@@ -1,0 +1,13 @@
+# Source files not needed in npm package
+examples/
+.github/
+.gitignore
+*.log
+
+# Development files
+.vscode/
+.idea/
+.DS_Store
+
+# Documentation (keep in git, not in npm)
+.editorconfig
