@@ -30,7 +30,7 @@ const SN = new SheetNext(dom: HTMLElement, options?: object)
 
 **参数：**
 - `dom`: 容器 DOM 元素（必需）
-- `options`: 可选配置对象（详见 [README 初始化配置](./README.md#初始化配置)）
+- `options`: 可选配置对象（详见 [README 初始化配置](https://github.com/wyyazlz/sheetnext/blob/master/README.md#初始化配置)）
 
 ### 核心属性
 

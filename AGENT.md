@@ -4,8 +4,8 @@
 
 ## 文档导航
 
-- [← 返回 README](./README.md) - 快速开始和特点介绍
-- [← API 文档](./DOCS.md) - 详细的类、方法和属性说明
+- [← 返回 README](https://github.com/wyyazlz/sheetnext/blob/master/README.md) - 快速开始和特点介绍
+- [← API 文档](https://github.com/wyyazlz/sheetnext/blob/master/DOCS.md) - 详细的类、方法和属性说明
 
 ---
 

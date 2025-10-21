@@ -1,12 +1,13 @@
 <div align="center">
   <div><img src="docs/logo.png" alt="SheetNext Logo" width="100" style="vertical-align: middle;"/></div>
+  <h1>SheetNext</h1>
   <div>✨ 数行代码可集成一个纯前端高性能 Excel 编辑器。</div>
   <div>🤖 内置超级AI工作流程，目标用 AI 操纵 Excel 表格完成所有任务。</div>
   <div>
     <a href="https://www.sheetnext.com/">🏠 官网</a> |
     <a href="https://www.sheetnext.com/editor">🎯 在线体验</a> |
-    <a href="https://github.com/yourusername/sheetnext/blob/master/AGENT.md">🤖 AI中转文档</a> |
-    <a href="https://github.com/yourusername/sheetnext/blob/master/DOCS.md">📖 编辑器操作文档</a>
+    <a href="https://github.com/wyyazlz/sheetnext/blob/master/DOCS.md">📖 API文档</a> |
+    <a href="https://github.com/wyyazlz/sheetnext/blob/master/AGENT.md">🤖 AI中转文档</a>
   </div>
 </div>
 

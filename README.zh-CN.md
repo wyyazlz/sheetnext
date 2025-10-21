@@ -26,25 +26,25 @@
 
 ### 📦 使用 npm 安装
 
-```bash
+\`\`\`bash
 npm install sheetnext
-```
+\`\`\`
 
-```html
+\`\`\`html
 <div id="SNContainer" style="width:100vw;height:100vh;padding:0 7px 7px"></div>
-```
+\`\`\`
 
-```javascript
+\`\`\`javascript
 import SheetNext from 'sheetnext';
 import 'sheetnext/dist/sheetnext.css';
 
 // 注意设置容器#SNContainer宽高
 const SN = new SheetNext(document.querySelector('#SNContainer'));
-```
+\`\`\`
 
 ### 🌐 浏览器直接引入
 
-```html
+\`\`\`html
 <!-- 引入样式 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sheetnext/dist/sheetnext.css">
 
@@ -58,16 +58,16 @@ const SN = new SheetNext(document.querySelector('#SNContainer'));
 <script>
   const SN = new SheetNext(document.querySelector('#SNContainer'));
 </script>
-```
+\`\`\`
 
 ## ⚙️ 初始化配置
 
-```javascript
+\`\`\`javascript
 const SN = new SheetNext(document.querySelector('#container'), {
   AI_URL: "http://localhost:3000/sheetnextAI",  // AI 中转地址（可选）
   AI_TOKEN: "your-token"                        // 中转 token（可选）
 });
-```
+\`\`\`
 
 ## 📚 文档
 
