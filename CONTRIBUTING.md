@@ -52,7 +52,7 @@ Please be respectful and constructive in all interactions.
 
 ## Questions?
 
-- 📧 Contact: support@sheetnext.com
+- 📧 Contact: wyyazlz@gmail.com
 - 🌐 Website: https://www.sheetnext.com
 - 💬 Issues: GitHub Issues page
 

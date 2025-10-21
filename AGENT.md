@@ -92,12 +92,12 @@ const OpenAI = require('openai');
 const CONFIG = {
     model: 'claude-sonnet-4-5-20250929', // 设置模型名称，自动判断使用 claude 还是 openai
     claude: {
-        apiKey: 'sk-xWp4TFA81arQCudIbLRmE0h1TtmM0lQWz4Lt7lKryUhk5HhN',
-        baseURL: 'https://m5.aitoo.fun/'
+        apiKey: 'your-apiKey',
+        baseURL: 'https://xx.xx.xx/'
     },
     openai: {
-        apiKey: 'sk-UWq0SWmDIEFTI5hswtg5uONjQ95ECUneWtp46Pp9Kdujg9py',
-        baseURL: 'https://m5.aitoo.fun/v1'
+        apiKey: 'your-apiKey',
+        baseURL: 'https://xx.xx.xx/v1'
     }
 };
 
