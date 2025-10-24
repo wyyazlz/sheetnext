@@ -26,7 +26,8 @@
     "README.md",
     "DOCS.md",
     "AGENT.md",
-    "docs/logo.png"
+    "docs/logo.png",
+    "docs/demo.png"
   ],
   "keywords": [
     "spreadsheet",
