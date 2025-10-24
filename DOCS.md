@@ -12,6 +12,7 @@
 - [Row Class](#Row) - 行管理：行高、批量行样式、获取行内单元格、显示/隐藏等
 - [Col Class](#Col) - 列管理：列宽、批量列样式、获取列内单元格、显示/隐藏等
 - [Drawing Class](#Drawing) - 图形管理：图表、图形、图片的增删改查、设置位置和尺寸、调整图层顺序等
+- [Layout Class](#Layout) - 布局管理：显示/隐藏菜单栏、工具栏、公式栏、AI 聊天面板等界面元素
 - [Utils Class](#Utils) - 坐标转换：单元格字符串与数字坐标互转、列字母与数字互转、范围格式转换等
 - [UndoRedo Class](#UndoRedo) - 历史管理：撤销/重做操作
 
@@ -595,6 +596,142 @@ Drawing 类代表图表、图片、连接线或形状等图形对象。
 
 ```javascript
 drawing.updIndex("top"); // 移到最上层
+```
+
+---
+
+## Layout
+
+Layout 类管理编辑器的界面布局，包括菜单栏、工具栏、公式栏、Sheet 标签栏和 AI 聊天面板等界面元素的显示与隐藏。
+
+### 构造函数
+
+Layout 类由 SheetNext 自动创建，通过 `SN.Layout` 访问。
+
+```javascript
+const SN = new SheetNext(dom, {
+  menuList: [...],  // 自定义菜单配置（可选）
+  menuRight: {...}  // 自定义右侧菜单（可选）
+});
+```
+
+**注意：** `menuList` 和 `menuRight` 只能在初始化时传入，后续无法修改。
+
+### 属性
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `showMenuBar` | `boolean` | 是否显示菜单栏（可读写） |
+| `showToolbar` | `boolean` | 是否显示工具栏（可读写） |
+| `showFormulaBar` | `boolean` | 是否显示公式栏（可读写） |
+| `showSheetTabBar` | `boolean` | 是否显示 Sheet 标签栏（可读写） |
+| `showAIChat` | `boolean` | 是否显示 AI 聊天面板（可读写） |
+| `showAIChatWindow` | `boolean` | 是否显示 AI 聊天小窗口模式（可读写） |
+| `isSmallWindow` | `boolean` | 当前是否为小窗口模式（宽度 < 900px）（只读） |
+| `menuConfig` | `object` | 菜单配置对象（只读） |
+
+### 菜单配置（初始化时）
+
+#### menuList 配置
+
+`menuList` 用于自定义顶部菜单栏，只能在初始化时传入。
+
+**MenuList 结构：**
+
+```typescript
+interface MenuItem {
+  label: string;              // 菜单项标签
+  handler?: () => void;       // 点击处理函数
+  disabled?: boolean;         // 是否禁用
+  tip?: string;               // 提示信息（右侧显示）
+  divider?: boolean;          // 是否为分隔线
+}
+
+interface Menu {
+  label: string;              // 菜单标签
+  items: MenuItem[];          // 菜单项列表
+}
+
+type MenuList = Menu[];
+```
+
+**完整示例：**
+
+```javascript
+const SN = new SheetNext(document.querySelector('#container'), {
+  // 配置后覆盖原配置
+  menuList: [
+      {
+          label: '文件',
+          items: [
+              { label: '导入 XLSX', handler: () => SN.containerDom.querySelector('.sn-upload').click() },
+              { divider: true },
+              { label: '导出 XLSX', handler: () => SN.export('XLSX') }
+          ]
+      },
+      {
+          label: '插入',
+          items: [
+              { label: '插入行', handler: () => SN.AI.chatInput('在表最后新插入10行') },
+              { label: '插入列', handler: () => SN.AI.chatInput('在表最后新插入10列') },
+              { label: '超链接', handler: () => SN.AI.chatInput('在A1插入超链接，文本：SN 地址：https://www.sheetnext.com') },
+              { label: '图片', disabled: true, tip: '待开放' },
+              { label: '图表', handler: () => SN.AI.chatInput('根据表中数据生成柱状图') },
+              { label: '图形', disabled: true, tip: '待开放' },
+              { label: '数据透视表', disabled: true, tip: '待开放' },
+              { label: '公式', handler: () => SN.AI.chatInput('在A1编写公式，求F18:G21的平均值') }
+          ]
+      },
+      {
+          label: '视图',
+          items: [
+              { label: '显示行列标', handler: () => { SN.activeSheet.showRowColHeaders = true; SN.r(); } },
+              { label: '隐藏行列标', handler: () => { SN.activeSheet.showRowColHeaders = false; SN.r(); } },
+              { label: '显示网格线', handler: () => { SN.activeSheet.showGridLines = true; SN.r(); } },
+              { label: '隐藏网格线', handler: () => { SN.activeSheet.showGridLines = false; SN.r(); } },
+              { label: '冻结首行', handler: () => { SN.activeSheet.ySplit = 1; SN.r(); } },
+              { label: '冻结首列', handler: () => { SN.activeSheet.xSplit = 1; SN.r(); } }
+          ]
+      },
+      {
+          label: '更多',
+          items: [
+              { label: 'SheetNext Pro', handler: () => window.open('https://www.sheetnext.com/pro') },
+              { label: '开发文档', handler: () => window.open('https://www.github.com/wyyazlz/sheetnext') },
+          ]
+      }
+  ]
+});
+```
+
+**默认菜单：**
+
+如果不传入 `menuList`，将使用默认菜单配置（包含：文件、插入、视图、更多）。
+
+#### menuRight 配置
+
+`menuRight` 用于自定义菜单栏右侧区域，只能在初始化时传入。
+
+**MenuRight 结构：**
+
+```typescript
+interface MenuRight {
+  html: string;               // HTML 内容
+  handler?: () => void;       // 点击处理函数
+}
+```
+
+**示例：**
+
+```javascript
+const SN = new SheetNext(document.querySelector('#container'), {
+  menuRight: {
+    html: '<span style="color: #666;">我的应用 v1.0</span>',
+    handler: () => {
+      alert('欢迎使用！');
+    }
+  }
+});
 ```
 
 ---

@@ -13,6 +13,10 @@
 
 ---
 
+<div align="center">
+  <img src="docs/demo.png" alt="SheetNext Demo" />
+</div>
+
 ## ✨ 特点
 
 - 📊 **电子表格功能** - 支持电子表格核心功能如：单元格编辑、样式、公式引擎、图表、排序、筛选等

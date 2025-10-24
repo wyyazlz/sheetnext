@@ -14,10 +14,20 @@
     </div>
 
 
-    <script type="module" src="../../src/index.js"></script>
+    <script type="module">
+        import SheetNext from '../../src/index.js';
 
-    <script>
-        const SN = new SheetNext(document.querySelector('#SNContainer1'));
+        const SN = new SheetNext(document.querySelector('#SNContainer1'), {
+            AI_URL: "http://localhost:8849/editorApi/conversation",
+            // menuList:[]
+        });
+
+        SN.AI.listenRequestStatus(status => {
+            console.log(status);
+            if (status == 401) {
+                userLogin('<%= userId %>')
+            }
+        });
     </script>
 
 </body>

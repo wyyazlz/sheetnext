@@ -1,6 +1,6 @@
 {
   "name": "sheetnext",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A powerful spreadsheet editor library with AI capabilities",
   "homepage": "https://www.sheetnext.com",
   "repository": {
@@ -35,7 +35,14 @@
     "table",
     "ai",
     "canvas",
-    "data-grid"
+    "data-grid",
+    "data-analysis",
+    "data-visualization",
+    "analytics",
+    "pivot-table",
+    "chart",
+    "business-intelligence",
+    "collaborative-editing"
   ],
   "author": "SheetNext Team",
   "license": "Apache-2.0",
