@@ -6,7 +6,7 @@
   <div>
     <a href="https://www.sheetnext.com/">🏠 官网</a> |
     <a href="https://www.sheetnext.com/editor">🎯 在线体验</a> |
-    <a href="https://github.com/wyyazlz/sheetnext/blob/master/DOCS.md">📖 文档</a>
+    <a href="https://www.sheetnext.com/docs">📖 文档</a>
   </div>
 </div>
 
@@ -63,13 +63,11 @@ const SN = new SheetNext(document.querySelector('#SNContainer'));
 ## ⚙️ 初始化配置
 
 ```javascript
-const SN = new SheetNext(document.querySelector('#container'), {
-  AI_URL: "http://localhost:3000/sheetnextAI",  // AI 中转地址（可选）
-  AI_TOKEN: "your-token"                        // 中转 token（可选）
-});
+const SN = new SheetNext(document.querySelector('#container'));
 ```
 
 ## 🔗 相关链接
 
 - 🏠 [官网](https://www.sheetnext.com)
+- 📖 [在线文档](https://www.sheetnext.com/docs)
 - 📦 [npm 包地址](https://www.npmjs.com/package/sheetnext)
