@@ -6,8 +6,7 @@
   <div>
     <a href="https://www.sheetnext.com/">🏠 官网</a> |
     <a href="https://www.sheetnext.com/editor">🎯 在线体验</a> |
-    <a href="https://github.com/wyyazlz/sheetnext/blob/master/DOCS.md">📖 文档</a> |
-    <a href="https://github.com/wyyazlz/sheetnext/blob/master/AGENT.md">🤖 AI中转文档</a>
+    <a href="https://github.com/wyyazlz/sheetnext/blob/master/DOCS.md">📖 文档</a>
   </div>
 </div>
 

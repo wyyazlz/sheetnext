@@ -167,5 +167,4 @@ export default class SheetNext {
   import(file: File): Promise<void>;
   export(type: 'XLSX'): void;
   r(): void;
-  getLicenseInfo(): any;
 }
