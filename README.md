@@ -1,7 +1,7 @@
 <h1 align="center">
   <span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; line-height: 1;">
-    <img src="docs/logo.png" alt="SheetNext Logo" width="48" style="display: block; transform: translateY(2px);" />
-    <span>SheetNext</span>
+    <img src="docs/logo.png" alt="SheetNext Logo" width="48" style="display: block;" />
+    <span style="display: inline-block; transform: translateY(-2px);">SheetNext</span>
   </span>
 </h1>
 
