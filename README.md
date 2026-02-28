@@ -1,19 +1,26 @@
-[中文](./README_CN.md) | English
+<h1 align="center">
+  <span style="white-space: nowrap;">
+    <img src="docs/logo.png" alt="SheetNext Logo" width="48" style="vertical-align: middle;" />
+    <span style="vertical-align: middle;">SheetNext</span>
+  </span>
+</h1>
 
 <p align="center">
-  <img src="docs/logo.png" alt="SheetNext Logo" width="120" />
+  AI-driven pure front-end spreadsheet component in JavaScript, Excel-like, with LLM-powered operations.
 </p>
 
-<h1 align="center">SheetNext</h1>
-
 <p align="center">
-  A pure front-end, high-performance spreadsheet engine.
+  English | <a href="./README_CN.md">简体中文</a>
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/sheetnext"><img src="https://img.shields.io/npm/v/sheetnext.svg" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/sheetnext"><img src="https://img.shields.io/npm/dm/sheetnext.svg" alt="npm downloads" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="license" /></a>
   <a href="https://github.com/wyyazlz/sheetnext"><img src="https://img.shields.io/github/stars/wyyazlz/sheetnext.svg?style=social" alt="GitHub stars" /></a>
+  <img src="https://img.shields.io/badge/rendering-Canvas-ff8c00.svg" alt="Canvas rendering" />
+  <img src="https://img.shields.io/badge/workflow-AI%20Ready-00A67E.svg" alt="AI ready" />
+  <img src="https://img.shields.io/badge/file%20support-XLSX%20%7C%20CSV%20%7C%20JSON-1f6feb.svg" alt="file support" />
 </p>
 
 <p align="center">
@@ -110,7 +117,7 @@ Import locale via UMD:
 
 #### Step 1: Download the AI Development Reference
 
-- Download `docs-detail.md` from the repository root: [docs-detail.md](https://github.com/wyyazlz/sheetnext/blob/main/docs-detail.md)
+- Download `docs-detail.md` from the repository root: [docs-detail.md](https://github.com/wyyazlz/sheetnext/blob/master/docs/docs-detail.md)
 
 #### Step 2: Feed `docs-detail` to Your AI Tool
 
