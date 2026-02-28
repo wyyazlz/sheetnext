@@ -1,7 +1,7 @@
 {
   "name": "sheetnext-open",
   "version": "0.1.8",
-  "description": "AI-driven pure front-end spreadsheet component built with JavaScript, offering Excel-like capabilities and flexible LLM integration for intelligent spreadsheet operations.",
+  "description": "A pure front-end spreadsheet component with Excel-like capabilities, built-in native AI workflows, and flexible LLM integration for data operations.",
   "homepage": "https://www.sheetnext.com",
   "repository": {
     "type": "git",

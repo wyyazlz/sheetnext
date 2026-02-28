@@ -1,12 +1,12 @@
 <h1 align="center">
-  <span style="white-space: nowrap;">
-    <img src="docs/logo.png" alt="SheetNext Logo" width="48" style="vertical-align: middle;" />
-    <span style="vertical-align: middle;">SheetNext</span>
+  <span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; line-height: 1;">
+    <img src="docs/logo.png" alt="SheetNext Logo" width="48" />
+    <span>SheetNext</span>
   </span>
 </h1>
 
 <p align="center">
-  AI-driven pure front-end spreadsheet component in JavaScript, Excel-like, with LLM-powered operations.
+  A pure front-end spreadsheet component with Excel-like capabilities, built-in native AI workflows, and flexible LLM integration for data operations.
 </p>
 
 <p align="center">
@@ -17,10 +17,10 @@
   <a href="https://www.npmjs.com/package/sheetnext"><img src="https://img.shields.io/npm/v/sheetnext.svg" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/sheetnext"><img src="https://img.shields.io/npm/dm/sheetnext.svg" alt="npm downloads" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="license" /></a>
-  <a href="https://github.com/wyyazlz/sheetnext"><img src="https://img.shields.io/github/stars/wyyazlz/sheetnext.svg?style=social" alt="GitHub stars" /></a>
   <img src="https://img.shields.io/badge/rendering-Canvas-ff8c00.svg" alt="Canvas rendering" />
   <img src="https://img.shields.io/badge/workflow-AI%20Ready-00A67E.svg" alt="AI ready" />
   <img src="https://img.shields.io/badge/file%20support-XLSX%20%7C%20CSV%20%7C%20JSON-1f6feb.svg" alt="file support" />
+  <a href="https://github.com/wyyazlz/sheetnext"><img src="https://img.shields.io/github/stars/wyyazlz/sheetnext.svg?style=social" alt="GitHub stars" /></a>
 </p>
 
 <p align="center">
