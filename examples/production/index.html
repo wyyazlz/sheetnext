@@ -9,7 +9,7 @@
         #app {
             width: 100vw;
             height: 100vh;
-            padding: 0 10px;
+            padding: 0 10px 10px 10px;
         }
     </style>
 </head>
@@ -18,8 +18,11 @@
     <div id="app"></div>
 
     <script src="../../dist/sheetnext.umd.js"></script>
+    <script src="../../dist/sheetnext.locale.zh-CN.umd.js"></script>
     <script>
-        const SN = new SheetNext(document.getElementById('app'));
+        const SN = new SheetNext(document.getElementById('app'), {
+            locale: 'zh-CN'
+        });
     </script>
 
 </body>

@@ -1,5 +1,5 @@
 {
-  "name": "sheetnext-open",
+  "name": "sheetnext",
   "version": "0.2.0",
   "description": "A pure front-end spreadsheet component with Excel-like capabilities, built-in native AI workflows, and flexible LLM integration for data operations.",
   "homepage": "https://www.sheetnext.com",
@@ -18,20 +18,19 @@
       "import": "./dist/sheetnext.es.js",
       "require": "./dist/sheetnext.umd.js"
     },
-    "./dist/sheetnext.css": "./dist/sheetnext.css"
+    "./dist/sheetnext.css": "./dist/sheetnext.css",
+    "./locales/zh-CN": {
+      "import": "./dist/sheetnext.locale.zh-CN.es.js",
+      "require": "./dist/sheetnext.locale.zh-CN.umd.js"
+    }
   },
   "files": [
     "dist",
-    "src",
-    "docs",
-    "examples",
     "README.md",
-    "CONTRIBUTING.md",
-    "CODE_OF_CONDUCT.md",
-    "SECURITY.md",
-    "NOTICE",
-    "THIRD_PARTY_LICENSES.md",
-    "OPEN_EDITION_SCOPE.md"
+    "README_CN.md",
+    "docs/docs-detail.md",
+    "docs/logo.png",
+    "docs/image_en.png"
   ],
   "scripts": {
     "dev": "vite",
@@ -43,8 +42,12 @@
     "excel",
     "editor",
     "table",
-    "open-source",
-    "sheetnext"
+    "ai",
+    "sheetnext",
+    "sheet",
+    "spreadsheet editor",
+    "ai excel",
+    "ai spreadsheet"
   ],
   "dependencies": {
     "fast-xml-parser": "^5.3.0"
