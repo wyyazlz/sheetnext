@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/image_en.png" alt="SheetNext Screenshot" width="800" />
+  <img src="docs/image_en.png" alt="SheetNext Screenshot" width="100%" />
 </p>
 
 - SheetNext 是一款纯前端、高性能的电子表格引擎，为企业提供开箱即用的智能表格能力底座。
