@@ -1,6 +1,6 @@
 <h1 align="center">
   <span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; line-height: 1;">
-    <img src="docs/logo.png" alt="SheetNext Logo" width="48" />
+    <img src="docs/logo.png" alt="SheetNext Logo" width="48" style="display: block; transform: translateY(2px);" />
     <span>SheetNext</span>
   </span>
 </h1>
@@ -20,7 +20,6 @@
   <img src="https://img.shields.io/badge/rendering-Canvas-ff8c00.svg" alt="Canvas rendering" />
   <img src="https://img.shields.io/badge/workflow-AI%20Ready-00A67E.svg" alt="AI ready" />
   <img src="https://img.shields.io/badge/file%20support-XLSX%20%7C%20CSV%20%7C%20JSON-1f6feb.svg" alt="file support" />
-  <a href="https://github.com/wyyazlz/sheetnext"><img src="https://img.shields.io/github/stars/wyyazlz/sheetnext.svg?style=social" alt="GitHub stars" /></a>
 </p>
 
 <p align="center">
