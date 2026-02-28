@@ -1,0 +1,493 @@
+/**
+ * 透视表字段面板样式
+ * 复刻Excel透视表字段配置面板UI
+ */
+
+/* 透视表侧边栏容器 */
+.sn-pivot-panel {
+    width: 320px;
+    min-width: 280px;
+    max-width: 400px;
+    display: none;
+    flex-direction: column;
+    background: #f8f9fa;
+    border-left: 1px solid #e0e0e0;
+    overflow: hidden;
+    font-size: 13px;
+    user-select: none;
+    margin-left: 7px;
+    box-shadow: var(--shadow);
+    border-radius: 3px;
+}
+
+/* 面板头部 */
+.sn-pivot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.sn-pivot-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.sn-pivot-header-btns {
+    display: flex;
+    gap: 4px;
+}
+
+.sn-pivot-header-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s, color 0.15s;
+    font-size: 14px;
+}
+
+.sn-pivot-header-btn:hover {
+    background: #e8e8e8;
+    color: #333;
+}
+
+/* 搜索框 */
+.sn-pivot-search {
+    padding: 8px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.sn-pivot-search-input {
+    width: 100%;
+    height: 28px;
+    padding: 0 8px 0 28px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") 6px center/14px no-repeat;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.sn-pivot-search-input:focus {
+    border-color: #36c;
+}
+
+.sn-pivot-search-input::placeholder {
+    color: #999;
+}
+
+/* 字段列表区域 */
+.sn-pivot-fields {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sn-pivot-fields-header {
+    padding: 8px 12px 4px;
+    font-size: 12px;
+    color: #666;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+.sn-pivot-fields-list {
+    flex: 1;
+    min-height: 80px;
+    overflow-y: auto;
+    padding: 4px 8px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sn-pivot-field-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.sn-pivot-field-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.sn-pivot-field-text {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sn-pivot-field-item:hover {
+    background: #f0f4ff;
+}
+
+.sn-pivot-field-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #36c;
+}
+
+.sn-pivot-field-item label {
+    flex: 1;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+}
+
+/* 拖放区域提示 */
+.sn-pivot-drop-hint {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #666;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+/* 拖放区域容器 - 2x2网格布局 */
+.sn-pivot-drop-zones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: #e0e0e0;
+    flex: 1;
+    min-height: 160px;
+}
+
+/* 单个拖放区域 */
+.sn-pivot-zone {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    min-height: 80px;
+}
+
+.sn-pivot-zone-header {
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e8e8e8;
+    flex-shrink: 0;
+}
+
+.sn-pivot-zone-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+/* 区域内的字段标签 */
+.sn-pivot-zone-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    background: #e8f0fe;
+    border: 1px solid #c7d9f7;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #1a56cc;
+    cursor: move;
+    transition: background 0.12s, transform 0.12s;
+}
+
+.sn-pivot-zone-item:hover {
+    background: #d4e3fc;
+}
+
+.sn-pivot-zone-item:active {
+    transform: scale(0.98);
+}
+
+.sn-pivot-zone-item-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sn-pivot-zone-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+.sn-pivot-zone-item:hover .sn-pivot-zone-item-actions {
+    opacity: 1;
+}
+
+.sn-pivot-zone-item-action {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    border-radius: 2px;
+    font-size: 12px;
+    transition: background 0.12s, color 0.12s;
+}
+
+.sn-pivot-zone-item-action:hover {
+    background: rgba(0,0,0,0.1);
+    color: #333;
+}
+
+.sn-pivot-zone-item-remove:hover {
+    color: #c00;
+}
+
+/* 值区域特殊样式 */
+.sn-pivot-zone[data-zone="value"] .sn-pivot-zone-item {
+    background: #fef3e0;
+    border-color: #f5d9a8;
+    color: #b35c00;
+}
+
+.sn-pivot-zone[data-zone="value"] .sn-pivot-zone-item:hover {
+    background: #fcecd0;
+}
+
+/* 筛选区域特殊样式 */
+.sn-pivot-zone[data-zone="filter"] .sn-pivot-zone-item {
+    background: #e8f5e9;
+    border-color: #c8e6c9;
+    color: #2e7d32;
+}
+
+.sn-pivot-zone[data-zone="filter"] .sn-pivot-zone-item:hover {
+    background: #dcedc8;
+}
+
+/* 空区域占位符 */
+.sn-pivot-zone-empty {
+    padding: 8px;
+    text-align: center;
+    color: #999;
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* 面板底部 */
+.sn-pivot-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.sn-pivot-delay-update {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+}
+
+.sn-pivot-delay-update input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.sn-pivot-update-btn {
+    padding: 6px 16px;
+    background: #36c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sn-pivot-update-btn:hover {
+    background: #2a52a3;
+}
+
+.sn-pivot-update-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* 滚动条样式 */
+.sn-pivot-fields-list::-webkit-scrollbar,
+.sn-pivot-zone-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sn-pivot-fields-list::-webkit-scrollbar-thumb,
+.sn-pivot-zone-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.sn-pivot-fields-list::-webkit-scrollbar-thumb:hover,
+.sn-pivot-zone-list::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* 拖拽中状态 */
+.sn-pivot-zone.drag-over {
+    background: #f0f7ff;
+}
+
+.sn-pivot-zone.drag-over .sn-pivot-zone-header {
+    background: #e3efff;
+    color: #36c;
+}
+
+.sn-pivot-fields-list.drag-over {
+    background: #f0f7ff;
+}
+
+/* 字段拖拽中的样式 */
+.sn-pivot-field-item.dragging {
+    opacity: 0.5;
+}
+
+/* 透视字段设置弹窗 */
+.sn-pivot-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sn-pivot-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sn-pivot-settings-row > label {
+    width: 95px;
+    flex-shrink: 0;
+    color: #666;
+    font-size: 12px;
+}
+
+.sn-pivot-settings-row input,
+.sn-pivot-settings-row select {
+    flex: 1;
+}
+
+.sn-pivot-settings-static {
+    font-size: 13px;
+    color: #333;
+}
+
+.sn-pivot-settings-tabs {
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 6px;
+}
+
+.sn-pivot-settings-tab {
+    padding: 4px 10px;
+    border: none;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sn-pivot-settings-tab.active {
+    background: #4f7cf6;
+    color: #fff;
+}
+
+.sn-pivot-settings-panel {
+    display: none;
+}
+
+.sn-pivot-settings-panel.active {
+    display: block;
+}
+
+.sn-pivot-settings-section {
+    border: 1px solid #eee;
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sn-pivot-settings-section-title {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+}
+
+.sn-pivot-settings-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #333;
+}
+
+
+
+/* 响应式调整 */
+@media (max-width: 900px) {
+    .sn-pivot-panel {
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 85%;
+        max-width: 320px;
+        z-index: 9999;
+        box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .sn-pivot-panel.show {
+        transform: translateX(0);
+    }
+}

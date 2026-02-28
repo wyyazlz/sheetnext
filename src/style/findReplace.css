@@ -1,0 +1,283 @@
+/* 查找替换定位对话框样式 */
+
+.sn-find-dialog {
+    width: 480px;
+    max-width: 95vw;
+    max-height: 90vh;
+}
+
+/* 标签页头部 */
+.sn-find-tabs {
+    display: flex;
+    gap: 0;
+}
+
+.sn-find-tab {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+}
+
+.sn-find-tab:hover {
+    color: #333;
+    background: #f5f7fa;
+}
+
+.sn-find-tab.active {
+    color: #4f7cf6;
+    border-bottom-color: #4f7cf6;
+    font-weight: 500;
+}
+
+/* 面板容器 */
+.sn-find-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sn-find-panel.active {
+    display: flex;
+}
+
+/* 表单区域 */
+.sn-find-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sn-find-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sn-find-row > label {
+    flex-shrink: 0;
+    min-width: 70px;
+    font-size: 13px;
+    color: #333;
+}
+
+.sn-find-input {
+    flex: 1;
+}
+
+/* 选项区域 */
+.sn-find-options {
+    margin-top: 4px;
+}
+
+.sn-find-options-toggle {
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    background: #fafafa;
+}
+
+.sn-find-options-toggle summary {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sn-find-options-toggle summary:hover {
+    color: #333;
+}
+
+.sn-find-options-toggle[open] summary {
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.sn-find-options-content {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sn-find-options-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sn-find-options-row > label:not(.sn-find-checkbox) {
+    font-size: 12px;
+    color: #666;
+}
+
+.sn-find-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+}
+
+.sn-find-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.sn-find-checkbox span {
+    user-select: none;
+}
+
+/* 状态信息 */
+.sn-find-status {
+    font-size: 12px;
+    color: #888;
+}
+
+/* 操作按钮区域 */
+.sn-find-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+/* 结果列表 */
+.sn-find-results {
+    display: none;
+}
+
+.sn-find-results.has-results {
+    display: block;
+    margin-top: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow: hidden;
+}
+
+.sn-find-results-header {
+    display: grid;
+    grid-template-columns: 80px 60px 1fr;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f5f7fa;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sn-find-results-list {
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.sn-find-result-item {
+    display: grid;
+    grid-template-columns: 80px 60px 1fr;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background 0.12s;
+}
+
+.sn-find-result-item:last-child {
+    border-bottom: none;
+}
+
+.sn-find-result-item:hover {
+    background: #f5f7fa;
+}
+
+.sn-find-result-item.active {
+    background: #e8f0fe;
+}
+
+.sn-find-result-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 定位条件区域 */
+.sn-goto-special {
+    margin-top: 8px;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 12px;
+    background: #fafafa;
+}
+
+.sn-goto-special-title {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.sn-goto-special-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 16px;
+}
+
+.sn-goto-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+}
+
+.sn-goto-option input[type="radio"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.sn-goto-option span {
+    user-select: none;
+}
+
+.sn-goto-option:hover {
+    color: #333;
+}
+
+/* 响应式 */
+@media (max-width: 500px) {
+    .sn-find-dialog {
+        width: 100%;
+    }
+
+    .sn-find-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .sn-find-row > label {
+        min-width: auto;
+    }
+
+    .sn-goto-special-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sn-find-results-header,
+    .sn-find-result-item {
+        grid-template-columns: 60px 50px 1fr;
+        gap: 4px;
+    }
+}

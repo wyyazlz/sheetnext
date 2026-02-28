@@ -1,0 +1,559 @@
+.sn-f16{
+    font-size: 16px !important;
+}
+/* 自定义滚动条样式 */
+.sn-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.sn-scrollbar::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 3px;
+}
+
+.sn-scrollbar::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.sn-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* 通用 */
+body,textarea {
+    margin: 0;
+    line-height: normal;
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+*, ::after, ::before {
+    box-sizing: border-box;
+}
+.sn-svg {
+    fill: currentColor;
+    font-size: 14px;
+    vertical-align: middle;
+}
+.sn-text-start{
+    text-align: left;
+}
+.sn-text-primary{
+    color: #36c !important;
+}
+.sn-cur{
+    cursor: pointer;
+}
+.sn-text-end{
+    text-align: right;
+}
+.sn-w100 {
+    width: 100%;
+}
+
+.sn-color-999 {
+    color: #999;
+}
+
+.sn-color-666 {
+    color: #666;
+}
+
+.sn-text-left {
+    text-align: left;
+}
+
+.sn-text-center {
+    text-align: center;
+}
+
+.sn-border {
+    border: 1px solid #999;
+}
+
+.sn-float-end {
+    float: right;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.justify-content-between {
+    justify-content: space-between;
+}
+
+.align-items-center {
+    align-items: center;
+}
+
+.justify-content-evenly {
+    justify-content: space-evenly;
+}
+
+/* 颜色选择器组件 */
+.sn-color-select {
+    padding: 8px;
+    width: 212px;
+}
+
+.sn-color-section {
+    margin-bottom: 8px;
+}
+
+.sn-color-section:last-child {
+    margin-bottom: 0;
+}
+
+.sn-color-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+    text-align: left;
+}
+
+.sn-color-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 2px;
+}
+
+.sn-color-item {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.sn-color-item:hover {
+    border-color: #666;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 3px rgba(0,0,0,0.3);
+}
+
+.sn-color-item.active {
+    border: 2px solid #1a73e8;
+}
+
+/* 白色块特殊边框 */
+.sn-color-item[data-color="#FFFFFF"] {
+    border-color: #ccc;
+}
+
+.sn-color-no-btn {
+    width: 100%;
+    padding: 6px 0;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    background: #fff;
+}
+
+.sn-color-no-btn:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+}
+
+.sn-color-more {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sn-color-more .sn-color-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.sn-color-input {
+    flex: 1;
+    height: 26px;
+    min-width: 0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.sn-color-input:hover {
+    border-color: #999;
+}
+
+/* 间距工具类 - Padding */
+.sn-p-0 {
+    padding: 0 !important;
+}
+
+.sn-p-1 {
+    padding: 0.25rem !important;
+}
+
+.sn-p-2 {
+    padding: 0.5rem !important;
+}
+
+.sn-p-3 {
+    padding: 0.75rem !important;
+}
+
+.sn-p-4 {
+    padding: 1rem !important;
+}
+
+.sn-p-5 {
+    padding: 1.25rem !important;
+}
+
+/* Padding Top */
+.sn-pt-0 {
+    padding-top: 0 !important;
+}
+
+.sn-pt-1 {
+    padding-top: 0.25rem !important;
+}
+
+.sn-pt-2 {
+    padding-top: 0.5rem !important;
+}
+
+.sn-pt-3 {
+    padding-top: 0.75rem !important;
+}
+
+.sn-pt-4 {
+    padding-top: 1rem !important;
+}
+
+.sn-pt-5 {
+    padding-top: 1.25rem !important;
+}
+
+/* Padding Bottom */
+.sn-pb-0 {
+    padding-bottom: 0 !important;
+}
+
+.sn-pb-1 {
+    padding-bottom: 0.25rem !important;
+}
+
+.sn-pb-2 {
+    padding-bottom: 0.5rem !important;
+}
+
+.sn-pb-3 {
+    padding-bottom: 0.75rem !important;
+}
+
+.sn-pb-4 {
+    padding-bottom: 1rem !important;
+}
+
+.sn-pb-5 {
+    padding-bottom: 1.25rem !important;
+}
+
+/* Padding Left */
+.sn-pl-0 {
+    padding-left: 0 !important;
+}
+
+.sn-pl-1 {
+    padding-left: 0.25rem !important;
+}
+
+.sn-pl-2 {
+    padding-left: 0.5rem !important;
+}
+
+.sn-pl-3 {
+    padding-left: 0.75rem !important;
+}
+
+.sn-pl-4 {
+    padding-left: 1rem !important;
+}
+
+.sn-pl-5 {
+    padding-left: 1.25rem !important;
+}
+
+/* Padding Right */
+.sn-pr-0 {
+    padding-right: 0 !important;
+}
+
+.sn-pr-1 {
+    padding-right: 0.25rem !important;
+}
+
+.sn-pr-2 {
+    padding-right: 0.5rem !important;
+}
+
+.sn-pr-3 {
+    padding-right: 0.75rem !important;
+}
+
+.sn-pr-4 {
+    padding-right: 1rem !important;
+}
+
+.sn-pr-5 {
+    padding-right: 1.25rem !important;
+}
+
+/* Padding X (左右) */
+.sn-px-0 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.sn-px-1 {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+.sn-px-2 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+.sn-px-3 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+.sn-px-4 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+.sn-px-5 {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+}
+
+/* Padding Y (上下) */
+.sn-py-0 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.sn-py-1 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+.sn-py-2 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.sn-py-3 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+}
+
+.sn-py-4 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.sn-py-5 {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+}
+
+/* 间距工具类 - Margin */
+.sn-m-0 {
+    margin: 0 !important;
+}
+
+.sn-m-1 {
+    margin: 0.25rem !important;
+}
+
+.sn-m-2 {
+    margin: 0.5rem !important;
+}
+
+.sn-m-3 {
+    margin: 0.75rem !important;
+}
+
+.sn-m-4 {
+    margin: 1rem !important;
+}
+
+.sn-m-5 {
+    margin: 1.25rem !important;
+}
+
+/* Margin Top */
+.sn-mt-0 {
+    margin-top: 0 !important;
+}
+
+.sn-mt-1 {
+    margin-top: 0.25rem !important;
+}
+
+.sn-mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+.sn-mt-3 {
+    margin-top: 0.75rem !important;
+}
+
+.sn-mt-4 {
+    margin-top: 1rem !important;
+}
+
+.sn-mt-5 {
+    margin-top: 1.25rem !important;
+}
+
+/* Margin Bottom */
+.sn-mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.sn-mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+.sn-mb-2 {
+    margin-bottom: 0.5rem !important;
+}
+
+.sn-mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+.sn-mb-4 {
+    margin-bottom: 1rem !important;
+}
+
+.sn-mb-5 {
+    margin-bottom: 1.25rem !important;
+}
+
+/* Margin Left */
+.sn-ml-0 {
+    margin-left: 0 !important;
+}
+
+.sn-ml-1 {
+    margin-left: 0.25rem !important;
+}
+
+.sn-ml-2 {
+    margin-left: 0.5rem !important;
+}
+
+.sn-ml-3 {
+    margin-left: 0.75rem !important;
+}
+
+.sn-ml-4 {
+    margin-left: 1rem !important;
+}
+
+.sn-ml-5 {
+    margin-left: 1.25rem !important;
+}
+
+/* Margin Right */
+.sn-mr-0 {
+    margin-right: 0 !important;
+}
+
+.sn-mr-1 {
+    margin-right: 0.25rem !important;
+}
+
+.sn-mr-2 {
+    margin-right: 0.5rem !important;
+}
+
+.sn-mr-3 {
+    margin-right: 0.75rem !important;
+}
+
+.sn-mr-4 {
+    margin-right: 1rem !important;
+}
+
+.sn-mr-5 {
+    margin-right: 1.25rem !important;
+}
+
+/* Margin X (左右) */
+.sn-mx-0 {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.sn-mx-1 {
+    margin-left: 0.25rem !important;
+    margin-right: 0.25rem !important;
+}
+
+.sn-mx-2 {
+    margin-left: 0.5rem !important;
+    margin-right: 0.5rem !important;
+}
+
+.sn-mx-3 {
+    margin-left: 0.75rem !important;
+    margin-right: 0.75rem !important;
+}
+
+.sn-mx-4 {
+    margin-left: 1rem !important;
+    margin-right: 1rem !important;
+}
+
+.sn-mx-5 {
+    margin-left: 1.25rem !important;
+    margin-right: 1.25rem !important;
+}
+
+/* Margin Y (上下) */
+.sn-my-0 {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.sn-my-1 {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+.sn-my-2 {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.sn-my-3 {
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.sn-my-4 {
+    margin-top: 1rem !important;
+    margin-bottom: 1rem !important;
+}
+
+.sn-my-5 {
+    margin-top: 1.25rem !important;
+    margin-bottom: 1.25rem !important;
+}

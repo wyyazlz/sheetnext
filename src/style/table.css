@@ -1,0 +1,320 @@
+/**
+ * 超级表对话框样式
+ */
+
+/* 表格对话框表单 */
+.sn-table-dialog .sn-form-group {
+    margin-bottom: 16px;
+}
+
+.sn-table-dialog .sn-form-group > label {
+    display: flex;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+}
+
+.sn-table-dialog .sn-form-group > label input[type="checkbox"] {
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* 区域输入框（仅需设置宽度，其他样式继承 modal.css 通用input样式） */
+.sn-table-dialog .sn-table-ref,
+.sn-table-dialog .sn-table-resize-ref {
+    width: 100%;
+}
+
+/* 表名输入框在弹窗中使用100%宽度（覆盖工具栏的120px） */
+.sn-modal .sn-table-name-input {
+    width: 100%;
+}
+
+/* 样式分组 */
+.sn-table-style-group {
+    margin-bottom: 12px;
+}
+
+.sn-table-style-group:last-child {
+    margin-bottom: 0;
+}
+
+.sn-table-style-group-title {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 6px;
+    padding-left: 2px;
+}
+
+/* 样式项 */
+.sn-table-style-item {
+    width: 40px;
+    height: 32px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    padding: 2px;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.sn-table-style-item:hover {
+    border-color: #b0b0b0;
+}
+
+.sn-table-style-item.selected {
+    border-color: #217346;
+}
+
+/* 样式预览 */
+.sn-table-style-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.sn-table-style-row {
+    flex: 1;
+    border-bottom: 1px solid;
+}
+
+.sn-table-style-row:last-child {
+    border-bottom: none;
+}
+
+.sn-table-style-row.header {
+    flex: 1.2;
+}
+
+/* 样式网格（用于样式选择器） */
+.sn-table-styles-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.sn-table-style-picker-body {
+    min-width: 340px;
+}
+
+/* 表选项面板 */
+.sn-table-options {
+    padding: 10px;
+}
+
+.sn-table-option-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.sn-table-option-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+}
+
+.sn-table-option-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* ==================== 工具栏表格样式菜单 ==================== */
+/* ==================== 样式画廊通用 ==================== */
+.sn-table-styles-menu,
+.sn-cell-styles-menu {
+    padding: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.sn-table-style-group,
+.sn-cell-style-group {
+    margin-bottom: 10px;
+}
+
+.sn-table-style-group:last-of-type,
+.sn-cell-style-group:last-of-type {
+    margin-bottom: 4px;
+}
+
+.sn-table-style-group-title,
+.sn-cell-style-group-title {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+    padding-left: 2px;
+    font-weight: 500;
+    text-align: left;
+}
+
+.sn-table-styles-menu .sn-table-style-item:hover,
+.sn-cell-styles-menu .sn-cell-style-item:hover {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 1px #4a90d9;
+}
+
+/* ==================== 表格样式画廊 ==================== */
+.sn-table-styles-menu .sn-table-style-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 40px);
+    gap: 3px;
+}
+
+.sn-table-styles-menu .sn-table-style-item {
+    width: 40px;
+    height: 32px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    padding: 2px;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sn-table-styles-menu .sn-table-style-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.sn-table-styles-menu .sn-table-style-row {
+    flex: 1;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+}
+
+.sn-table-styles-menu .sn-table-style-row:last-child {
+    border-bottom: none;
+}
+
+.sn-table-styles-menu .sn-table-style-row.header {
+    flex: 1.3;
+}
+
+.sn-table-styles-menu .sn-dropdown-divider {
+    margin: 8px 0;
+    border-top: 1px solid #e0e0e0;
+}
+
+.sn-table-styles-menu > li:last-child {
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 3px;
+    list-style: none;
+}
+
+.sn-table-styles-menu > li:last-child:hover {
+    background: #f0f0f0;
+}
+
+/* ==================== 单元格样式画廊 ==================== */
+.sn-cell-styles-menu .sn-cell-style-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+}
+
+.sn-cell-styles-menu .sn-cell-style-item {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    padding: 2px;
+    box-sizing: border-box;
+    text-align: center;
+    min-width: 0;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sn-cell-styles-menu .sn-cell-style-preview {
+    height: 28px;
+    line-height: 28px;
+    border-radius: 2px;
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sn-cell-styles-menu .sn-cell-style-label {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==================== 删除重复项对话框 ==================== */
+.sn-remove-duplicates-dialog .sn-form-group {
+    margin-bottom: 16px;
+}
+
+.sn-duplicate-actions {
+    display: flex;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.sn-btn-link {
+    background: none;
+    border: none;
+    color: #217346;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+}
+
+.sn-btn-link:hover {
+    text-decoration: underline;
+}
+
+.sn-duplicate-columns,
+.sn-slicer-columns {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 8px;
+    background: #fafafa;
+}
+
+.sn-duplicate-col-item,
+.sn-slicer-col-item {
+    padding: 4px 0;
+}
+
+.sn-duplicate-col-item label,
+.sn-slicer-col-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+}
+
+.sn-duplicate-col-item input[type="checkbox"],
+.sn-slicer-col-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* ==================== 插入切片器对话框 ==================== */
+.sn-insert-slicer-dialog .sn-form-group {
+    margin-bottom: 16px;
+}
+
+.sn-insert-slicer-dialog .sn-form-group > label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}

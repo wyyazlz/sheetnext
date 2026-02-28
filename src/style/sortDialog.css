@@ -1,0 +1,352 @@
+/* 自定义排序对话框样式 */
+
+.sn-sort-dialog {
+    width: 580px;
+    max-width: 95vw;
+    max-height: 90vh;
+}
+
+/* 工具栏 */
+.sn-sort-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.sn-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sn-sort-btn:hover:not(:disabled) {
+    background: #f5f7fa;
+    border-color: #bbb;
+}
+
+.sn-sort-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sn-sort-btn svg {
+    flex-shrink: 0;
+}
+
+.sn-sort-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #e0e0e0;
+    margin: 0 4px;
+}
+
+/* 排序条件列表表头 */
+.sn-sort-levels-header {
+    display: grid;
+    grid-template-columns: 30px 1.5fr 1fr 1fr;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f5f7fa;
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+}
+
+/* 排序条件列表 */
+.sn-sort-levels {
+    border: 1px solid #e0e0e0;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.sn-sort-levels::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sn-sort-levels::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 3px;
+}
+
+/* 单个排序条件 */
+.sn-sort-level {
+    display: grid;
+    grid-template-columns: 30px 1.5fr 1fr 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sn-sort-level:last-child {
+    border-bottom: none;
+}
+
+.sn-sort-level:hover {
+    background: #f9fafb;
+}
+
+.sn-sort-level.selected {
+    background: #e8f0fe;
+}
+
+.sn-sort-col-select {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sn-sort-col-select input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.sn-sort-col-column,
+.sn-sort-col-sortby,
+.sn-sort-col-order {
+    display: flex;
+    align-items: center;
+}
+
+.sn-sort-level-prefix {
+    font-size: 11px;
+    color: #888;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+/* 下拉框布局（基础样式继承自 modal.css 通用样式） */
+.sn-sort-level select {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 选项区域 */
+.sn-sort-options {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e5e5;
+}
+
+.sn-sort-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+}
+
+.sn-sort-option input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.sn-sort-option span {
+    user-select: none;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .sn-sort-dialog {
+        width: 100%;
+    }
+
+    .sn-sort-levels-header,
+    .sn-sort-level {
+        grid-template-columns: 24px 1fr;
+        gap: 6px;
+    }
+
+    .sn-sort-levels-header .sn-sort-col-sortby,
+    .sn-sort-levels-header .sn-sort-col-order {
+        display: none;
+    }
+
+    .sn-sort-level .sn-sort-col-column {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .sn-sort-level .sn-sort-col-sortby,
+    .sn-sort-level .sn-sort-col-order {
+        grid-column: 2;
+    }
+
+    .sn-sort-level-prefix {
+        margin-right: 0;
+        margin-bottom: 2px;
+    }
+
+    .sn-sort-options {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+/* 编辑自定义列表按钮 */
+.sn-sort-edit-custom {
+    padding: 2px 6px;
+    margin-left: 4px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    background: #fff;
+    font-size: 11px;
+    color: #666;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sn-sort-edit-custom:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+}
+
+/* 自定义列表弹窗 */
+.sn-sort-custom-list-popup {
+    position: fixed;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 10001;
+    display: none;
+    width: 300px;
+}
+
+.sn-sort-custom-list-popup.active {
+    display: block;
+}
+
+.sn-sort-custom-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    font-weight: 500;
+    font-size: 13px;
+    color: #333;
+}
+
+.sn-sort-custom-list-close {
+    border: none;
+    background: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.sn-sort-custom-list-close:hover {
+    color: #333;
+}
+
+.sn-sort-custom-list-presets {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.sn-sort-custom-list-presets label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+/* 自定义列表弹窗表单样式（弹窗在 modal 外，需独立定义） */
+.sn-sort-preset-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.sn-sort-preset-select:focus {
+    border-color: #4f7cf6;
+}
+
+.sn-sort-custom-list-input {
+    padding: 10px 12px;
+}
+
+.sn-sort-custom-list-input label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.sn-sort-custom-textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.sn-sort-custom-textarea:focus {
+    border-color: #4f7cf6;
+}
+
+.sn-sort-custom-textarea:hover:not(:focus) {
+    border-color: #bbb;
+}
+
+.sn-sort-custom-list-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid #e5e5e5;
+    background: #fafafa;
+    border-radius: 0 0 6px 6px;
+}
+
+.sn-sort-custom-apply {
+    background: #4f7cf6 !important;
+    border-color: #4f7cf6 !important;
+    color: #fff !important;
+}
+
+.sn-sort-custom-apply:hover {
+    background: #3d6be5 !important;
+}
+
+/* 次序列需要相对定位以容纳弹窗 */
+.sn-sort-col-order {
+    position: relative;
+}

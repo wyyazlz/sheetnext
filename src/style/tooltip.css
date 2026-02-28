@@ -1,0 +1,162 @@
+/* Tooltip container */
+.sn-tooltip-container {
+    position: absolute;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+.sn-tooltip-container.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Tooltip content */
+.sn-tooltip-content {
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    max-width: 300px;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Tooltip arrow */
+.sn-tooltip-arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+/* Top placement */
+.sn-tooltip-container[data-placement="top"] .sn-tooltip-arrow {
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px 5px 0 5px;
+    border-color: #333 transparent transparent transparent;
+}
+
+/* Bottom placement */
+.sn-tooltip-container[data-placement="bottom"] .sn-tooltip-arrow {
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 5px 5px 5px;
+    border-color: transparent transparent #333 transparent;
+}
+
+/* Left placement */
+.sn-tooltip-container[data-placement="left"] .sn-tooltip-arrow {
+    right: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 0 5px 5px;
+    border-color: transparent transparent transparent #333;
+}
+
+/* Right placement */
+.sn-tooltip-container[data-placement="right"] .sn-tooltip-arrow {
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 5px 5px 0;
+    border-color: transparent #333 transparent transparent;
+}
+
+/* Trigger element style */
+.sn-tooltip {
+    cursor: pointer;
+}
+
+/* Optional: Primary theme */
+.sn-tooltip-container.tooltip-primary .sn-tooltip-content {
+    background-color: #007bff;
+}
+
+.sn-tooltip-container.tooltip-primary[data-placement="top"] .sn-tooltip-arrow {
+    border-color: #007bff transparent transparent transparent;
+}
+
+.sn-tooltip-container.tooltip-primary[data-placement="bottom"] .sn-tooltip-arrow {
+    border-color: transparent transparent #007bff transparent;
+}
+
+.sn-tooltip-container.tooltip-primary[data-placement="left"] .sn-tooltip-arrow {
+    border-color: transparent transparent transparent #007bff;
+}
+
+.sn-tooltip-container.tooltip-primary[data-placement="right"] .sn-tooltip-arrow {
+    border-color: transparent #007bff transparent transparent;
+}
+
+/* Success theme */
+.sn-tooltip-container.tooltip-success .sn-tooltip-content {
+    background-color: #28a745;
+}
+
+.sn-tooltip-container.tooltip-success[data-placement="top"] .sn-tooltip-arrow {
+    border-color: #28a745 transparent transparent transparent;
+}
+
+.sn-tooltip-container.tooltip-success[data-placement="bottom"] .sn-tooltip-arrow {
+    border-color: transparent transparent #28a745 transparent;
+}
+
+.sn-tooltip-container.tooltip-success[data-placement="left"] .sn-tooltip-arrow {
+    border-color: transparent transparent transparent #28a745;
+}
+
+.sn-tooltip-container.tooltip-success[data-placement="right"] .sn-tooltip-arrow {
+    border-color: transparent #28a745 transparent transparent;
+}
+
+/* Warning theme */
+.sn-tooltip-container.tooltip-warning .sn-tooltip-content {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.sn-tooltip-container.tooltip-warning[data-placement="top"] .sn-tooltip-arrow {
+    border-color: #ffc107 transparent transparent transparent;
+}
+
+.sn-tooltip-container.tooltip-warning[data-placement="bottom"] .sn-tooltip-arrow {
+    border-color: transparent transparent #ffc107 transparent;
+}
+
+.sn-tooltip-container.tooltip-warning[data-placement="left"] .sn-tooltip-arrow {
+    border-color: transparent transparent transparent #ffc107;
+}
+
+.sn-tooltip-container.tooltip-warning[data-placement="right"] .sn-tooltip-arrow {
+    border-color: transparent #ffc107 transparent transparent;
+}
+
+/* Danger theme */
+.sn-tooltip-container.tooltip-danger .sn-tooltip-content {
+    background-color: #dc3545;
+}
+
+.sn-tooltip-container.tooltip-danger[data-placement="top"] .sn-tooltip-arrow {
+    border-color: #dc3545 transparent transparent transparent;
+}
+
+.sn-tooltip-container.tooltip-danger[data-placement="bottom"] .sn-tooltip-arrow {
+    border-color: transparent transparent #dc3545 transparent;
+}
+
+.sn-tooltip-container.tooltip-danger[data-placement="left"] .sn-tooltip-arrow {
+    border-color: transparent transparent transparent #dc3545;
+}
+
+.sn-tooltip-container.tooltip-danger[data-placement="right"] .sn-tooltip-arrow {
+    border-color: transparent #dc3545 transparent transparent;
+}

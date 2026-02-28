@@ -1,7 +1,7 @@
 {
-  "name": "sheetnext",
+  "name": "sheetnext-open",
   "version": "0.1.8",
-  "description": "A powerful spreadsheet editor library with AI capabilities",
+  "description": "SheetNext Open Edition (commercial-friendly and source available).",
   "homepage": "https://www.sheetnext.com",
   "repository": {
     "type": "git",
@@ -10,9 +10,9 @@
   "bugs": {
     "url": "https://github.com/wyyazlz/sheetnext/issues"
   },
+  "license": "Apache-2.0",
   "main": "dist/sheetnext.umd.js",
   "module": "dist/sheetnext.es.js",
-  "types": "types/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/sheetnext.es.js",
@@ -22,46 +22,34 @@
   },
   "files": [
     "dist",
-    "types",
+    "src",
+    "docs",
+    "examples",
     "README.md",
-    "DOCS.md",
-    "docs/logo.png",
-    "docs/demo.png"
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "NOTICE",
+    "THIRD_PARTY_LICENSES.md",
+    "OPEN_EDITION_SCOPE.md"
   ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "keywords": [
     "spreadsheet",
     "excel",
     "editor",
     "table",
-    "ai",
-    "canvas",
-    "data-grid",
-    "data-analysis",
-    "data-visualization",
-    "analytics",
-    "pivot-table",
-    "chart",
-    "business-intelligence",
-    "collaborative-editing"
+    "open-source",
+    "sheetnext"
   ],
-  "author": "SheetNext Team",
-  "license": "Apache-2.0",
   "dependencies": {
-    "echarts": "^6.0.0",
-    "fast-xml-parser": "^5.3.0",
-    "file-saver": "^2.0.5",
-    "jszip": "^2.6.1"
+    "fast-xml-parser": "^5.3.0"
   },
-  "peerDependencies": {
-    "@anthropic-ai/sdk": ">=0.65.0",
-    "openai": ">=6.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@anthropic-ai/sdk": {
-      "optional": true
-    },
-    "openai": {
-      "optional": true
-    }
+  "devDependencies": {
+    "vite": "^7.1.9"
   }
 }

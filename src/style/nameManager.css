@@ -1,0 +1,194 @@
+/* Name Manager Dialog */
+.sn-modal-body.sn-modal-body-nm {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sn-name-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-height: 320px;
+}
+
+.sn-nm-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sn-nm-btn {
+    padding: 5px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sn-nm-btn:hover:not(:disabled) {
+    border-color: #4f7cf6;
+    color: #4f7cf6;
+}
+
+.sn-nm-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sn-nm-filter {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+/* 表单组件布局（基础样式继承自 modal.css 通用样式） */
+.sn-nm-filter-select {
+    /* 继承通用样式 */
+}
+
+.sn-nm-table-wrap {
+    flex: 1;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    overflow: auto;
+    min-height: 0;
+}
+
+.sn-nm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.sn-nm-table th {
+    position: sticky;
+    top: 0;
+    background: #f5f5f5;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 500;
+    border-bottom: 1px solid #d9d9d9;
+    white-space: nowrap;
+}
+
+.sn-nm-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.sn-nm-row {
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.sn-nm-row:hover {
+    background: #f5f7ff;
+}
+
+.sn-nm-row.active {
+    background: #e6f0ff;
+}
+
+.sn-nm-empty {
+    text-align: center;
+    color: #999;
+    padding: 20px !important;
+}
+
+.sn-nm-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.sn-nm-ref-input {
+    flex: 1;
+    background: #f9f9f9;
+}
+
+/* Define Name Dialog */
+.sn-modal-body.sn-modal-body-dn {
+    overflow: visible;
+}
+
+.sn-define-name {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sn-dn-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sn-dn-row > label {
+    flex-shrink: 0;
+    width: 70px;
+    font-size: 13px;
+    color: #333;
+}
+
+.sn-dn-name,
+.sn-dn-comment,
+.sn-dn-scope,
+.sn-dn-ref {
+    flex: 1;
+}
+
+/* Use In Formula Dialog */
+.sn-use-formula {
+    max-height: 300px;
+    overflow: auto;
+}
+
+.sn-uf-list {
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sn-uf-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background 0.12s;
+}
+
+.sn-uf-item:last-child {
+    border-bottom: none;
+}
+
+.sn-uf-item:hover {
+    background: #f5f7ff;
+}
+
+.sn-uf-item.active {
+    background: #e6f0ff;
+}
+
+.sn-uf-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.sn-uf-ref {
+    font-size: 12px;
+    color: #888;
+}

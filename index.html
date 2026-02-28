@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SheetNext Open Edition Dev</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .sn-demo {
+            width: 100vw;
+            height: 100vh;
+            padding: 0 8px 8px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="sn-demo"></div>
+    <script type="module">
+        import SheetNext from './src/index.js';
+
+        new SheetNext(document.querySelector('.sn-demo'), {
+            locale: 'en-US'
+        });
+    </script>
+</body>
+</html>

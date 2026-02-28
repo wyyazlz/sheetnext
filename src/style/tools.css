@@ -1,0 +1,870 @@
+/**
+ * 工具栏样式
+ * 复刻Excel/WPS风格的Ribbon界面
+ */
+
+/* ==================== 面板 ==================== */
+.sn-tools-panel {
+    display: none;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.sn-tools-panel.active {
+    display: flex;
+    animation: panelFadeIn 0.2s ease;
+}
+
+@keyframes panelFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ==================== 工具组 ==================== */
+.sn-tools-group {
+    display: flex;
+    border-right: 1px solid #ddd;
+    padding: 0 5px;
+    min-width: 50px;
+}
+
+.sn-tools-group.last {
+    border-right: none;
+}
+
+.sn-tools-group-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 3px 0;
+}
+
+/* row 布局容器 - 让多个row垂直排列 */
+.sn-tools-rows {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+/* ==================== 大图标项 ==================== */
+.sn-tools-item.large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding:4px 5px;
+    min-width: 48px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+
+.sn-tools-item.large:hover {
+    background: #eee;
+}
+
+.sn-tools-item.large:active {
+    background: #ddd;
+}
+
+.sn-tools-item.large > .sn-svg {
+    font-size: 21px;
+    margin-bottom: 5px;
+}
+
+.sn-tools-item.large .sn-dropdown-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+}
+
+.sn-tools-item.large .sn-dropdown-toggle .sn-svg {
+    font-size: 21px;
+    margin-bottom: 5px;
+}
+
+.sn-tools-item-label {
+    font-size: 11px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* ==================== 小图标项 ==================== */
+.sn-tools-item.small {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 23px;
+    padding: 0 5px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+
+.sn-tools-item.small:not(.sn-split-btn):hover {
+    background: #eee;
+}
+
+.sn-tools-item.small:not(.sn-split-btn):active {
+    background: #ddd;
+}
+
+.sn-tools-item.small span {
+    font-size: 12px;
+    color: #333;
+    margin-left: 2px;
+}
+
+.sn-tools-item.small .sn-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+}
+
+/* ==================== 堆叠布局（垂直） ==================== */
+.sn-tools-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sn-tools-stack-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.sn-tools-stack-item:not(.sn-split-btn):hover {
+    background: #eee;
+}
+
+.sn-tools-stack-item:not(.sn-split-btn):active {
+    background: #ddd;
+}
+
+.sn-tools-stack-item .sn-svg {
+    text-align: center;
+}
+
+.sn-tools-stack-item .sn-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    height: 100%;
+}
+
+.sn-tools-stack-item .sn-dropdown-toggle .sn-svg {
+    text-align: center;
+}
+
+.sn-tools-stack-item .sn-dropdown-toggle span {
+    flex: 1;
+}
+
+/* ==================== 行布局（水平） ==================== */
+.sn-tools-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* ==================== 下拉框 ==================== */
+.sn-tools-dropdown.inline {
+    display: flex;
+    align-items: center;
+    height: 22px;
+}
+
+.sn-tools-dropdown.inline .sn-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    border: 1px solid #d4d4d4;
+    border-radius: 3px;
+    background: #fff;
+    font-size: 12px;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.sn-tools-dropdown.inline .sn-dropdown-toggle span {
+    flex: 1;
+    text-align: left;
+}
+
+.sn-tools-dropdown.inline .sn-dropdown-toggle .sn-arrow {
+    margin-left: auto;
+}
+
+.sn-tools-dropdown.inline .sn-dropdown-toggle:hover {
+    border-color: #9e9e9e;
+    background: #eee;
+}
+
+/* ==================== 组合框（可搜索下拉） ==================== */
+.sn-combobox {
+    display: flex;
+    align-items: stretch;
+    height: 22px;
+    border: 1px solid #d4d4d4;
+    border-radius: 3px;
+    background: #fff;
+    transition: border-color 0.15s;
+}
+
+.sn-combobox:hover,
+.sn-combobox:focus-within {
+    border-color: #9e9e9e;
+}
+
+.sn-combobox:hover .sn-combobox-arrow,
+.sn-combobox:focus-within .sn-combobox-arrow {
+    border-left-color: #9e9e9e;
+}
+
+.sn-combobox-main {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.sn-combobox-main .sn-svg {
+    font-size: 16px;
+    color: #666;
+}
+
+.sn-combobox-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: #333;
+    padding: 0;
+}
+
+.sn-combobox-input::placeholder {
+    color: #999;
+}
+
+.sn-combobox-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border-left: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.sn-combobox-arrow:hover {
+    background: rgba(0,0,0,0.06);
+}
+
+/* ==================== 下拉箭头 ==================== */
+.sn-arrow {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin-left: 2px;
+    margin-top: -1px;
+    border-right: 1.3px solid currentColor;
+    border-bottom: 1.3px solid currentColor;
+    color: #666;
+    transform: rotate(45deg);
+    transform-origin: center;
+}
+
+/* ==================== 分裂按钮 ==================== */
+/* 水平分裂按钮 */
+.sn-split-btn {
+    display: flex;
+    align-items: stretch;
+    border-radius: 3px;
+    height: 23px;
+}
+
+.sn-split-btn:hover {
+    outline: 1px solid #c0c0c0;
+    outline-offset: -1px;
+}
+
+.sn-split-btn-main {
+    display: flex;
+    align-items: center;
+    padding: 0 1px 0 2px;
+    cursor: pointer;
+    border-radius: 3px 0 0 3px;
+    transition: background 0.15s;
+}
+
+.sn-split-btn:hover .sn-split-btn-main:hover {
+    background: rgba(0,0,0,0.08);
+}
+
+.sn-split-btn[data-color-type] .sn-split-btn-main {
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    padding: 2px 3px 1px;
+}
+
+.sn-split-btn[data-color-type] .sn-color-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.sn-split-btn-arrow {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 0 3px 3px 0;
+    border-left: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.sn-split-btn:hover .sn-split-btn-arrow {
+    border-left-color: #c0c0c0;
+}
+
+.sn-split-btn:hover .sn-split-btn-arrow:hover {
+    background: rgba(0,0,0,0.08);
+}
+
+.sn-split-btn-arrow .sn-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px 0 1px;
+    width: 100%;
+    height: 100%;
+}
+
+/* stack 中的分裂按钮样式 */
+.sn-split-btn.sn-stack-split .sn-split-btn-main {
+    flex: 1;
+    padding: 2px 6px;
+    font-size: 12px;
+    color: #333;
+    white-space: nowrap;
+}
+
+.sn-split-btn.sn-stack-split .sn-split-btn-main span {
+    flex: 1;
+}
+
+.sn-split-btn.sn-stack-split .sn-split-btn-arrow .sn-dropdown-toggle {
+    padding: 0 4px;
+}
+
+/* ==================== 复选框 ==================== */
+.sn-tools-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #333;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.sn-tools-checkbox:hover {
+    background: #e8e8e8;
+}
+
+.sn-tools-checkbox input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    margin: 0;
+}
+
+.sn-tools-checkbox input[type="checkbox"]:hover {
+    border-color: #555;
+}
+
+.sn-tools-checkbox input[type="checkbox"]:checked {
+    background: #36c;
+    border-color: #36c;
+}
+
+.sn-tools-checkbox input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* ==================== Dropdown 类型的 tools-item 修复 ==================== */
+/* 外层去掉 padding 和 hover，让 toggle 完全覆盖 */
+.sn-dropdown.sn-tools-item.large {
+    padding: 0;
+}
+.sn-dropdown.sn-tools-item.large:hover {
+    background: transparent;
+}
+.sn-dropdown.sn-tools-item.large .sn-dropdown-toggle {
+    padding: 4px 5px;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+.sn-dropdown.sn-tools-item.large .sn-dropdown-toggle:hover {
+    background: #eee;
+}
+.sn-dropdown.sn-tools-item.large .sn-dropdown-toggle:active {
+    background: #ddd;
+}
+
+.sn-dropdown.sn-tools-item.small {
+    padding: 0;
+}
+.sn-dropdown.sn-tools-item.small:hover {
+    background: transparent;
+}
+.sn-dropdown.sn-tools-item.small .sn-dropdown-toggle {
+    padding: 0 5px;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+.sn-dropdown.sn-tools-item.small .sn-dropdown-toggle:hover {
+    background: #eee;
+}
+.sn-dropdown.sn-tools-item.small .sn-dropdown-toggle:active {
+    background: #ddd;
+}
+
+.sn-dropdown.sn-tools-stack-item {
+    padding: 0;
+}
+.sn-dropdown.sn-tools-stack-item:hover {
+    background: transparent;
+}
+.sn-dropdown.sn-tools-stack-item .sn-dropdown-toggle {
+    padding: 4px 6px;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+.sn-dropdown.sn-tools-stack-item .sn-dropdown-toggle:hover {
+    background: #eee;
+}
+.sn-dropdown.sn-tools-stack-item .sn-dropdown-toggle:active {
+    background: #ddd;
+}
+
+/* ==================== 工具栏按钮选中状态 ==================== */
+.sn-tools-item.sn-btn-selected,
+.sn-split-btn.sn-btn-selected .sn-split-btn-main {
+    background: #d0e0f0;
+    border-color: #a0c0e0;
+}
+
+.sn-tools-item.sn-btn-selected:hover,
+.sn-split-btn.sn-btn-selected .sn-split-btn-main:hover {
+    background: #c0d8ec;
+}
+
+/* ==================== 工具栏按钮禁用状态 ==================== */
+.sn-item-disabled,
+.sn-item-disabled * {
+    cursor: not-allowed !important;
+}
+
+.sn-item-disabled .sn-svg,
+.sn-item-disabled .sn-arrow,
+.sn-item-disabled span,
+.sn-item-disabled label,
+.sn-item-disabled input,
+.sn-item-disabled .sn-combobox-input,
+.sn-item-disabled .sn-combobox-input::placeholder {
+    color: #999 !important;
+}
+
+.sn-item-disabled .sn-color-bar {
+    background: #999 !important;
+    border-color: #999 !important;
+}
+
+.sn-item-disabled:hover,
+.sn-item-disabled:active,
+.sn-item-disabled .sn-dropdown-toggle:hover,
+.sn-item-disabled .sn-dropdown-toggle:active,
+.sn-item-disabled .sn-split-btn-main:hover,
+.sn-item-disabled .sn-split-btn-main:active,
+.sn-item-disabled .sn-split-btn-arrow:hover,
+.sn-item-disabled .sn-split-btn-arrow:active {
+    background: transparent !important;
+}
+
+.sn-item-disabled:hover {
+    outline: none !important;
+}
+
+.sn-combobox.sn-item-disabled:hover,
+.sn-combobox.sn-item-disabled:focus-within {
+    border-color: #d4d4d4 !important;
+}
+
+.sn-combobox.sn-item-disabled:hover .sn-combobox-arrow,
+.sn-combobox.sn-item-disabled:focus-within .sn-combobox-arrow {
+    border-left-color: transparent !important;
+}
+
+/* 颜色选择器颜色条 */
+.sn-color-bar {
+    display: block;
+    width: 16px;
+    height: 5px;
+    margin-top: -4px;
+    background: #000;
+    border-radius: 1px;
+    border: 1px solid #999;
+}
+
+.sn-split-btn[data-color-type="font"] .sn-color-bar {
+    background: var(--sn-font-color, #FF0000);
+}
+
+.sn-split-btn[data-color-type="fill"] .sn-color-bar {
+    background: var(--sn-fill-color, #FFFF00);
+}
+
+.sn-split-btn[data-color-empty="true"] .sn-color-bar {
+    background: transparent;
+    border: 1px solid #a0a0a0;
+    height: 2px;
+}
+
+/* ==================== 带标签的输入框（两行布局） ==================== */
+.sn-tools-label-input {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 4px 6px;
+    min-width: 60px;
+}
+
+.sn-tools-label-input label {
+    font-size: 12px;
+    color: #333;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.sn-tools-label-input input {
+    width: 110px;
+    padding: 2px 6px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.sn-tools-label-input input:focus {
+    border-color: #36c;
+}
+
+/* ==================== 高亮面板 ==================== */
+.sn-highlight-panel {
+    padding: 8px;
+}
+
+.sn-hl-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.sn-hl-row:last-child {
+    margin-bottom: 0;
+}
+
+.sn-hl-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.sn-hl-btn:hover {
+    border-color: #999;
+}
+
+.sn-hl-btn.sn-btn-selected {
+    border: 2px solid #36c;
+}
+
+.sn-hl-off {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    color: #999;
+    font-size: 12px;
+}
+
+/* 高亮按钮激活状态 */
+.sn-dropdown.sn-hl-active > .sn-dropdown-toggle,
+.sn-dropdown.sn-hl-active > .sn-sheets-btn {
+    background: #d0e0f0;
+    border-radius: 3px;
+}
+
+
+/* ==================== Minimal Toolbar Mode ==================== */
+.sn-toolbar-minimal .sn-tools-panel {
+    flex-wrap: nowrap;
+    overflow: visible;
+    gap: 0;
+}
+
+.sn-toolbar-minimal .sn-tools-group {
+    border-right: none;
+    padding: 0 2px;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.sn-toolbar-minimal .sn-tools-group-content {
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 2px 0;
+    gap: 5px;
+}
+
+.sn-toolbar-minimal .sn-tools-stack,
+.sn-toolbar-minimal .sn-tools-rows {
+    flex-direction: row;
+    gap: 5px;
+}
+
+.sn-toolbar-minimal .sn-tools-row {
+    gap: 5px;
+}
+
+/* 所有项：统一尺寸，icon ↔ text 5px */
+.sn-toolbar-minimal .sn-tools-item.large,
+.sn-toolbar-minimal .sn-tools-item.small,
+.sn-toolbar-minimal .sn-tools-stack-item,
+.sn-toolbar-minimal .sn-dropdown.sn-tools-item.large,
+.sn-toolbar-minimal .sn-dropdown.sn-tools-item.small {
+    min-width: 22px;
+    height: 23px;
+    gap: 5px;
+}
+
+/* small/stack 下拉 toggle：icon ↔ arrow 2px */
+.sn-toolbar-minimal .sn-tools-stack-item .sn-dropdown-toggle,
+.sn-toolbar-minimal .sn-tools-item.small .sn-dropdown-toggle,
+.sn-toolbar-minimal .sn-dropdown.sn-tools-item.large .sn-dropdown-toggle {
+    gap: 2px;
+}
+
+/* 下拉 toggle 内文本标签：补足 icon ↔ text 到 5px（2px gap + 3px margin） */
+.sn-toolbar-minimal .sn-tools-stack-item .sn-dropdown-toggle > .sn-minimal-text-label,
+.sn-toolbar-minimal .sn-tools-item.small .sn-dropdown-toggle > .sn-minimal-text-label,
+.sn-toolbar-minimal .sn-dropdown.sn-tools-item.large .sn-dropdown-toggle > .sn-minimal-text-label {
+    margin-left: 3px;
+}
+
+
+
+/* large 项：横向布局，icon ↔ text 5px */
+.sn-toolbar-minimal .sn-tools-item.large {
+    flex-direction: row;
+    gap: 5px;
+}
+
+.sn-toolbar-minimal .sn-dropdown.sn-tools-item.large .sn-dropdown-toggle {
+    flex-direction: row;
+}
+
+/* large 项：图标尺寸 */
+.sn-toolbar-minimal .sn-tools-item.large > .sn-svg,
+.sn-toolbar-minimal .sn-tools-item.large .sn-dropdown-toggle .sn-svg {
+    font-size: 16px;
+    margin-bottom: 0;
+}
+
+/* 隐藏标签（large 项用 font-size:0 保留箭头可见；small/stack 项直接隐藏） */
+.sn-toolbar-minimal .sn-tools-item-label {
+    font-size: 0;
+    line-height: 0;
+}
+
+.sn-toolbar-minimal .sn-tools-item.small > span,
+.sn-toolbar-minimal .sn-tools-item.small > .sn-dropdown-toggle > span,
+.sn-toolbar-minimal .sn-tools-stack-item > span,
+.sn-toolbar-minimal .sn-tools-stack-item > .sn-dropdown-toggle > span {
+    display: none;
+}
+
+/* 显示极简文本标签 */
+.sn-toolbar-minimal .sn-minimal-text-label {
+    display: inline-flex !important;
+    align-items: center;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* 复选框 & 标签输入 */
+.sn-toolbar-minimal .sn-tools-checkbox {
+    padding: 2px 4px;
+}
+
+.sn-toolbar-minimal .sn-tools-label-input {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+    min-width: 0;
+    padding: 0 4px;
+}
+
+.sn-toolbar-minimal .sn-tools-label-input label {
+    margin-bottom: 0;
+}
+
+/* 组合框：minimal 下 rows 变为横向，main 需保持原始宽度不塌缩 */
+.sn-toolbar-minimal .sn-combobox-main {
+    flex: 0 0 auto;
+}
+
+.sn-tools-checkbox input[type="checkbox"]:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.sn-tools-checkbox input[type="checkbox"]:disabled ~ span {
+    color: #999;
+}
+
+.sn-toolbar-more {
+    position: relative;
+    flex: 0 0 auto;
+    display: none;
+    align-self: center;
+    align-items: center;
+    height: auto;
+    min-width: auto;
+    margin-left: auto;
+    padding: 0 2px;
+    cursor: pointer;
+}
+
+.sn-toolbar-more-toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    color: #999;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.sn-toolbar-more-toggle .sn-svg {
+    font-size: 10px !important;
+}
+
+.sn-toolbar-overflow-menu {
+    position: fixed;
+    min-width: 280px;
+    max-width: min(80vw, 900px);
+    overflow: visible;
+    padding: 6px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+    z-index: 1001;
+}
+
+.sn-toolbar-more.active .sn-toolbar-overflow-menu {
+    display: flex;
+}
+
+.sn-toolbar-overflow-menu .sn-tools-group {
+    border-right: none;
+    padding: 0 4px 0 0;
+}
+
+.sn-toolbar-overflow-menu .sn-tools-group-content {
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.sn-tab-overflow {
+    flex: 0 0 auto;
+    display: none;
+}
+
+.sn-tab-overflow .sn-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 28px;
+    padding: 0 8px;
+    color: #333;
+    border-radius: 3px;
+}
+
+.sn-tab-overflow .sn-dropdown-toggle:hover {
+    background: #f5f5f5;
+}
+
+.sn-tab-overflow-menu li.active {
+    color: #36c;
+    font-weight: 500;
+}
+
+
+

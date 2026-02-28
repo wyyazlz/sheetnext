@@ -1,0 +1,145 @@
+/* 公式审核样式 */
+
+/* 错误检查对话框 */
+.sn-error-check {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sn-error-summary {
+    font-size: 13px;
+    color: #666;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.sn-error-list {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+}
+
+.sn-error-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    gap: 12px;
+    transition: background 0.12s;
+}
+
+.sn-error-item:last-child {
+    border-bottom: none;
+}
+
+.sn-error-item:hover {
+    background: #f5f7ff;
+}
+
+.sn-error-item.active {
+    background: #e6f0ff;
+}
+
+.sn-error-ref {
+    font-weight: 500;
+    min-width: 50px;
+    color: #333;
+}
+
+.sn-error-type {
+    color: #c44444;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+.sn-error-formula {
+    flex: 1;
+    color: #666;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 公式求值对话框 */
+.sn-formula-eval {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sn-eval-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.sn-eval-row > label {
+    flex-shrink: 0;
+    color: #666;
+    min-width: 70px;
+}
+
+.sn-eval-formula {
+    font-family: 'Consolas', 'Monaco', monospace;
+    color: #333;
+    word-break: break-all;
+}
+
+.sn-eval-steps {
+    background: #f5f5f5;
+    border-radius: 4px;
+    padding: 8px 12px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.sn-eval-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.sn-eval-ref {
+    font-family: 'Consolas', 'Monaco', monospace;
+    color: #4472C4;
+    font-weight: 500;
+}
+
+.sn-eval-arrow {
+    color: #999;
+}
+
+.sn-eval-val {
+    color: #333;
+}
+
+.sn-eval-empty {
+    color: #999;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.sn-eval-replaced {
+    font-family: 'Consolas', 'Monaco', monospace;
+    color: #666;
+    word-break: break-all;
+}
+
+.sn-eval-result-row {
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+    margin-top: 4px;
+}
+
+.sn-eval-result {
+    font-weight: 600;
+    color: #2e7d32;
+    font-size: 14px;
+}
