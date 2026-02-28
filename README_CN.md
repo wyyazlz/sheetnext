@@ -1,7 +1,6 @@
 <p align="center">
   <img src="docs/logo.png" alt="SheetNext Logo" width="80" />
 </p>
-<h1 align="center">SheetNext</h1>
 
 <p align="center">
   一款纯前端、媲美 Excel 的电子表格控件，内置原生 AI 工作流，可灵活接入大模型进行数据操作。
