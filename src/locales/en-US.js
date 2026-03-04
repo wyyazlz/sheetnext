@@ -915,7 +915,7 @@ const enUS = {
         "panel": {
             "examples": {
                 "item1": "Analyze the current sheet data, generate a chart, and provide key insights on a new sheet.",
-                "item2": "Generate a meeting notes template.",
+                "item2": "Generate a more detailed meeting notes template.",
                 "item3": "Highlight employees with salary above 10,000 using conditional formatting.",
                 "item4": "Generate a styled 2030 calendar: three months per row, distinct block colors, spacer rows/cols, and highlighted weekends.",
                 "item5": "Use SUMIF to summarize sales by department and generate a department summary table.",

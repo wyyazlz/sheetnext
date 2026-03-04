@@ -284,12 +284,16 @@ const SN = new SheetNext(document.querySelector('#SNContainer'));
 | --- | --- | --- | --- | --- |
 | event | - | Yes | - | - |
 
-##### `listenRequestStatus(callback)`
+##### Events (via `SN.Event`)
 
-**Parameters**
-| Name | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| callback | - | Yes | - | - |
+| Event | Timing | Notes |
+| --- | --- | --- |
+| `beforeAIRequest` | Before request is sent | Async hook, supports `e.cancel(reason)` |
+| `aiRequestStart` | Request started | Includes request metadata |
+| `aiRequestChunk` | Streaming chunk received | Fired for each parsed SSE chunk |
+| `afterAIRequest` | Request succeeded | Async hook with final result |
+| `aiRequestError` | Request failed | Async hook with error and status |
+| `aiRequestFinally` | Always after request ends | Async hook for cleanup/metrics |
 
 ##### `async screenshot(addresses = [])`
 

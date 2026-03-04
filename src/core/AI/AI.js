@@ -10,10 +10,6 @@ export default class AI {
         this._SN = SN;
     }
 
-    listenRequestStatus() {
-        return () => {};
-    }
-
     chatInput() {
         return notifyUnavailable(this._SN);
     }

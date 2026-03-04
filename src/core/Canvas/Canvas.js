@@ -16,6 +16,9 @@ import LazyDOM from '../Layout/LazyDOM.js';
 const INPUT_VISIBLE_Z_INDEX = '999';
 const INPUT_HIDDEN_Z_INDEX = '-1';
 
+const _clm = new WeakMap();
+export const _cgl = (canvas) => _clm.get(canvas);
+
 /**
  * 画布渲染与交互管理
  * @title 🖱️ 绑定操作
@@ -25,13 +28,15 @@ export default class Canvas {
 
     /**
      * @param {Object} SN - SheetNext 主实例
+     * @param {Object} license
      */
-    constructor(SN) {
+    constructor(SN, license) {
         /**
          * SheetNext 主实例
          * @type {Object}
          */
         this.SN = SN
+        _clm.set(this, license);
         /**
          * 工具方法集合
          * @type {Utils}

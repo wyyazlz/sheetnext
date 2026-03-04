@@ -4,6 +4,7 @@
  */
 
 import { syncToolbarState } from '../Layout/ToolbarBuilder.js';
+import { _cgl } from './Canvas.js';
 import { getFormulaBarValue } from './helpers.js';
 
 // 获取高亮信息（选中区域的行列）
@@ -401,7 +402,7 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
         this.ctx.drawImage(this.buffer, 0, 0); // 将缓冲区内容复制到显示画布上
 
         // 绘制水印
-        this.SN.License?._drawWatermark(this.ctx, this.showLayer.width, this.showLayer.height, this.dpr);
+        _cgl(this)?._drawWatermark(this.ctx, this.showLayer.width, this.showLayer.height, this.dpr);
 
         // 绘制追踪箭头
         this.renderTraceArrows(sheet);

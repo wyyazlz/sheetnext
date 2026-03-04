@@ -152,7 +152,7 @@ export async function loadFromLocal() {
         const time = new Date(saveData.t).toLocaleString();
         const name = saveData.n || '未命名';
 
-        await SN.Utils.modal({
+        const modalResult = await SN.Utils.modal({
             titleKey: 'action.storage.modal.restore.title',
             title: SN.t('action.storage.modal.restore.title'),
             content: SN.t('action.storage.modal.restore.content', { name, time }),
@@ -161,6 +161,7 @@ export async function loadFromLocal() {
             cancelKey: 'common.cancel',
             cancelText: SN.t('common.cancel')
         });
+        if (!modalResult) return;
 
         // 解压
         const jsonStr = decompress(saveData.d);
@@ -174,7 +175,6 @@ export async function loadFromLocal() {
             SN.Utils.toast(SN.t('action.storage.toast.msg005'));
         }
     } catch (e) {
-        if (e?.message === 'cancel') return;
         console.error('恢复失败:', e);
         SN.Utils.toast(SN.t('action.storage.toast.restoreFailed', { message: e.message }));
     }

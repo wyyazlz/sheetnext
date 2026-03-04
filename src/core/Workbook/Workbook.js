@@ -35,6 +35,7 @@ import "../../style/slicer.css"
 class SheetNext {
     static _instanceCounter = 0;
     static _pendingLocalesConsumed = false;
+    #license = null;
 
     /** @param {string} locale @param {Object} messages @returns {typeof SheetNext} */
     static registerLocale(locale, messages) {
@@ -77,19 +78,19 @@ class SheetNext {
         this.properties = {}
 
         this.Event = new EventEmitter()
-        this.License = new License(this, options.licenseKey)
+        this.#license = new License(this, options.licenseKey)
         this.Utils = new Utils(this)
         this.I18n = this._createI18n(options)
         this.Print = new Print(this)
         this.Action = new Action(this)
         this.Layout = new Layout(this, options)
-        this.AI = new AI(this, options)
+        this.AI = new AI(this, options, this.#license)
         this.Xml = new Xml(this)
-        this.IO = new IO(this)
+        this.IO = new IO(this, this.#license)
         this.Formula = new Formula(this)
         this.DependencyGraph = new DependencyGraph(this)
         this.UndoRedo = new UndoRedo(this)
-        this.Canvas = new Canvas(this)
+        this.Canvas = new Canvas(this, this.#license)
 
         this._readOnly = false
         this._activeSheet = null
@@ -318,7 +319,12 @@ class SheetNext {
 
     _setupGlobalNamespace() {
         const namespace = `SN_${SheetNext._instanceCounter++}`;
-        window[namespace] = this;
+        Object.defineProperty(window, namespace, {
+            value: this,
+            writable: false,
+            configurable: false,
+            enumerable: false
+        });
         return namespace;
     }
 
