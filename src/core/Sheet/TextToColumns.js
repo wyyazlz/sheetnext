@@ -100,6 +100,7 @@ function _splitTextByDelimiters(text, delimiters, options = {}) {
     return tokens;
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function textToColumns(range, options = {}) {
     const sourceRange = _normalizeRange(this, range);
     if (sourceRange.s.c !== sourceRange.e.c) {

@@ -1,6 +1,6 @@
 /**
- * 键盘事件处理模块
- * 调用 Action 层的剪贴板方法
+ * Keyboard Event Processing Module
+ * Calling the Action Layer's Clipboard Method
  */
 
 // 键盘按下
@@ -216,8 +216,8 @@ export function docKeyDown(event) {
 }
 
 /**
- * 粘贴事件处理
- * 支持 HTML 样式解析和图片粘贴
+ * Paste event handling
+ * Supports HTML style parsing and image pasting
  */
 export function docPaste(event) {
     // 检查焦点状态
@@ -232,7 +232,7 @@ export function docPaste(event) {
 }
 
 /**
- * 复制事件处理（用于拦截浏览器默认复制）
+ * Copy event handling (for blocking browser default copy)
  */
 export function docCopy(event) {
     // 检查焦点状态：只有焦点在隐藏输入框且未激活编辑时才处理
@@ -252,7 +252,7 @@ export function docCopy(event) {
 }
 
 /**
- * 剪切事件处理
+ * Cut Event Handling
  */
 export function docCut(event) {
     // 检查焦点状态：只有焦点在隐藏输入框且未激活编辑时才处理

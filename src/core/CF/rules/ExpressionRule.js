@@ -1,14 +1,17 @@
 /**
- * Expression规则 - 自定义公式
+ * Expression Rule - Custom Formula
  */
 import { CFRule } from '../CFRule.js';
 
 export class ExpressionRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {string} */
         this.formula = config.formula || '';
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         if (!this.formula) return false;
 

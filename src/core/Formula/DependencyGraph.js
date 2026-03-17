@@ -1,23 +1,25 @@
 /**
- * DependencyGraph - 公式依赖链管理器
+ * DependencyGraph - Formula Dependency Chain Manager
  *
- * 功能：
- * 1. 追踪单元格之间的依赖关系
- * 2. 自动计算受影响的单元格
- * 3. 检测循环引用
- * 4. 拓扑排序确保正确的计算顺序
- * 5. 支持跨工作表引用
- * 6. Volatile 函数支持（RAND, TODAY, NOW 等）
+ * Features:
+ * 1. Track dependencies between cells
+ * 2. Automatically calculate affected cells
+ * 3. Detect circular references
+ * 4. Topological ranking ensures correct calculation order
+ * 5. Support cross-sheet references
+ * 6. Volatile function support (Rand, today, now, etc.)
  *
- * 性能优化：
- * - 使用Map/Set实现O(1)复杂度的增删查
- * - 增量更新，只重算受影响的单元格
- * - 批量更新模式减少重复计算
- * - 缓存拓扑排序结果
+ * Performance Optimization:
+ * - Addition and deletion of O (1) complexity using Map/Set
+ * - Incremental updates, only affected cells are recalculated
+ * - Batch update mode reduces double counting
+ * - Cache topology sort results
  */
 
 export default class DependencyGraph {
+    /** @param {import('../Workbook/Workbook.js').default} SN */
     constructor(SN) {
+        /** @type {import('../Workbook/Workbook.js').default} */
         this.SN = SN;
 
         // 核心数据结构
@@ -42,19 +44,19 @@ export default class DependencyGraph {
     }
 
     /**
-     * 生成单元格唯一键
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
-     * @returns {string} 唯一键，格式: "sheetName!R{r}C{c}"
+     * Generate Cell Unique Key
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
+     * @ returns {string} unique key in the format: "sheetName!R {r} C {c} "
      */
     cellKey(sheetName, r, c) {
         return `${sheetName}!R${r}C${c}`;
     }
 
     /**
-     * 解析单元格键
-     * @param {string} key - 单元格键
+     * Parse Cell Key
+     * @param {string} key - Cell Keys
      * @returns {{sheetName: string, r: number, c: number}}
      */
     parseKey(key) {
@@ -68,10 +70,10 @@ export default class DependencyGraph {
     }
 
     /**
-     * 注册 Volatile 单元格
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
+     * Register Volatile Cells
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
      */
     registerVolatile(sheetName, r, c) {
         const key = this.cellKey(sheetName, r, c);
@@ -79,10 +81,10 @@ export default class DependencyGraph {
     }
 
     /**
-     * 取消注册 Volatile 单元格
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
+     * Unregister Volatile Cells
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
      */
     unregisterVolatile(sheetName, r, c) {
         const key = this.cellKey(sheetName, r, c);
@@ -90,10 +92,10 @@ export default class DependencyGraph {
     }
 
     /**
-     * 检查单元格是否为 Volatile
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
+     * Check if the cell is Volatile
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
      * @returns {boolean}
      */
     isVolatile(sheetName, r, c) {
@@ -102,9 +104,9 @@ export default class DependencyGraph {
     }
 
     /**
-     * 重算所有 Volatile 单元格及其依赖链
-     * 这是 Volatile 机制的核心方法
-     * 调用时机：用户编辑任何单元格后、手动触发重算时
+     * Recalculate all Volatile cells and their dependency chains
+     * This is the core approach of the Volatile mechanism
+     * When to call: When the user manually triggers a recalculation after editing any cell
      */
     recalculateVolatile() {
         if (this.volatileCells.size === 0) return;
@@ -149,7 +151,7 @@ export default class DependencyGraph {
     }
 
     /**
-     * 获取 Volatile 单元格数量
+     * Get Volatile cell count
      * @returns {number}
      */
     get volatileCount() {
@@ -157,9 +159,9 @@ export default class DependencyGraph {
     }
 
     /**
-     * 添加依赖关系
-     * @param {string} fromKey - 依赖方单元格键（公式单元格）
-     * @param {string} toKey - 被依赖方单元格键（引用单元格）
+     * Add dependency
+     * @param {string} fromKey - Dependent Cell Key (Formula Cell)
+     * @param {string} toKey - Dependent Party Cell Key (Reference Cell)
      */
     addDependency(fromKey, toKey) {
         // 正向依赖：fromKey依赖toKey
@@ -176,9 +178,9 @@ export default class DependencyGraph {
     }
 
     /**
-     * 移除依赖关系
-     * @param {string} fromKey - 依赖方单元格键
-     * @param {string} toKey - 被依赖方单元格键（可选，不传则移除所有）
+     * Remove dependency
+     * @param {string} fromKey - Relying Party Cell Key
+     * @param {string} toKey - Dependent party cell key (optional, remove all if not passed)
      */
     removeDependency(fromKey, toKey = null) {
         if (toKey) {
@@ -198,9 +200,9 @@ export default class DependencyGraph {
     }
 
     /**
-     * 更新单元格的依赖关系
-     * 当单元格公式改变时调用
-     * @param {Cell} cell - 单元格对象
+     * Update Cell Dependencies
+     * Called when the cell formula changes
+     * @param {Cell} cell - Cell Object
      */
     updateDependencies(cell) {
         const sheetName = cell.row.sheet.name;
@@ -247,9 +249,9 @@ export default class DependencyGraph {
     }
 
     /**
-     * 获取受影响的单元格（递归获取所有依赖链）
-     * @param {string} cellKey - 改变的单元格键
-     * @returns {Set<string>} 受影响的单元格键集合
+     * get affected cells (recursively get all dependency chains)
+     * @param {string} cellKey - changed cell keys
+     * @ returns {Set<string>} set of affected cell keys
      */
     getAffectedCells(cellKey) {
         const affected = new Set();
@@ -275,9 +277,9 @@ export default class DependencyGraph {
     }
 
     /**
-     * 拓扑排序 - 确定计算顺序
-     * @param {Set<string>} cellKeys - 需要排序的单元格键集合
-     * @returns {Array<string>} 排序后的单元格键数组
+     * Topology Sorting - Determine Calculation Order
+     * @param {Set<string>} cellKeys - Collection of cell keys that need to be sorted
+     * @ returns {Array<string>} Sorted Cell Key Array
      */
     topologicalSort(cellKeys) {
         const sorted = [];
@@ -324,10 +326,11 @@ export default class DependencyGraph {
     }
 
     /**
-     * 检测循环引用
-     * @param {string} fromKey - 起始单元格
-     * @param {string} toKey - 目标单元格
-     * @returns {boolean} 是否存在循环
+     * Detection Cycle Reference
+     * @param {string} fromKey - starting cell
+     * @param {string} toKey - target cell
+Is there a cycle for
+     * @ returns {boolean}
      */
     detectCycle(fromKey, toKey) {
         if (fromKey === toKey) return true;
@@ -354,7 +357,7 @@ export default class DependencyGraph {
     }
 
     /**
-     * 开始批量更新模式
+     * Start Batch Update Mode
      */
     startBatch() {
         this.batchMode = true;
@@ -362,7 +365,8 @@ export default class DependencyGraph {
     }
 
     /**
-     * 结束批量更新模式并执行所有更新
+     * ends bulk update mode and performs all updates
+Trigger update when
      */
     endBatch() {
         this.batchMode = false;
@@ -390,10 +394,10 @@ export default class DependencyGraph {
     }
 
     /**
-     * 单元格值改变时触发更新
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
+     * cell value changes
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
      */
     notifyChange(sheetName, r, c) {
         const cellKey = this.cellKey(sheetName, r, c);
@@ -428,8 +432,8 @@ export default class DependencyGraph {
     }
 
     /**
-     * 重建整个工作表的依赖关系
-     * @param {Sheet} sheet - 工作表对象
+     * Rebuilding dependencies across worksheets
+     * @param {Sheet} sheet - Sheet Objects
      */
     rebuildForSheet(sheet) {
         const sheetName = sheet.name;
@@ -460,7 +464,7 @@ export default class DependencyGraph {
     }
 
     /**
-     * 重建所有工作表的依赖关系
+     * Rebuild dependencies for all worksheets
      */
     rebuildAll() {
         // 清空所有依赖
@@ -475,11 +479,11 @@ export default class DependencyGraph {
     }
 
     /**
-     * 获取单元格的直接依赖（我依赖谁）
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
-     * @returns {Array} 依赖的单元格数组
+     * Get direct dependencies on cells (who I depend on)
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
+     * @ returns {Array} dependent array of cells
      */
     getDependencies(sheetName, r, c) {
         const key = this.cellKey(sheetName, r, c);
@@ -490,11 +494,11 @@ export default class DependencyGraph {
     }
 
     /**
-     * 获取单元格的直接依赖者（谁依赖我）
-     * @param {string} sheetName - 工作表名
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
-     * @returns {Array} 依赖者的单元格数组
+     * Get the direct dependents of a cell (who depends on me)
+     * @param {string} sheetName - Sheet name
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
+     * @ returns {Array} Dependent Cell Array
      */
     getDependents(sheetName, r, c) {
         const key = this.cellKey(sheetName, r, c);
@@ -505,7 +509,7 @@ export default class DependencyGraph {
     }
 
     /**
-     * 清空所有依赖关系
+     * Clear all dependencies
      */
     clear() {
         this.dependencies.clear();
@@ -515,7 +519,7 @@ export default class DependencyGraph {
     }
 
     /**
-     * 获取依赖图统计信息（用于调试）
+     * Get dependency diagram statistics (for debugging)
      */
     getStats() {
         return {

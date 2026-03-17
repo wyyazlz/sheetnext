@@ -1,14 +1,23 @@
 import { buildSlicerKey, formatSlicerValue, isBlankValue } from './helpers.js';
 
 export default class SlicerCache {
+    /** @param {import('../Workbook/Workbook.js').default} SN @param {Object} [options={}] */
     constructor(SN, options = {}) {
+        /** @type {number|string} */
         this.cacheId = options.cacheId ?? this._generateCacheId(SN);
+        /** @type {'table'|'pivot'} */
         this.sourceType = options.sourceType ?? 'table';
+        /** @type {string|null} */
         this.sourceSheet = options.sourceSheet ?? null;
+        /** @type {string|null} */
         this.sourceName = options.sourceName ?? null;
+        /** @type {string|null} */
         this.sourceId = options.sourceId ?? null;
+        /** @type {number} */
         this.fieldIndex = Number.isFinite(options.fieldIndex) ? options.fieldIndex : 0;
+        /** @type {string} */
         this.fieldName = options.fieldName ?? '';
+        /** @type {Array<Object>} */
         this.items = [];
         this._SN = SN;
         this._itemMap = new Map();
@@ -25,6 +34,7 @@ export default class SlicerCache {
         return maxId + 1;
     }
 
+    /** @type {number} */
     get version() {
         return this._version;
     }
@@ -37,6 +47,7 @@ export default class SlicerCache {
         return this._itemMap;
     }
 
+    /** @param {{force?: boolean}} [options={}] @returns {Array<Object>} */
     getItems({ force = false } = {}) {
         if (this._dirty || force) {
             this.refresh();

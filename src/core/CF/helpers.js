@@ -1,14 +1,19 @@
 /**
- * 条件格式辅助函数
- * 包含颜色插值、条件比较、百分位计算等工具
+ * Conditional formatting helper function
+ * Contains tools for color interpolation, conditional comparisons, percentile calculations, and more
  */
 
 /**
- * 条件比较函数
- * @param {number} value - 待比较的值
- * @param {string} operator - 操作符
- * @param {number} formula1 - 比较值1
- * @param {number} formula2 - 比较值2（用于between）
+ * Conditional formatting helper function
+ * Contains tools for color interpolation, conditional comparisons, percentile calculations, and more
+ */
+
+/**
+ * Conditional Comparison Function
+ * @param {number} value - Value to compare
+ * @param {string} operator - Operator
+ * @param {number} formula1 - Comparison value 1
+ * @param {number} formula2 - Comparison value 2 (for between)
  * @returns {boolean}
  */
 export function compareValue(value, operator, formula1, formula2) {
@@ -37,8 +42,8 @@ export function compareValue(value, operator, formula1, formula2) {
 }
 
 /**
- * 解析颜色为RGB数组
- * @param {string} color - 颜色字符串 (#RRGGBB 或 rgb())
+ * Resolve Color to RGB Array
+ * @param {string} color - Color string (# RRGGBB or rgb ())
  * @returns {number[]} [r, g, b]
  */
 export function parseColor(color) {
@@ -73,7 +78,7 @@ export function parseColor(color) {
 }
 
 /**
- * RGB数组转十六进制颜色
+ * RGB array to hex color
  * @param {number[]} rgb - [r, g, b]
  * @returns {string} #RRGGBB
  */
@@ -84,11 +89,11 @@ export function rgbToHex(rgb) {
 }
 
 /**
- * 双色插值
- * @param {string} color1 - 起始颜色
- * @param {string} color2 - 结束颜色
- * @param {number} t - 插值比例 [0, 1]
- * @returns {string} 插值后的颜色
+ * Two-color interpolation
+ * @param {string} color1 - Start color
+ * @param {string} color2 - End Color
+ * @param {number} t - Interpolation Scale [0, 1]
+ * @ returns {string} interpolated color
  */
 export function interpolateColor(color1, color2, t) {
     const rgb1 = parseColor(color1);
@@ -104,12 +109,12 @@ export function interpolateColor(color1, color2, t) {
 }
 
 /**
- * 三色插值
- * @param {string} color1 - 起始颜色
- * @param {string} color2 - 中间颜色
- * @param {string} color3 - 结束颜色
- * @param {number} t - 插值比例 [0, 1]
- * @returns {string} 插值后的颜色
+ * Tricolor interpolation
+ * @param {string} color1 - Start color
+ * @param {string} color2 - Middle Color
+ * @param {string} color3 - End Color
+ * @param {number} t - Interpolation Scale [0, 1]
+ * @ returns {string} interpolated color
  */
 export function interpolateColor3(color1, color2, color3, t) {
     if (t <= 0.5) {
@@ -120,9 +125,9 @@ export function interpolateColor3(color1, color2, color3, t) {
 }
 
 /**
- * 使颜色变亮
- * @param {string} color - 原始颜色
- * @param {number} amount - 变亮程度 [0, 1]
+ * Brighten Colors
+ * @param {string} color - Original Color
+ * @param {number} amount - Brightness [0, 1]
  * @returns {string}
  */
 export function lightenColor(color, amount) {
@@ -132,9 +137,9 @@ export function lightenColor(color, amount) {
 }
 
 /**
- * 使颜色变暗
- * @param {string} color - 原始颜色
- * @param {number} amount - 变暗程度 [0, 1]
+ * Darken Colors
+ * @param {string} color - Original Color
+ * @param {number} amount - Degree of darkening [0, 1]
  * @returns {string}
  */
 export function darkenColor(color, amount) {
@@ -144,9 +149,9 @@ export function darkenColor(color, amount) {
 }
 
 /**
- * 计算百分位值
- * @param {number[]} sortedValues - 已排序的数值数组
- * @param {number} percentile - 百分位 [0, 100]
+ * Calculate Percentile
+ * @param {number[]} sortedValues - Sorted Numeric Array
+ * @param {number} percentile - Percentile [0, 100]
  * @returns {number}
  */
 export function getPercentile(sortedValues, percentile) {
@@ -163,9 +168,9 @@ export function getPercentile(sortedValues, percentile) {
 }
 
 /**
- * 计算标准差
- * @param {number[]} values - 数值数组
- * @param {number} avg - 平均值
+ * Calculate standard deviation
+ * @param {number[]} values - Numeric Array
+ * @param {number} avg - Mean
  * @returns {number}
  */
 export function getStdDev(values, avg) {
@@ -176,10 +181,10 @@ export function getStdDev(values, avg) {
 }
 
 /**
- * 根据cfvo配置计算阈值
- * @param {Object} cfvo - cfvo配置 { type, val }
- * @param {Object} rangeData - 范围数据
- * @param {Function} resolveFormula - 公式解析函数
+ * Calculate thresholds based on cfvo configuration
+ * @param {Object} cfvo - cfvo configuration {type, val}
+ * @param {Object} rangeData - Scope data
+ * @param {Function} resolveFormula - Formula parsing function
  * @returns {number}
  */
 export function resolveCfvoValue(cfvo, rangeData, resolveFormula) {
@@ -214,8 +219,8 @@ export function resolveCfvoValue(cfvo, rangeData, resolveFormula) {
 }
 
 /**
- * 判断是否为错误值
- * @param {*} value - 单元格值
+ * Determine if it is an error value
+ * @param {*} value - Cell Value
  * @returns {boolean}
  */
 export function isErrorValue(value) {
@@ -225,8 +230,8 @@ export function isErrorValue(value) {
 }
 
 /**
- * 判断是否为空白值
- * @param {*} value - 单元格值
+ * Determine if it is a blank value
+ * @param {*} value - Cell Value
  * @returns {boolean}
  */
 export function isBlankValue(value) {
@@ -234,7 +239,7 @@ export function isBlankValue(value) {
 }
 
 /**
- * 获取今天的起始时间戳
+ * Get today's start timestamp
  * @returns {number}
  */
 export function getTodayStart() {
@@ -243,7 +248,7 @@ export function getTodayStart() {
 }
 
 /**
- * 获取本周的起始时间戳（周日为第一天）
+ * Get the start timestamp of the week (Sunday is the first day)
  * @returns {number}
  */
 export function getWeekStart() {
@@ -253,7 +258,7 @@ export function getWeekStart() {
 }
 
 /**
- * 获取本月的起始时间戳
+ * Get the start timestamp of the month
  * @returns {number}
  */
 export function getMonthStart() {
@@ -262,9 +267,9 @@ export function getMonthStart() {
 }
 
 /**
- * Excel日期序列号转时间戳
- * @param {number} serial - Excel日期序列号
- * @returns {number} 时间戳
+ * Excel date sequence number to timestamp
+ * @param {number} serial - Excel date serial number
+ * @ returns {number} timestamps
  */
 export function excelDateToTimestamp(serial) {
     // Excel日期基准：1900-01-01
@@ -274,9 +279,9 @@ export function excelDateToTimestamp(serial) {
 }
 
 /**
- * 时间戳转Excel日期序列号
- * @param {number} timestamp - 时间戳
- * @returns {number} Excel日期序列号
+ * Timestamp to Excel date serial number
+ * @param {number} timestamp - Timestamp
+ * @ returns {number} Excel date serial number
  */
 export function timestampToExcelDate(timestamp) {
     const excelEpoch = new Date(1899, 11, 30).getTime();
@@ -284,9 +289,9 @@ export function timestampToExcelDate(timestamp) {
 }
 
 /**
- * 扩展十六进制颜色为8位（AARRGGBB）
- * @param {string} hex - 6位颜色 #RRGGBB
- * @returns {string} 8位颜色 FFRRGGBB
+ * Extended hex color is 8 bits (AARRGGBB)
+ * @param {string} hex - 6 bit color # RRGGBB
+ * @ returns {string} 8-bit color FFRRGGBB
  */
 export function expandHex(hex) {
     if (!hex) return 'FF000000';

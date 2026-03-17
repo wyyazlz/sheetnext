@@ -1,14 +1,16 @@
 /**
- * BlankError规则 - 空白/非空白/错误/非错误
+ * BlankError Rule - Blank/Not Blank/Error/Not Error
  */
 import { CFRule } from '../CFRule.js';
 import { isBlankValue, isErrorValue } from '../helpers.js';
 
 export class BlankErrorRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         const val = cell.calcVal;
 

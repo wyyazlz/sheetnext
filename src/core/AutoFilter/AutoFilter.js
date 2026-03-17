@@ -1,7 +1,7 @@
 /**
- * 自动筛选模块
- * @title 🔍 自动筛选
- * 负责管理工作表筛选状态（支持 Sheet 级 + Table 级独立筛选）
+ * Automatic Filter Module
+ * @title AutoFilter
+ * Responsible for managing sheet screening status (supports Sheet-level + Table-level independent screening)
  * @class
  */
 
@@ -14,6 +14,24 @@ function cloneRange(range) {
         s: { r: range.s.r, c: range.s.c },
         e: { r: range.e.r, c: range.e.c }
     };
+}
+
+function cloneFilterConfig(config) {
+    if (config == null) return config;
+    return JSON.parse(JSON.stringify(config));
+}
+
+function cloneColumns(columns) {
+    const next = new Map();
+    if (!columns) return next;
+    columns.forEach((config, colIndex) => {
+        next.set(colIndex, cloneFilterConfig(config));
+    });
+    return next;
+}
+
+function cloneSortState(sortState) {
+    return sortState ? { ...sortState } : null;
 }
 
 function normalizeRange(range) {
@@ -33,16 +51,16 @@ function isRangeEqual(a, b) {
 
 export default class AutoFilter {
     /**
-     * @param {Sheet} sheet - 所属工作表
+     * @param {Sheet} sheet - Sheet it belongs to
      */
     constructor(sheet) {
         /**
-         * 所属工作表
+         * Sheet it belongs to
          * @type {Sheet}
          */
         this.sheet = sheet;
         /**
-         * SheetNext 主实例
+         * SheetNext Main Instance
          * @type {Object}
          */
         this._SN = sheet.SN;
@@ -51,7 +69,7 @@ export default class AutoFilter {
         this._activeScopeId = DEFAULT_SCOPE_ID;
 
         /**
-         * 多筛选作用域：默认包含 __sheet__
+         * Multi-filter scope: __ sheet __ included by default
          * @type {Map<string, Object>}
          */
         this._scopes = new Map();
@@ -61,7 +79,7 @@ export default class AutoFilter {
         }));
 
         /**
-         * 所有筛选作用域合并后的隐藏行
+         * Hidden rows after all filter scopes are merged
          * @type {Set<number>}
          */
         this._allHiddenRows = new Set();
@@ -196,10 +214,199 @@ export default class AutoFilter {
         };
     }
 
+    _captureSheetScopeState() {
+        const scope = this._getDefaultScope();
+        return {
+            ref: scope.ref,
+            range: cloneRange(scope.range),
+            columns: cloneColumns(scope.columns),
+            sortState: cloneSortState(scope.sortState)
+        };
+    }
+
+    _applySheetScopeState(state, options = {}) {
+        const scope = this._getDefaultScope();
+        const nextRange = cloneRange(state?.range);
+
+        if (!nextRange) {
+            scope.ref = null;
+            scope.range = null;
+            scope.columns = new Map();
+            scope.sortState = null;
+            scope.hiddenRows.clear();
+            this._syncCombinedHiddenRows();
+            return;
+        }
+
+        scope.range = nextRange;
+        scope.ref = state?.ref || this._SN.Utils.rangeNumToStr(nextRange);
+        scope.columns = cloneColumns(state?.columns);
+        scope.sortState = cloneSortState(state?.sortState);
+
+        if (scope.columns.size > 0) {
+            this._applyFilters(this._defaultScopeId, {
+                silent: options.silent === true,
+                emitEvents: false,
+                recordChange: false,
+                recalculate: options.recalculate === true
+            });
+            return;
+        }
+
+        scope.hiddenRows.clear();
+        this._syncCombinedHiddenRows();
+    }
+
+    _onRowsInserted(r, n) {
+        const scope = this._getDefaultScope();
+        if (!scope?.range) return false;
+
+        if (r <= scope.range.s.r) {
+            scope.range.s.r += n;
+            scope.range.e.r += n;
+        } else if (r <= scope.range.e.r + 1) {
+            scope.range.e.r += n;
+        } else {
+            return false;
+        }
+
+        scope.ref = this._SN.Utils.rangeNumToStr(scope.range);
+        this._applySheetScopeState(this._captureSheetScopeState(), { silent: true });
+        return true;
+    }
+
+    _onRowsDeleted(r, n) {
+        const scope = this._getDefaultScope();
+        if (!scope?.range) return false;
+
+        const delEnd = r + n - 1;
+        const range = cloneRange(scope.range);
+
+        if (delEnd < range.s.r) {
+            range.s.r -= n;
+            range.e.r -= n;
+        } else if (r > range.e.r) {
+            return false;
+        } else {
+            const nextStart = range.s.r < r ? range.s.r : (range.e.r > delEnd ? r : null);
+            const nextEnd = range.e.r > delEnd ? range.e.r - n : (range.s.r < r ? r - 1 : null);
+
+            if (nextStart === null || nextEnd === null || nextStart > nextEnd) {
+                this._applySheetScopeState(null, { silent: true });
+                return true;
+            }
+
+            range.s.r = nextStart;
+            range.e.r = nextEnd;
+        }
+
+        this._applySheetScopeState({
+            ref: this._SN.Utils.rangeNumToStr(range),
+            range,
+            columns: scope.columns,
+            sortState: scope.sortState
+        }, { silent: true });
+        return true;
+    }
+
+    _onColsInserted(c, n) {
+        const scope = this._getDefaultScope();
+        if (!scope?.range) return false;
+
+        const range = cloneRange(scope.range);
+        const columns = cloneColumns(scope.columns);
+        const sortState = cloneSortState(scope.sortState);
+
+        if (c <= range.s.c) {
+            range.s.c += n;
+            range.e.c += n;
+        } else if (c <= range.e.c + 1) {
+            range.e.c += n;
+        } else {
+            return false;
+        }
+
+        if (columns.size > 0) {
+            const nextColumns = new Map();
+            columns.forEach((config, colIndex) => {
+                const nextColIndex = colIndex >= c ? colIndex + n : colIndex;
+                nextColumns.set(nextColIndex, config);
+            });
+            scope.columns = nextColumns;
+        }
+
+        if (sortState && sortState.colIndex >= c) {
+            sortState.colIndex += n;
+        }
+
+        this._applySheetScopeState({
+            ref: this._SN.Utils.rangeNumToStr(range),
+            range,
+            columns: scope.columns,
+            sortState
+        }, { silent: true });
+        return true;
+    }
+
+    _onColsDeleted(c, n) {
+        const scope = this._getDefaultScope();
+        if (!scope?.range) return false;
+
+        const delEnd = c + n - 1;
+        const range = cloneRange(scope.range);
+        const columns = cloneColumns(scope.columns);
+        let sortState = cloneSortState(scope.sortState);
+
+        if (delEnd < range.s.c) {
+            range.s.c -= n;
+            range.e.c -= n;
+        } else if (c > range.e.c) {
+            return false;
+        } else {
+            const nextStart = range.s.c < c ? range.s.c : (range.e.c > delEnd ? c : null);
+            const nextEnd = range.e.c > delEnd ? range.e.c - n : (range.s.c < c ? c - 1 : null);
+
+            if (nextStart === null || nextEnd === null || nextStart > nextEnd) {
+                this._applySheetScopeState(null, { silent: true });
+                return true;
+            }
+
+            range.s.c = nextStart;
+            range.e.c = nextEnd;
+        }
+
+        const nextColumns = new Map();
+        columns.forEach((config, colIndex) => {
+            if (colIndex < c) {
+                nextColumns.set(colIndex, config);
+                return;
+            }
+            if (colIndex > delEnd) {
+                nextColumns.set(colIndex - n, config);
+            }
+        });
+
+        if (sortState) {
+            if (sortState.colIndex > delEnd) {
+                sortState.colIndex -= n;
+            } else if (sortState.colIndex >= c) {
+                sortState = null;
+            }
+        }
+
+        this._applySheetScopeState({
+            ref: this._SN.Utils.rangeNumToStr(range),
+            range,
+            columns: nextColumns,
+            sortState
+        }, { silent: true });
+        return true;
+    }
+
     // ===================== 对外：默认 scope 兼容访问 =====================
 
     /**
-     * 获取/设置默认（sheet）筛选范围
+     * Gets/sets the default (sheet) filter range
      * @type {string|null}
      */
     get ref() {
@@ -216,7 +423,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 兼容旧代码：直接读写 _ref（默认作用域）
+     * Compatible with legacy code: direct read/write_ref (default scope)
      */
     get _ref() {
         return this.ref;
@@ -234,7 +441,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 默认（sheet）作用域范围
+     * Default (sheet) scope
      * @type {{s: {r: number, c: number}, e: {r: number, c: number}}|null}
      */
     get range() {
@@ -242,7 +449,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 兼容旧代码：直接读写 _range（默认作用域）
+     * Compatible with legacy code: direct read/write_range (default scope)
      */
     get _range() {
         return this.range;
@@ -256,7 +463,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 默认（sheet）作用域筛选条件
+     * Default (sheet) scope filter
      * @type {Map<number, Object>}
      */
     get columns() {
@@ -264,7 +471,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 默认（sheet）作用域排序状态
+     * Default (sheet) scope sort state
      * @type {{colIndex: number, order: 'asc'|'desc'}|null}
      */
     get sortState() {
@@ -276,7 +483,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 默认（sheet）作用域是否启用
+     * Whether the default (sheet) scope is enabled
      * @type {boolean}
      */
     get enabled() {
@@ -285,7 +492,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 默认（sheet）作用域表头行
+     * Default (sheet) scope table header row
      * @type {number}
      */
     get headerRow() {
@@ -293,7 +500,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 默认（sheet）作用域是否有生效筛选
+     * Whether the default (sheet) scope has a valid filter
      * @type {boolean}
      */
     get hasActiveFilters() {
@@ -301,7 +508,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 所有筛选隐藏行（只读，供公式等内部逻辑复用）
+     * All filter hidden rows (read-only, for internal logic multiplexing such as formulas)
      * @type {Set<number>}
      */
     get _hiddenRows() {
@@ -311,7 +518,7 @@ export default class AutoFilter {
     // ===================== scope 管理 =====================
 
     /**
-     * 当前激活作用域 ID
+     * Current Active Scope ID
      * @type {string}
      */
     get activeScopeId() {
@@ -469,7 +676,7 @@ export default class AutoFilter {
     // ===================== 默认筛选范围管理 =====================
 
     /**
-     * 设置筛选范围（默认 sheet scope；可指定 scopeId）
+     * Set filter scope (default sheet scope; scopeId can be specified)
      * @param {{s: {r: number, c: number}, e: {r: number, c: number}}} range
      * @param {string} [scopeId]
      */
@@ -561,7 +768,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 判断某列是否在筛选范围内
+     * Determine if a column is within the filter range
      * @param {number} colIndex
      * @param {string} [scopeId]
      */
@@ -572,7 +779,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 判断某行是否是表头行
+     * Determine if a row is a table header row
      * @param {number} rowIndex
      * @param {string} [scopeId]
      */
@@ -582,7 +789,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 获取某列的所有唯一值（用于筛选面板）
+     * Get all unique values for a column (for filter panel)
      * @param {number} colIndex
      * @param {string} [scopeId]
      * @returns {Array<{value: any, text: string, count: number, isEmpty: boolean}>}
@@ -627,7 +834,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 设置列筛选条件
+     * Set column filters
      * @param {number} colIndex
      * @param {Object} filter
      * @param {string} [scopeId]
@@ -690,7 +897,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 清除某列筛选
+     * Clear a column filter
      * @param {number} colIndex
      * @param {string} [scopeId]
      */
@@ -744,7 +951,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 清除筛选条件（保留范围）
+     * Clear filters (reserved range)
      * @param {string} [scopeId]
      */
     clearAllFilters(scopeId = null) {
@@ -792,7 +999,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 完全清除筛选（包含范围）
+     * Clear filters completely (inclusive)
      * @param {string} [scopeId]
      */
     clear(scopeId = this._defaultScopeId) {
@@ -982,7 +1189,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 判断列是否有筛选
+     * Determine if columns are filtered
      * @param {number} colIndex
      * @param {string} [scopeId]
      */
@@ -992,7 +1199,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 设置排序状态
+     * Set sorting status
      * @param {number} colIndex
      * @param {'asc'|'desc'} order
      * @param {string} [scopeId]
@@ -1004,7 +1211,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 获取排序状态
+     * Get sorting status
      * @param {number} colIndex
      * @param {string} [scopeId]
      */
@@ -1017,7 +1224,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 行是否因筛选被隐藏
+     * Whether the row is hidden due to filtering
      * @param {number} rowIndex
      * @returns {boolean}
      */
@@ -1150,7 +1357,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 从 worksheet AutoFilter 解析默认作用域
+     * Resolve default scopes from sheet AutoFilter
      * @param {Object} xmlObj
      */
     parse(xmlObj) {
@@ -1165,7 +1372,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 将指定作用域的筛选状态解析到内存（主要用于 table 导入）
+     * Resolves the filter state of the specified scope to memory (mainly for table import)
      * @param {string} scopeId
      * @param {Object} autoFilterXml
      * @param {{range?: Object, restoreHiddenRowsFromSheet?: boolean, ownerType?: string, ownerId?: string}} [options]
@@ -1247,7 +1454,7 @@ export default class AutoFilter {
     }
 
     /**
-     * 构建指定作用域 XML；默认导出 sheet 作用域
+     * Build the XML for the specified scope; export the sheet scope by default
      * @param {string} [scopeId]
      * @returns {Object|null}
      */

@@ -83,6 +83,7 @@ function toBoolean(value, fallback) {
 }
 
 export default class SheetProtection {
+    /** @param {import('./Sheet.js').default} sheet */
     constructor(sheet) {
         this._sheet = sheet;
         this._enabled = false;
@@ -95,6 +96,7 @@ export default class SheetProtection {
         this._listenersBound = false;
     }
 
+    /** @type {import('../Workbook/Workbook.js').default} */
     get SN() {
         return this._sheet.SN;
     }
@@ -105,75 +107,90 @@ export default class SheetProtection {
 
     // ==================== 核心属性 ====================
 
+    /** @type {boolean} */
     get enabled() {
         return this._enabled;
     }
 
     // ==================== 15个标准点位 get/set ====================
 
+    /** @type {boolean} */
     get selectLockedCells() { return this._options.selectLockedCells; }
     set selectLockedCells(v) { this._setOption('selectLockedCells', !!v); }
 
+    /** @type {boolean} */
     get selectUnlockedCells() { return this._options.selectUnlockedCells; }
     set selectUnlockedCells(v) { this._setOption('selectUnlockedCells', !!v); }
 
+    /** @type {boolean} */
     get formatCells() { return this._options.formatCells; }
     set formatCells(v) { this._setOption('formatCells', !!v); }
 
+    /** @type {boolean} */
     get formatColumns() { return this._options.formatColumns; }
     set formatColumns(v) { this._setOption('formatColumns', !!v); }
 
+    /** @type {boolean} */
     get formatRows() { return this._options.formatRows; }
     set formatRows(v) { this._setOption('formatRows', !!v); }
 
+    /** @type {boolean} */
     get insertColumns() { return this._options.insertColumns; }
     set insertColumns(v) { this._setOption('insertColumns', !!v); }
 
+    /** @type {boolean} */
     get insertRows() { return this._options.insertRows; }
     set insertRows(v) { this._setOption('insertRows', !!v); }
 
+    /** @type {boolean} */
     get insertHyperlinks() { return this._options.insertHyperlinks; }
     set insertHyperlinks(v) { this._setOption('insertHyperlinks', !!v); }
 
+    /** @type {boolean} */
     get deleteColumns() { return this._options.deleteColumns; }
     set deleteColumns(v) { this._setOption('deleteColumns', !!v); }
 
+    /** @type {boolean} */
     get deleteRows() { return this._options.deleteRows; }
     set deleteRows(v) { this._setOption('deleteRows', !!v); }
 
+    /** @type {boolean} */
     get sort() { return this._options.sort; }
     set sort(v) { this._setOption('sort', !!v); }
 
+    /** @type {boolean} */
     get autoFilter() { return this._options.autoFilter; }
     set autoFilter(v) { this._setOption('autoFilter', !!v); }
 
+    /** @type {boolean} */
     get pivotTables() { return this._options.pivotTables; }
     set pivotTables(v) { this._setOption('pivotTables', !!v); }
 
+    /** @type {boolean} */
     get objects() { return this._options.objects; }
     set objects(v) { this._setOption('objects', !!v); }
 
     // ==================== 核心方法 ====================
 
     /**
-     * 启用工作表保护
-     * @param {Object} options - 保护选项
-     * @param {string} [options.password] - 明文密码（会自动哈希）
-     * @param {string} [options.passwordHash] - 已哈希的密码
-     * @param {boolean} [options.selectLockedCells] - 允许选择锁定单元格
-     * @param {boolean} [options.selectUnlockedCells] - 允许选择未锁定单元格
-     * @param {boolean} [options.formatCells] - 允许设置单元格格式
-     * @param {boolean} [options.formatColumns] - 允许设置列格式
-     * @param {boolean} [options.formatRows] - 允许设置行格式
-     * @param {boolean} [options.insertColumns] - 允许插入列
-     * @param {boolean} [options.insertRows] - 允许插入行
-     * @param {boolean} [options.insertHyperlinks] - 允许插入超链接
-     * @param {boolean} [options.deleteColumns] - 允许删除列
-     * @param {boolean} [options.deleteRows] - 允许删除行
-     * @param {boolean} [options.sort] - 允许排序
-     * @param {boolean} [options.autoFilter] - 允许使用自动筛选
-     * @param {boolean} [options.pivotTables] - 允许使用数据透视表
-     * @param {boolean} [options.objects] - 允许编辑对象
+     * ENABLE SHEET PROTECTION
+     * @param {Object} options - SAVE OPTIONS
+     * @param {string} [options.password] - EXPRESS PASSWORD (AUTO-HASHI)
+     * @param {string} [options.passwordHash] - HASH'S PASSWORD
+     * @param {boolean} [options.selectLockedCells] - ALLOWS THE SELECTION OF LOCKED CELLS
+     * @param {boolean} [options.selectUnlockedCells] - ALLOW SELECTION OF UNLOCKED CELLS
+     * @param {boolean} [options.formatCells] - ALLOW SETTING CELL FORMATS
+     * @param {boolean} [options.formatColumns] - ALLOW SETTING BAR FORMATS
+     * @param {boolean} [options.formatRows] - ALLOW SETTING LINE FORMATS
+     * @param {boolean} [options.insertColumns] - ALLOW INSERT COLUMNS
+     * @param {boolean} [options.insertRows] - ALLOW INSERT ROWS
+     * @param {boolean} [options.insertHyperlinks] - ALLOW THE INSERTION OF HYPERLINKS
+     * @param {boolean} [options.deleteColumns] - ALLOWS THE DELETION OF COLUMNS
+     * @param {boolean} [options.deleteRows] - ALLOW DELETE ROWS
+     * @param {boolean} [options.sort] - ALLOW SORTING
+     * @param {boolean} [options.autoFilter] - ALLOW AUTOFILTER
+     * @param {boolean} [options.pivotTables] - ALLOW DATA PERCEIVE TABLES
+     * @param {boolean} [options.objects] - ALLOW EDITING OF OBJECTS
      */
     enable(options = {}) {
         // 设置选项
@@ -207,8 +224,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 禁用工作表保护
-     * @param {string} [password] - 密码（如果设置了密码保护）
+     * DISABLE SHEET PROTECTION
+     * @param {string} [password] - Password (if password protected)
      * @returns {{ ok: boolean, message?: string }}
      */
     disable(password) {
@@ -230,8 +247,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 验证密码
-     * @param {string} input - 输入的密码
+     * Authentication password
+     * @param {string} input - Password entered
      * @returns {{ ok: boolean, message?: string }}
      */
     verifyPassword(input) {
@@ -251,7 +268,7 @@ export default class SheetProtection {
     }
 
     /**
-     * 获取所有保护选项（用于 UI 显示或导出）
+     * Get all protection options (for UI display or export)
      * @returns {Object|null}
      */
     getOptions() {
@@ -268,8 +285,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 检查单元格是否锁定
-     * @param {Object} cell - 单元格对象
+     * Check if cells are locked
+     * @param {Object} cell - Cell Object
      * @returns {boolean}
      */
     isCellLocked(cell) {
@@ -278,8 +295,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 检查单元格是否可选择
-     * @param {Object} cell - 单元格对象
+     * Check if cells are optional
+     * @param {Object} cell - Cell Object
      * @returns {boolean}
      */
     isCellSelectable(cell) {
@@ -292,8 +309,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 检查区域是否可选择
-     * @param {Object|string} area - 区域对象或字符串
+     * Check if the area is optional
+     * @param {Object|string} area - Area Object or String
      * @returns {boolean}
      */
     isAreaSelectable(area) {
@@ -323,8 +340,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 检查多个区域是否可选择
-     * @param {Array} areas - 区域数组
+     * Check if multiple areas are optional
+     * @param {Array} areas - Regional arrays
      * @returns {boolean}
      */
     areAreasSelectable(areas) {
@@ -334,7 +351,7 @@ export default class SheetProtection {
     }
 
     /**
-     * 是否允许显示选区
+     * Whether to allow the selection
      * @returns {boolean}
      */
     isSelectionVisible() {
@@ -343,8 +360,8 @@ export default class SheetProtection {
     }
 
     /**
-     * 设置单元格保护属性
-     * @param {Object|string|Array} area - 区域
+     * Set cell protection properties
+     * @param {Object|string|Array} area - Regional
      * @param {Object} options - { locked?: boolean, hidden?: boolean }
      */
     setCellProtection(area, options = {}) {
@@ -367,7 +384,7 @@ export default class SheetProtection {
     }
 
     /**
-     * 构建 xlsx 导出用的 sheetProtection 节点
+     * SetProtec node for building xlsx export
      * @returns {Object|null}
      */
     buildXmlNode() {

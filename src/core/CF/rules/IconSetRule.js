@@ -1,6 +1,6 @@
 /**
- * IconSet规则 - 图标集
- * 支持20+种图标集
+ * IconSet Rules - Icon Sets
+ * Supports 20 + icon sets
  */
 import { CFRule } from '../CFRule.js';
 import { resolveCfvoValue } from '../helpers.js';
@@ -30,10 +30,12 @@ export const ICON_SETS = {
 };
 
 export class IconSetRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
         const parsedIconSet = (config.iconSet && typeof config.iconSet === 'object') ? config.iconSet : null;
         this.iconSet = (typeof config.iconSet === 'string' ? config.iconSet : parsedIconSet?.iconSet) || '3TrafficLights1';
+        /** @type {Array<Object>} */
         this.cfvos = config.cfvos || parsedIconSet?.cfvo || this._getDefaultCfvos();
         this.reverse = (typeof config.reverse === 'boolean' ? config.reverse : parsedIconSet?.reverse) || false;
         const showValue = typeof config.showValue !== 'undefined' ? config.showValue : parsedIconSet?.showValue;
@@ -53,10 +55,12 @@ export class IconSetRule extends CFRule {
         return cfvos;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         return typeof cell.calcVal === 'number' && !isNaN(cell.calcVal);
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {Object|null} */
     getFormat(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (typeof val !== 'number' || isNaN(val)) return null;

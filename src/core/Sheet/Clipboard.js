@@ -1,7 +1,7 @@
 /**
- * 剪贴板核心模块 - Excel 一比一复刻
- * 支持：复制/剪切/粘贴、选择性粘贴、跨 sheet 操作
- * 高性能设计：批量操作、最小化重绘
+ * Clipboard Core Module - Excel One to One
+ * Support: Copy/clip/ paste, Paste selected, Sheet cross
+ * High Performance Design: Batch Operations, Minimised Redraw
  */
 
 import { PasteMode, PasteOperation } from '../../enum/index.js';
@@ -16,9 +16,9 @@ function emitIfListeners(SN, event, data) {
 }
 
 /**
- * 复制区域数据
- * @param {Object} area - 复制区域 { s: {r, c}, e: {r, c} }
- * @param {boolean} isCut - 是否剪切
+ * Copy Regional Data
+ * @param {Object} area - Copy area {s: {r, c}, e: {r, c}
+ * @param {boolean} isCut - Whether to cut
  */
 export function copy(area = null, isCut = false) {
     const sheet = this;
@@ -111,22 +111,22 @@ export function copy(area = null, isCut = false) {
 }
 
 /**
- * 剪切区域数据
- * @param {Object} area - 剪切区域
+ * Cut Area Data
+ * @param {Object} area - Cut Area
  */
 export function cut(area = null) {
     return this.copy(area, true);
 }
 
 /**
- * 粘贴数据到目标区域
- * @param {Object} targetArea - 目标区域起始位置 { r, c } 或完整区域
- * @param {Object} options - 粘贴选项
- * @param {string} options.mode - 粘贴模式 (PasteMode)
- * @param {string} options.operation - 运算模式 (PasteOperation)
- * @param {boolean} options.skipBlanks - 跳过空单元格
- * @param {boolean} options.transpose - 转置
- * @param {Object} options.externalData - 外部剪贴板数据（从系统剪贴板解析）
+ * Paste Data to Target Area
+ * @param {Object} targetArea - Target area start location {r, c} or full area
+ * @param {Object} options - Paste Options
+ * @param {string} options.mode - PasteMode
+ * @param {string} options.operation - Operation
+ * @param {boolean} options.skipBlanks - Skip empty cells
+ * @param {boolean} options.transpose - Convert
+ * @param {Object} options.externalData - External Clipboard Data (from System Clipboard)
  */
 export function paste(targetArea = null, options = {}) {
     const sheet = this;
@@ -310,7 +310,7 @@ export function paste(targetArea = null, options = {}) {
 }
 
 /**
- * 清除剪贴板
+ * Clear Clipboard
  */
 export function clearClipboard() {
     const sheet = this;
@@ -321,14 +321,14 @@ export function clearClipboard() {
 }
 
 /**
- * 获取当前剪贴板数据
+ * Fetch the current clipboard data
  */
 export function getClipboardData() {
     return clipboardData;
 }
 
 /**
- * 检查是否有剪贴板数据
+ * Check for clipboard data
  */
 export function hasClipboardData() {
     return clipboardData !== null;
@@ -337,7 +337,7 @@ export function hasClipboardData() {
 // ==================== 内部辅助函数 ====================
 
 /**
- * 复制单元格数据
+ * Copy Cell Data
  */
 function copyCellData(cell, sheet) {
     return {
@@ -353,7 +353,7 @@ function copyCellData(cell, sheet) {
 }
 
 /**
- * 根据模式粘贴单元格
+ * Paste Cells By Mode
  */
 function pasteCellByMode(targetCell, srcCell, mode, operation, sheet) {
     // 先计算运算结果（如果需要）
@@ -465,7 +465,7 @@ function pasteCellByMode(targetCell, srcCell, mode, operation, sheet) {
 }
 
 /**
- * 设置值（不触发撤销记录，批量操作结束后统一记录）
+ * Set value (no trigger for cancellation of record, flat record after batch operation)
  */
 function setValueWithoutUndo(cell, val) {
     cell._calcVal = undefined;
@@ -504,7 +504,7 @@ function setValueWithoutUndo(cell, val) {
 }
 
 /**
- * 判断是否应粘贴合并单元格
+ * judge whether to paste the merged cells
  */
 function shouldPasteMerges(mode) {
     return [
@@ -517,7 +517,7 @@ function shouldPasteMerges(mode) {
 }
 
 /**
- * 判断是否应粘贴批注
+ * Judge whether or not to paste the comment
  */
 function shouldPasteComments(mode) {
     return [
@@ -528,7 +528,7 @@ function shouldPasteComments(mode) {
 }
 
 /**
- * 清除目标区域的合并单元格
+ * Clear the merged cells of the target area
  */
 function clearTargetMerges(sheet, area) {
     const toRemove = [];
@@ -545,7 +545,7 @@ function clearTargetMerges(sheet, area) {
 }
 
 /**
- * 清除区域数据（剪切后清除源区域）
+ * Clear Area Data (excise Source Area after Cut)
  */
 function clearArea(sheet, area) {
     sheet.eachCells(area, (r, c) => {
@@ -589,7 +589,7 @@ function clearArea(sheet, area) {
 }
 
 /**
- * 判断两个区域是否重叠
+ * To determine whether the two regions overlap
  */
 function areasOverlap(area1, area2) {
     return !(area1.e.r < area2.s.r || area1.s.r > area2.e.r ||
@@ -597,14 +597,14 @@ function areasOverlap(area1, area2) {
 }
 
 /**
- * 判断单元格是否为空
+ * Determines whether cells are empty
  */
 function isEmpty(cellData) {
     return cellData.editVal === "" || cellData.editVal === null || cellData.editVal === undefined;
 }
 
 /**
- * 获取粘贴模式标签
+ * Fetch Paste Mode Label
  */
 function getPasteModeLabel(mode) {
     const labels = {
@@ -625,7 +625,7 @@ function getPasteModeLabel(mode) {
 }
 
 /**
- * 获取运算模式标签
+ * Get Operations Mode Label
  */
 function getOperationLabel(op) {
     const labels = {
@@ -639,9 +639,9 @@ function getOperationLabel(op) {
 }
 
 /**
- * 从系统剪贴板解析数据（用于外部粘贴）
- * @param {Object} parsed - parseHTMLStyle 解析的结果
- * @returns {Object} 内部剪贴板格式数据
+ * Parsing data from the system clipboard (for external pasting)
+ * @param {Object} parsed - Results of parseHTMLStyle Parsing
+ * @returns {Object} Internal clipboard format data
  */
 export function fromParsedHTML(parsed) {
     if (!parsed || !parsed.data) return null;
@@ -681,9 +681,9 @@ export function fromParsedHTML(parsed) {
 }
 
 /**
- * 从纯文本解析数据
- * @param {string} text - Tab 分隔的文本
- * @returns {Object} 内部剪贴板格式数据
+ * Parsing data from plain text
+ * @param {string} text - Tab-separated text
+ * @returns {Object} Internal clipboard format data
  */
 export function fromPlainText(text) {
     if (!text) return null;

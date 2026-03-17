@@ -1,6 +1,6 @@
 /**
- * 迷你图渲染模块
- * 高性能设计：只渲染视图内的迷你图，使用缓存避免重复计算
+ * Sparkline Rendering Module
+ * High-performance design: render only sparklines within the view, use cache to avoid duplicate calculations
  */
 
 const SPARKLINE_COLOR_FALLBACKS = {
@@ -17,8 +17,8 @@ const SPARKLINE_COLOR_FALLBACKS = {
 const getColor = (group, key) => group?.colors?.[key] ?? SPARKLINE_COLOR_FALLBACKS[key];
 
 /**
- * 渲染所有视图内的迷你图
- * @param {Object} sheet - 工作表对象
+ * Render sparklines within all views
+ * @param {Object} sheet - Sheet Objects
  */
 export function rSparklines(sheet) {
     if (!sheet.Sparkline || sheet.Sparkline.map.size === 0) return;
@@ -59,7 +59,7 @@ export function rSparklines(sheet) {
 }
 
 /**
- * 绘制单个迷你图
+ * Draw a single sparkline
  * @private
  */
 function _rSparkline(x, y, w, h, sparkline, data, sheet) {

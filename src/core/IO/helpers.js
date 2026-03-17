@@ -1,5 +1,5 @@
 /**
- * IO 辅助函数和工具类
+ * IO Auxiliary Functions and Tool Classes
  */
 
 // ==================== IndexTable 类 - 用于去重和快速查找 ====================
@@ -32,12 +32,15 @@ function _stableSerialize(value) {
 }
 
 export class IndexTable {
+    /** @param {(item:any)=>string} [hashFn] */
     constructor(hashFn) {
         this.items = [];
         this.map = new Map();
+        /** @type {(item:any)=>string} */
         this.hashFn = hashFn || this._defaultHash;
     }
 
+    /** @param {any} item @returns {number|null} */
     add(item) {
         if (item === null || item === undefined) return null;
         const key = this.hashFn(item);

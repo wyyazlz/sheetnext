@@ -104,6 +104,7 @@ function _normalizeRule(rule) {
     return next;
 }
 
+/** @param {string|Object|Array<string|Object>} range @param {Object} rule */
 export function setDataValidation(range, rule) {
     const areas = _resolveAreas(this, range);
     if (!areas.length) return { success: false, canceled: true, cellCount: 0 };
@@ -140,6 +141,7 @@ export function setDataValidation(range, rule) {
     });
 }
 
+/** @param {string|Object|Array<string|Object>} range */
 export function clearDataValidation(range) {
     const areas = _resolveAreas(this, range);
     if (!areas.length) return { success: false, canceled: true, cellCount: 0 };

@@ -1,17 +1,23 @@
 import { interpolateColor } from './helpers.js';
 import { shouldHideFormula } from './helpers.js'
+import { getFilterIconLayout } from './FilterRenderer.js';
 
 /**
- * 单元格渲染模块
- * 负责处理单元格的渲染逻辑,包括背景、文本、边框等
+ * Cell Rendering Module
+ * Responsible for the rendering logic of cells, including backgrounds, text, borders, etc.
  */
 
 /**
- * 获取单元格的超级表样式（如果有）
+ * Cell Rendering Module
+ * Responsible for the rendering logic of cells, including backgrounds, text, borders, etc.
+ */
+
+/**
+ * Gets the supertable style of the cell (if any)
  * @param {Sheet} sheet
  * @param {number} row
  * @param {number} col
- * @returns {Object|null} { bgColor, fgColor, isBold } 或 null
+ * @ returns {Object | null} {bgColor, fgColor, isBold} or null
  */
 function getAutoTableFgColor(bgColor) {
     if (typeof bgColor !== 'string') return null;
@@ -191,6 +197,7 @@ function getTableCellStyle(sheet, row, col) {
     return null;
 }
 
+/** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell @param {boolean} [skipGridLine=false] @param {Object|null} [cfFormat=null] @param {Object|null} [tableStyle=null] */
 export function rCellBackground(x, y, w, h, cell, skipGridLine = false, cfFormat = null, tableStyle = null) {
     // 条件格式背景色优先
     const cfFillColor = cfFormat?.fill?.fgColor;
@@ -499,13 +506,19 @@ export function rCellBackground(x, y, w, h, cell, skipGridLine = false, cfFormat
 }
 
 // 渲染单元格文本
-export function rCellText(x, y, w, h, cell) {
+/** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell @param {{x:number,y:number,w:number,h:number}|null} [layoutRect=null] */
+export function rCellText(x, y, w, h, cell, layoutRect = null) {
     // 显示公式模式：显示 editVal 而不是 showVal
     const sheet = this.activeSheet;
     const hideFormula = shouldHideFormula(sheet, cell);
     const showFormula = sheet?.showFormulas && !hideFormula;
     const v = showFormula ? cell.editVal.toString() : cell.showVal.toString();
     if (!v) return;
+
+    const alignX = layoutRect?.x ?? x;
+    const alignY = layoutRect?.y ?? y;
+    const alignW = layoutRect?.w ?? w;
+    const alignH = layoutRect?.h ?? h;
 
     // 富文本路径（非公式模式且有富文本数据）
     const richText = !showFormula ? cell._richText : null;
@@ -514,9 +527,9 @@ export function rCellText(x, y, w, h, cell) {
     let lines = [];
     if (cell.alignment.wrapText) {
         if (richText) {
-            lines = wrapRichText.call(this, richText, w - 4, cell);
+            lines = wrapRichText.call(this, richText, alignW - 4, cell);
         } else {
-            lines = wrapText.call(this, v, w - 4, this.bc); // 4是左右边距
+            lines = wrapText.call(this, v, alignW - 4, this.bc); // 4是左右边距
         }
     } else {
         if (richText) {
@@ -526,10 +539,11 @@ export function rCellText(x, y, w, h, cell) {
         }
     }
 
-    rText.call(this, { lines, cell, x, y, w, h, richText: !!richText }, false);
+    rText.call(this, { lines, cell, x, y, w, h, alignX, alignY, alignW, alignH, richText: !!richText }, false);
 }
 
 // 渲染带溢出支持的单元格文本（支持条件格式字体色和超级表样式）
+/** @param {number} r @param {number} c @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell @param {Object} sheet @param {Array<Object>} nonEmptyCells @param {Object|null} [cfFormat=null] @param {Object|null} [tableStyle=null] */
 export function rCellTextWithOverflow(r, c, x, y, w, h, cell, sheet, nonEmptyCells, cfFormat = null, tableStyle = null) {
     // 显示公式模式：显示 editVal 而不是 showVal
     const hideFormula = shouldHideFormula(sheet, cell);
@@ -772,6 +786,7 @@ export function rCellTextWithOverflow(r, c, x, y, w, h, cell, sheet, nonEmptyCel
 }
 
 // 渲染单元格（背景+文本）
+/** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell */
 export function rCell(x, y, w, h, cell) {
     rCellBackground.call(this, x, y, w, h, cell);
     rCellText.call(this, x, y, w, h, cell);
@@ -848,7 +863,7 @@ function measureRichLineWidth(richLine, cell) {
 }
 
 // 富文本水平渲染
-function rRichTextNormal(richLines, cell, baseX, y, baseW, h, defaultFsize, defaultColor) {
+function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsize, defaultColor) {
     const f = cell.font;
     const px = 2;
     const indent = cell.alignment?.indent || 0;
@@ -898,13 +913,13 @@ function rRichTextNormal(richLines, cell, baseX, y, baseW, h, defaultFsize, defa
         let bottomY;
         switch (verticalAlign) {
             case 'center':
-                bottomY = y + (h - totalTextHeight) / 2 + yThisBottom;
+                bottomY = baseY + (baseH - totalTextHeight) / 2 + yThisBottom;
                 break;
             case 'top':
-                bottomY = y + px + yThisBottom;
+                bottomY = baseY + px + yThisBottom;
                 break;
             default:
-                bottomY = y + h - totalTextHeight + yThisBottom - 1;
+                bottomY = baseY + baseH - totalTextHeight + yThisBottom - 1;
                 break;
         }
         bottomY = Math.round(bottomY);
@@ -1025,11 +1040,13 @@ export function adjustTextPosition(horizontalAlign, verticalAlign, cellX, cellY,
 
 // 渲染文本
 export function rText(info) {
-    let { lines, cell, x, y, w, h, alignX, alignW, cfFormat, tableStyle, richText } = info;
+    let { lines, cell, x, y, w, h, alignX, alignY, alignW, alignH, cfFormat, tableStyle, richText } = info;
 
     // 对齐基准区域（如果未指定，使用裁剪区域）
     const baseX = alignX !== undefined ? alignX : x;
+    const baseY = alignY !== undefined ? alignY : y;
     const baseW = alignW !== undefined ? alignW : w;
+    const baseH = alignH !== undefined ? alignH : h;
 
     const f = cell.font;
     let fsize = (f.size ?? 11) * 1.333;
@@ -1081,7 +1098,7 @@ export function rText(info) {
         } else {
             maxTextWidth = Math.max(...lines.map(line => this.bc.measureText(line).width));
         }
-        const availableWidth = w - px;
+        const availableWidth = baseW - px;
 
         if (maxTextWidth > availableWidth && maxTextWidth > 0) {
             const scale = availableWidth / maxTextWidth;
@@ -1103,23 +1120,23 @@ export function rText(info) {
     // 文字方向处理
     if (textRotation === 255) {
         // 竖排文字
-        rTextVertical.call(this, lines, cell, x, y, w, h, fsize, textColor);
+        rTextVertical.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor);
     } else if (textRotation && textRotation !== 0) {
         // 旋转文字
-        rTextRotated.call(this, lines, cell, x, y, w, h, fsize, textColor, textRotation);
+        rTextRotated.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor, textRotation);
     } else if (richText) {
         // 富文本水平渲染
-        rRichTextNormal.call(this, lines, cell, baseX, y, baseW, h, fsize, textColor);
+        rRichTextNormal.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor);
     } else {
         // 普通水平文字
-        rTextNormal.call(this, lines, cell, baseX, y, baseW, h, fsize, textColor);
+        rTextNormal.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor);
     }
 
     this.bc.restore();
 }
 
 // 普通水平文字渲染
-function rTextNormal(lines, cell, baseX, y, baseW, h, fsize, textColor) {
+function rTextNormal(lines, cell, baseX, baseY, baseW, baseH, fsize, textColor) {
     const f = cell.font;
     const lineHeights = lines.length > 1 ? fsize * 1.35 : fsize * 1.15;
     const totalTextHeight = lines.length * lineHeights;
@@ -1129,7 +1146,7 @@ function rTextNormal(lines, cell, baseX, y, baseW, h, fsize, textColor) {
     const pivotToggle = cell._pivotToggle;
     const hasPivotToggle = !!pivotToggle;
     const hasPivotIndent = Object.prototype.hasOwnProperty.call(cell, '_pivotIndent');
-    const pivotIconSize = Math.min(12, Math.max(6, Math.floor(h - 4)));
+    const pivotIconSize = Math.min(12, Math.max(6, Math.floor(baseH - 4)));
     const iconSize = hasPivotToggle ? pivotIconSize : 0;
     const pivotIndentLevel = Number.isFinite(cell._pivotIndent) ? cell._pivotIndent : 0;
     const pivotIndentStep = pivotIndentLevel > 0 ? Math.max(10, Math.min(16, pivotIconSize + 4)) : 0;
@@ -1139,10 +1156,10 @@ function rTextNormal(lines, cell, baseX, y, baseW, h, fsize, textColor) {
     const pivotFilter = cell._pivotFilter;
     const hasPivotFilter = !!pivotFilter;
     const indent = (hasPivotIndent || hasPivotToggle || hasPivotFilter) ? 0 : baseIndent;
-    const filterSize = hasPivotFilter ? Math.min(12, Math.max(6, Math.floor(h - 4))) : 0;
+    const filterLayout = hasPivotFilter ? getFilterIconLayout(baseX, baseY, baseW, baseH) : null;
+    const filterSize = filterLayout?.iconSize ?? 0;
     const filterSlot = hasPivotFilter ? filterSize + 6 : 0;
     let pivotDrawn = false;
-    let filterDrawn = false;
 
     if (!hasPivotToggle && cell._pivotToggleRect) {
         delete cell._pivotToggleRect;
@@ -1160,7 +1177,7 @@ function rTextNormal(lines, cell, baseX, y, baseW, h, fsize, textColor) {
     // 检查是否是会计格式
     const accounting = cell.accountingData;
     if (accounting && lines.length === 1) {
-        rTextAccounting.call(this, accounting, cell, baseX, y, baseW, h, fsize, textColor, lineHeights, totalTextHeight, verticalAlign);
+        rTextAccounting.call(this, accounting, cell, baseX, baseY, baseW, baseH, fsize, textColor, lineHeights, totalTextHeight, verticalAlign);
         return;
     }
 
@@ -1170,32 +1187,20 @@ function rTextNormal(lines, cell, baseX, y, baseW, h, fsize, textColor) {
         const textBaseX = isLeftAlign ? baseX + textOffset : baseX;
         const textBaseW = isLeftAlign ? Math.max(0, baseW - textOffset - filterSlot) : Math.max(0, baseW - filterSlot);
         const textWidth = this.bc.measureText(line).width;
-        const { textX, textY } = adjustTextPosition.call(this, horizontalAlign, verticalAlign, textBaseX, y, textBaseW, h, textWidth, fsize, totalTextHeight, index, lineHeights, indent);
+        const { textX, textY } = adjustTextPosition.call(this, horizontalAlign, verticalAlign, textBaseX, baseY, textBaseW, baseH, textWidth, fsize, totalTextHeight, index, lineHeights, indent);
 
         this.bc.fillStyle = textColor;
         if (hasPivotToggle && !pivotDrawn && iconSize > 0) {
-            let iconY = y + (h - iconSize) / 2;
+            let iconY = baseY + (baseH - iconSize) / 2;
             if (verticalAlign === 'top') {
-                iconY = y + 2;
+                iconY = baseY + 2;
             } else if (verticalAlign === 'bottom') {
-                iconY = y + h - iconSize - 2;
+                iconY = baseY + baseH - iconSize - 2;
             }
             const iconX = baseX + 2 + pivotIndentPx;
             drawPivotToggleIcon(this.bc, iconX, iconY, iconSize, !!pivotToggle?.collapsed);
             cell._pivotToggleRect = { x: iconX, y: iconY, w: iconSize, h: iconSize };
             pivotDrawn = true;
-        }
-        if (hasPivotFilter && !filterDrawn && filterSize > 0) {
-            let iconY = y + (h - filterSize) / 2;
-            if (verticalAlign === 'top') {
-                iconY = y + 2;
-            } else if (verticalAlign === 'bottom') {
-                iconY = y + h - filterSize - 2;
-            }
-            const iconX = baseX + baseW - filterSize - 2;
-            this.drawFilterIcon(this.bc, iconX, iconY, filterSize, !!pivotFilter?.active, null);
-            cell._pivotFilterRect = { x: iconX, y: iconY, w: filterSize, h: filterSize };
-            filterDrawn = true;
         }
         this.bc.fillText(line, textX, textY);
 
@@ -1234,7 +1239,7 @@ function rTextNormal(lines, cell, baseX, y, baseW, h, fsize, textColor) {
 }
 
 // 会计格式渲染：货币符号左对齐，数字右对齐
-function rTextAccounting(accounting, cell, baseX, y, baseW, h, fsize, textColor, lineHeights, totalTextHeight, verticalAlign) {
+function rTextAccounting(accounting, cell, baseX, baseY, baseW, baseH, fsize, textColor, lineHeights, totalTextHeight, verticalAlign) {
     const px = 2; // 单元格内边距
     const { prefix, number, suffix } = accounting;
 
@@ -1248,13 +1253,13 @@ function rTextAccounting(accounting, cell, baseX, y, baseW, h, fsize, textColor,
     let textY;
     switch (verticalAlign) {
         case 'center':
-            textY = y + (h - totalTextHeight) / 2 + lineHeights - fsize;
+            textY = baseY + (baseH - totalTextHeight) / 2 + lineHeights - fsize;
             break;
         case 'top':
-            textY = y + px + lineHeights - fsize;
+            textY = baseY + px + lineHeights - fsize;
             break;
         default: // bottom
-            textY = y + h - totalTextHeight + lineHeights - fsize - 1;
+            textY = baseY + baseH - totalTextHeight + lineHeights - fsize - 1;
             break;
     }
 
@@ -1363,6 +1368,7 @@ function rTextRotated(lines, cell, x, y, w, h, fsize, textColor, rotation) {
 }
 
 // 渲染合并的单元格
+/** @param {Object} sheet */
 export function rMerged(sheet) {
     // 遍历所有合并单元格
     sheet.merges.forEach(m => {
@@ -1370,7 +1376,9 @@ export function rMerged(sheet) {
         const sCell = sheet.getAreaInviewInfo(m);
         const cellInfo = sheet.getCell(start.r, start.c);
         if (sCell.inView) { // 区域有一部分在视图中,那么合并
-            rCell.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo);
+            const layoutRect = sheet._getAreaInviewInfo2(m);
+            rCellBackground.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo);
+            rCellText.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo, layoutRect);
             // ****************设置合并单元格边框比较特殊,逻辑为：比如如果top有边框,那么top的所有单元格的topborder属性都必须一样****************
             // 获取合并区域的范围
             const { s, e } = m; // s是起始位置,e是结束位置
@@ -1471,6 +1479,7 @@ export function rMerged(sheet) {
 }
 
 // 边框渲染
+/** @param {Array<Object>} ciArr */
 export function rBorder(ciArr) {
     const snap = (value) => this.snap(value);
     const px = (value) => this.px(value);
@@ -1616,6 +1625,7 @@ export function rBorder(ciArr) {
 }
 
 // 渲染基础数据
+/** @param {Object} sheet */
 export function rBaseData(sheet) {
     this.bc.strokeStyle = '#ddd';
     this.bc.textAlign = 'left';
@@ -1710,6 +1720,7 @@ export function rBaseData(sheet) {
     });
 
     // 存储 cellPositions 供 rConditionalFormats 使用（图标）
+    this._cellRenderPositions = cellPositions;
     this._cfCellPositions = cellPositions;
 
     // 第二遍：绘制数据条（在文字之前，避免覆盖）

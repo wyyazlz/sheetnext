@@ -1,6 +1,6 @@
 /**
- * 图标集定义与Canvas矢量绘制
- * 所有图标使用Canvas绘制，无外部依赖
+ * Icon Set Definition vs. Canvas Vector Drawing
+ * All icons are drawn using Canvas with no external dependencies
  */
 
 // 图标缓存：`${iconName}-${size}` -> Canvas
@@ -19,9 +19,9 @@ const COLORS = {
 };
 
 /**
- * 获取图标Canvas（带缓存）
- * @param {string} iconName - 图标名称
- * @param {number} size - 图标尺寸
+ * Get Icon Canvas (with Cache)
+ * @param {string} iconName - Icon Name
+ * @param {number} size - Icon Size
  * @returns {HTMLCanvasElement}
  */
 export function getIconCanvas(iconName, size = 16) {
@@ -42,10 +42,10 @@ export function getIconCanvas(iconName, size = 16) {
 }
 
 /**
- * 绘制图标到指定上下文
- * @param {CanvasRenderingContext2D} ctx - Canvas上下文
- * @param {string} iconName - 图标名称
- * @param {number} size - 图标尺寸
+ * Draw icon to specified context
+ * @param {CanvasRenderingContext2D} ctx - Canvas Context
+ * @param {string} iconName - Icon Name
+ * @param {number} size - Icon Size
  */
 export function drawIcon(ctx, iconName, size) {
     const cx = size / 2;
@@ -83,7 +83,7 @@ export function drawIcon(ctx, iconName, size) {
 }
 
 /**
- * 绘制箭头图标
+ * Draw arrow icon
  */
 function drawArrow(ctx, name, size) {
     const cx = size / 2;
@@ -178,7 +178,7 @@ function drawArrow(ctx, name, size) {
 }
 
 /**
- * 绘制交通灯图标
+ * Draw Traffic Light Icon
  */
 function drawTrafficLight(ctx, name, size) {
     const cx = size / 2;
@@ -224,7 +224,7 @@ function drawTrafficLight(ctx, name, size) {
 }
 
 /**
- * 绘制旗帜图标
+ * Draw flag icon
  */
 function drawFlag(ctx, name, size) {
     const x = size * 0.25;
@@ -256,7 +256,7 @@ function drawFlag(ctx, name, size) {
 }
 
 /**
- * 绘制标志图标
+ * Draw logo icon
  */
 function drawSign(ctx, name, size) {
     const cx = size / 2;
@@ -297,7 +297,7 @@ function drawSign(ctx, name, size) {
 }
 
 /**
- * 绘制符号图标
+ * Draw Symbol Icon
  */
 function drawSymbol(ctx, name, size) {
     const cx = size / 2;
@@ -379,7 +379,7 @@ function drawSymbol(ctx, name, size) {
 }
 
 /**
- * 绘制星星图标
+ * Draw star icon
  */
 function drawStar(ctx, name, size) {
     const cx = size / 2;
@@ -422,7 +422,7 @@ function drawStar(ctx, name, size) {
 }
 
 /**
- * 绘制三角形图标
+ * Draw Triangle Icon
  */
 function drawTriangle(ctx, name, size) {
     const cx = size / 2;
@@ -453,7 +453,7 @@ function drawTriangle(ctx, name, size) {
 }
 
 /**
- * 绘制评分图标
+ * Draw Rating Icon
  */
 function drawRating(ctx, name, size) {
     const bars = parseInt(name.replace('rating', '')) || 0;
@@ -478,7 +478,7 @@ function drawRating(ctx, name, size) {
 }
 
 /**
- * 绘制圆形图标（红到黑系列）
+ * Draw a circular icon (red to black series)
  */
 function drawCircle(ctx, name, size) {
     const cx = size / 2;
@@ -503,7 +503,7 @@ function drawCircle(ctx, name, size) {
 }
 
 /**
- * 绘制四分图标
+ * Draw Quad Icon
  */
 function drawQuarter(ctx, name, size) {
     const cx = size / 2;
@@ -536,7 +536,7 @@ function drawQuarter(ctx, name, size) {
 }
 
 /**
- * 绘制方块图标（2x2四宫格）
+ * Draw Tile Icon (2x2 Quad)
  */
 function drawBox(ctx, name, size) {
     const boxes = parseInt(name.replace('box', '')) || 0;
@@ -569,7 +569,7 @@ function drawBox(ctx, name, size) {
 }
 
 /**
- * 清除图标缓存
+ * Clear Icon Cache
  */
 export function clearIconCache() {
     iconCache.clear();

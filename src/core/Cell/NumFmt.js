@@ -1,12 +1,12 @@
 /**
- * Excel 数值格式化模块
- * 完整实现 Excel numFmt 规范，支持：
- * - 4段格式（正数;负数;零;文本）
- * - 条件格式 [>100]、颜色 [Red]、locale [$-804]
- * - 日期时间（自动区分 m 月/分）
- * - 数字（千分位、小数、百分比、科学计数）
- * - 分数（自动约分、固定分母）
- * - 特殊格式（填充、对齐、文本占位）
+ * Excel Numeric Formatting Module
+ * Fully implement the Excel numFmt specification, supporting:
+ * - 4-paragraph format (positive; negative; zero; text)
+ * - conditional formatting [> 100], color [Red], locale [$ -804]
+ * - Datetime (automatically distinguish m mo/min)
+ * - Numbers (thousands, decimals, percentages, scientific counts)
+ * - Fraction (auto reduction, fixed denominator)
+ * - Special formatting (padding, alignment, text placeholder)
  */
 
 import { BUILTIN_NUMFMTS } from './constants.js';

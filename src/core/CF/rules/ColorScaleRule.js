@@ -1,22 +1,27 @@
 /**
- * ColorScale规则 - 色阶（双色/三色渐变）
+ * ColorScale Rule - Levels (Two-/Tri-Color Gradient)
  */
 import { CFRule } from '../CFRule.js';
 import { interpolateColor, interpolateColor3, resolveCfvoValue, expandHex } from '../helpers.js';
 
 export class ColorScaleRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {Array<Object>} */
         this.cfvos = config.cfvos || [{ type: 'min' }, { type: 'max' }];
+        /** @type {string[]} */
         this.colors = config.colors || ['#F8696B', '#63BE7B'];
         this.needsRangeData = true;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         // 色阶只对数值有效
         return typeof cell.calcVal === 'number' && !isNaN(cell.calcVal);
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {Object|null} */
     getFormat(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (typeof val !== 'number' || isNaN(val)) return null;

@@ -27,6 +27,7 @@ const TOTALS_FUNCTION_ALIASES = {
 export default class TableItem {
     /** @param {Sheet} sheet @param {Object} options */
     constructor(sheet, options = {}) {
+        /** @type {Sheet} */
         this.sheet = sheet;
         /** @type {string} */
         this.id = options.id || this._generateId();

@@ -1,17 +1,22 @@
 /**
- * Top10规则 - 前N项/后N项/前N%/后N%
+ * Top10 Rule - Top N/Bottom N/Bottom N %/Bottom N %
  */
 import { CFRule } from '../CFRule.js';
 
 export class Top10Rule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {number} */
         this.rank = config.rank || 10;
+        /** @type {boolean} */
         this.percent = config.percent || false;
+        /** @type {boolean} */
         this.bottom = config.bottom || false;
         this.needsRangeData = true;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (typeof val !== 'number' || isNaN(val)) return false;

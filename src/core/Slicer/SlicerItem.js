@@ -7,6 +7,7 @@ const DEFAULT_MIN_HEIGHT = 160;
 export default class SlicerItem {
     /** @param {Sheet} sheet @param {Object} options */
     constructor(sheet, options = {}) {
+        /** @type {Sheet} */
         this.sheet = sheet;
         /** @type {string} */
         this.id = options.id ?? `Slicer_${Date.now()}`;
@@ -42,6 +43,7 @@ export default class SlicerItem {
         this.selectedKeys = new Set(options.selectedKeys || []);
 
         // Accept both Drawing and drawing option names for compatibility.
+        /** @type {import('../Drawing/DrawingItem.js').default|null} */
         this.Drawing = options.Drawing || options.drawing || null;
         this._SN = sheet.SN;
         if (this.Drawing) {
@@ -61,6 +63,7 @@ export default class SlicerItem {
         this._position = null;
     }
 
+    /** @type {import('./SlicerCache.js').default|null} */
     get cache() {
         return this._SN._slicerCaches?.get(this.cacheId) || null;
     }
@@ -177,6 +180,7 @@ export default class SlicerItem {
         this._syncHeaderState();
     }
 
+    /** @param {Object} canvas @param {number} x @param {number} y @param {number} w @param {number} h @param {boolean} [inView=true] */
     render(canvas, x, y, w, h, inView = true) {
         this._ensureDom(canvas);
         if (!this._dom) return;

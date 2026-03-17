@@ -1,14 +1,14 @@
 /**
- * 合并单元格处理模块
- * 负责处理单元格的合并、解除合并及相关操作
+ * Merge Cell Processing Modules
+ * Handle cell merge, unmerger and related operations
  */
 
 import { findMaxCompositeArea } from './helpers.js';
 
 /**
- * 获取区域在此表能拓展的最大区域，根据合并的单元格拓展
- * @param {Object} selection - 选区
- * @returns {Object} 拓展后的最大区域
+ * Gets the maximum area that this table can expand by using the merged cell
+ * @param {Object} selection - Selection
+ * @returns {Object} Maximum area after extension
  */
 export function _getExpandMaxArea(selection) {
     if (!this.merges) return selection;
@@ -26,9 +26,9 @@ export function _getExpandMaxArea(selection) {
 }
 
 /**
- * 检测区域中是否存在合并的单元格
- * @param {Object} area - 区域对象
- * @returns {Boolean} 是否存在合并单元格
+ * Tests whether merged cells exist in the range
+ * @param {Object} area - Area Object
+ * @returns {Boolean} Whether merged cells exist
  */
 export function areaHaveMerge(area) {
     if (area) {
@@ -39,8 +39,8 @@ export function areaHaveMerge(area) {
 }
 
 /**
- * 解除合并，传入单元格地址或区域，默认取 activeAreas
- * @param {Object|String|null} cellAd - 单元格地址或区域
+ * Unmerger, transfer to cell address or area, default take active Areas
+ * @param {Object|String|null} cellAd - Cell address or area
  */
 export function unMergeCells(cellAd = null) {
     const sheet = this;
@@ -93,7 +93,7 @@ export function unMergeCells(cellAd = null) {
 }
 
 /**
- * 解除单个合并区域（内部方法）
+ * Disassembly individual areas (internal method)
  */
 function unMergeOne(cellAd) {
     const sheet = this;
@@ -147,9 +147,9 @@ function unMergeOne(cellAd) {
 }
 
 /**
- * 合并单元格，支持多种模式
- * @param {Array|Object|String|null} areas - 区域，默认取 activeAreas
- * @param {String} mode - 模式: 'default'|'center'|'content'|'same'
+ * Merge Cells to Support Multiple Modes
+ * @param {Array|Object|String|null} areas - Section, default action Areas
+ * @param {String} mode - Mode: 'default' |center' |content'same'
  */
 export function mergeCells(areas = null, mode = 'default') {
     const sheet = this;
@@ -240,7 +240,7 @@ export function mergeCells(areas = null, mode = 'default') {
 }
 
 /**
- * 合并单个区域（内部方法）
+ * Merge individual areas (internal approach)
  */
 function mergeOneArea(areaAd, applyCenter = false) {
     const sheet = this;

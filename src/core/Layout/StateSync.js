@@ -1,49 +1,51 @@
 /**
- * StateSync - 工具栏复选框与核心API状态双向绑定同步器
+ * StateSync - Toolbar checkbox bidirectionally binds synchronizer with core API status
  *
- * 设计思路：
- * 1. 配置中 checked 为 getter 函数，面板渲染时调用获取实时状态
- * 2. API 状态变更时，通过 notify 方法同步已渲染的 checkbox DOM
- * 3. 面板按需加载，未渲染时不做无用功，渲染时自动读取最新状态
+ * Design Ideas
+ * 1. In the configuration, checked is the getter function, and when the panel is rendered, it is called to get the real-time status.
+ * 2. Synchronize rendered checkbox Dom via notify method when API status changes
+ * 3. Panels load on demand, unrendered without useless work, and automatically read state of update when rendering
  */
 
 export default class StateSync {
+    /** @param {import('../Workbook/Workbook.js').default} SN */
     constructor(SN) {
+        /** @type {import('../Workbook/Workbook.js').default} */
         this.SN = SN;
         // id -> { element, getter } 绑定映射
         this.bindings = new Map();
     }
 
     /**
-     * 注册 checkbox 绑定（面板渲染时由 ToolbarBuilder 调用）
-     * @param {string} id - checkbox 的唯一标识（对应配置中的 id）
-     * @param {HTMLInputElement} element - checkbox DOM 元素
-     * @param {Function} getter - 状态获取函数 (ctx) => boolean
+     * Register checkbox binding (called by ToolbarBuilder at panel rendering)
+     * @param {string} id - checkbox unique identifier (id in the configuration)
+     * @param {HTMLInputElement} element - Checkbox DOM element
+     * @param {Function} getter - Status Retrieving Function (ctx) => boolean
      */
     register(id, element, getter) {
         this.bindings.set(id, { element, getter });
     }
 
     /**
-     * 注销绑定（面板销毁时调用，可选）
-     * @param {string} id - checkbox 的唯一标识
+     * Write-off binding (call on panel destruction, optional)
+     * @param {string} id - Checkbox's only identifier
      */
     unregister(id) {
         this.bindings.delete(id);
     }
 
     /**
-     * 批量注销（面板销毁时调用）
-     * @param {string[]} ids - checkbox 的唯一标识数组
+     * Batch write-off (call when panel is destroyed)
+     * @param {string[]} ids - The only identification array for checkbox
      */
     unregisterAll(ids) {
         ids.forEach(id => this.bindings.delete(id));
     }
 
     /**
-     * API 状态变更时调用，同步已渲染的 checkbox
-     * @param {string} id - checkbox 的唯一标识
-     * @param {boolean} value - 新状态值
+     * Call on API status change, sync replayed checkbox
+     * @param {string} id - Checkbox's only identifier
+     * @param {boolean} value - New Status Value
      */
     notify(id, value) {
         const binding = this.bindings.get(id);
@@ -55,9 +57,9 @@ export default class StateSync {
     }
 
     /**
-     * 获取当前状态（面板渲染时调用）
-     * @param {Function|boolean} getter - getter 函数或静态布尔值
-     * @returns {boolean} 当前状态
+     * Retrieving current status (call on panel rendering)
+     * @param {Function|boolean} getter - Geter function or static boolean value
+     * @returns {bolean} Current status
      */
     getState(getter) {
         if (typeof getter === 'function') {
@@ -67,8 +69,8 @@ export default class StateSync {
     }
 
     /**
-     * 检查是否已注册
-     * @param {string} id - checkbox 的唯一标识
+     * Check for registration
+     * @param {string} id - Checkbox's only identifier
      * @returns {boolean}
      */
     has(id) {
@@ -76,7 +78,7 @@ export default class StateSync {
     }
 
     /**
-     * 清空所有绑定
+     * Clear all bounds.
      */
     clear() {
         this.bindings.clear();

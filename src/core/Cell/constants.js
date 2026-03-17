@@ -1,10 +1,15 @@
 /**
- * 项目常量定义
- * 存放Excel相关的枚举和常量配置
+ * Project Constant Definition
+ * Store Excel-related enumeration and constant configurations
  */
 
 /**
- * Excel 单元格类型映射
+ * Project Constant Definition
+ * Store Excel-related enumeration and constant configurations
+ */
+
+/**
+ * Excel Cell Type Mapping
  */
 export const CELL_TYPES = {
     'n': 'number',
@@ -17,7 +22,7 @@ export const CELL_TYPES = {
 };
 
 /**
- * Excel 内置数字格式
+ * Excel built-in number format
  * @see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.numberingformat
  */
 export const BUILTIN_NUMFMTS = {

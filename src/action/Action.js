@@ -101,6 +101,7 @@ Object.assign(Fun.prototype, {
 Object.assign(Fun.prototype, {
     insertImages: InsertActions.insertImages,
     insertAreaScreenshot: InsertActions.insertAreaScreenshot,
+    downloadActiveDrawingImage: InsertActions.downloadActiveDrawingImage,
     insertChart: InsertActions.insertChart,
     openChartModal: InsertActions.openChartModal,
     insertComment: InsertActions.insertComment,

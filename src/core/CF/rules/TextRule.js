@@ -1,15 +1,18 @@
 /**
- * Text规则 - 文本相关
- * 包含：containsText, notContainsText, beginsWith, endsWith
+ * Text Rule - Text Dependent
+ * Contains: containsText, notContainsText, beginsWith, endsWith
  */
 import { CFRule } from '../CFRule.js';
 
 export class TextRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {string} */
         this.text = config.text || '';
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (val === null || val === undefined) return false;

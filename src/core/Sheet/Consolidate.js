@@ -122,6 +122,7 @@ function _compute(funcName, items) {
     }
 }
 
+/** @param {Array<string|Object>|Object} ranges @param {Object} [options={}] */
 export function consolidate(ranges, options = {}) {
     if (ranges && typeof ranges === 'object' && !Array.isArray(ranges) && !ranges.s) {
         options = ranges;

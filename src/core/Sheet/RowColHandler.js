@@ -1,12 +1,250 @@
 /**
- * 行列操作处理模块
- * 负责处理行列的插入和删除操作
+ * Line Operations Processing Module
+ * Inserting and Deleting Handling Lines
  */
 
 /**
- * 插入行
- * @param {Number} r - 插入位置的行索引
- * @param {Number} number - 插入的行数
+ * Line Operations Processing Module
+ * Inserting and Deleting Handling Lines
+ */
+
+function _cloneRange(range) {
+    if (!range?.s || !range?.e) return null;
+    return {
+        s: { r: range.s.r, c: range.s.c },
+        e: { r: range.e.r, c: range.e.c }
+    };
+}
+function _cloneTableColumns(columns = []) {
+    return columns.map(col => ({ ...col }));
+}
+
+function _buildNormalizedTableColumns(columns = [], count = columns.length) {
+    const next = _cloneTableColumns(columns).slice(0, count);
+    while (next.length < count) {
+        next.push({
+            id: next.length + 1,
+            name: `列${next.length + 1}`
+        });
+    }
+    return next.map((col, index) => ({
+        ...col,
+        id: index + 1,
+        name: col?.name || `列${index + 1}`
+    }));
+}
+
+function _resetTableRowCache(table) {
+    table._stripeRowIndexCache = null;
+    table._stripeCacheStartRow = -1;
+    table._stripeCacheEndRow = -1;
+    table._stripeCacheVisibilityVersion = -1;
+}
+
+function _applyTableSnapshots(sheet, snapshots, stage) {
+    if (!sheet.Table || snapshots.length === 0) return;
+
+    snapshots.forEach(snapshot => {
+        const state = snapshot[stage];
+        const table = snapshot.table;
+        if (!state) return;
+
+        if (!state.exists) {
+            table._ref = null;
+            sheet.Table._tables.delete(table.id);
+            sheet.AutoFilter.unregisterTableScope(table.id, { silent: true });
+            _resetTableRowCache(table);
+            return;
+        }
+
+        table._ref = _cloneRange(state.range);
+        table.columns = _cloneTableColumns(state.columns);
+        table._showTotalsRow = state.showTotalsRow;
+        sheet.Table._tables.set(table.id, table);
+        _resetTableRowCache(table);
+
+        if (table.showTotalsRow && table.range) {
+            table.applyTotalsRow({ initializeDefaults: true, force: true });
+        }
+
+        if (table.autoFilterEnabled && table.range) {
+            table._updateAutoFilter();
+        } else {
+            sheet.AutoFilter.unregisterTableScope(table.id, { silent: true });
+        }
+    });
+}
+
+function _buildRowDeleteTableSnapshots(sheet, r, number) {
+    if (!sheet.Table || sheet.Table.size === 0) return [];
+
+    const delEnd = r + number - 1;
+    const snapshots = [];
+
+    sheet.Table.forEach(table => {
+        const range = table.range;
+        if (!range || range.e.r < r) return;
+
+        const before = {
+            exists: true,
+            range: _cloneRange(range),
+            columns: _cloneTableColumns(table.columns),
+            showTotalsRow: table.showTotalsRow
+        };
+
+        let exists = true;
+        let nextRange = _cloneRange(range);
+        let nextShowTotalsRow = table.showTotalsRow;
+
+        if (range.s.r > delEnd) {
+            nextRange.s.r -= number;
+            nextRange.e.r -= number;
+        } else {
+            const nextStart = range.s.r < r ? range.s.r : (range.e.r > delEnd ? r : null);
+            const nextEnd = range.e.r > delEnd ? range.e.r - number : (range.s.r < r ? r - 1 : null);
+
+            if (nextStart === null || nextEnd === null || nextStart > nextEnd) {
+                exists = false;
+                nextRange = null;
+            } else {
+                nextRange.s.r = nextStart;
+                nextRange.e.r = nextEnd;
+            }
+        }
+
+        if (exists && nextRange) {
+            const rowCount = nextRange.e.r - nextRange.s.r + 1;
+            const minRows = (table.showHeaderRow ? 1 : 0) + (table.showTotalsRow ? 1 : 0);
+            if (rowCount <= 0) {
+                exists = false;
+                nextRange = null;
+            } else if (table.showTotalsRow && rowCount < minRows) {
+                nextShowTotalsRow = false;
+            }
+        }
+
+        snapshots.push({
+            table,
+            before,
+            after: {
+                exists,
+                range: nextRange,
+                columns: _cloneTableColumns(before.columns),
+                showTotalsRow: nextShowTotalsRow
+            }
+        });
+    });
+
+    return snapshots;
+}
+
+function _buildColDeleteTableSnapshots(sheet, c, number) {
+    if (!sheet.Table || sheet.Table.size === 0) return [];
+
+    const delEnd = c + number - 1;
+    const snapshots = [];
+
+    sheet.Table.forEach(table => {
+        const range = table.range;
+        if (!range || range.e.c < c) return;
+
+        const before = {
+            exists: true,
+            range: _cloneRange(range),
+            columns: _cloneTableColumns(table.columns),
+            showTotalsRow: table.showTotalsRow
+        };
+
+        let exists = true;
+        let nextRange = _cloneRange(range);
+
+        if (range.s.c > delEnd) {
+            nextRange.s.c -= number;
+            nextRange.e.c -= number;
+        } else {
+            const nextStart = range.s.c < c ? range.s.c : (range.e.c > delEnd ? c : null);
+            const nextEnd = range.e.c > delEnd ? range.e.c - number : (range.s.c < c ? c - 1 : null);
+
+            if (nextStart === null || nextEnd === null || nextStart > nextEnd) {
+                exists = false;
+                nextRange = null;
+            } else {
+                nextRange.s.c = nextStart;
+                nextRange.e.c = nextEnd;
+            }
+        }
+
+        let nextColumns = _cloneTableColumns(before.columns);
+        if (exists && nextRange) {
+            const overlapStart = Math.max(range.s.c, c);
+            const overlapEnd = Math.min(range.e.c, delEnd);
+            const removedCount = overlapStart <= overlapEnd ? (overlapEnd - overlapStart + 1) : 0;
+            const removeIndex = Math.max(0, c - range.s.c);
+            if (removedCount > 0) {
+                nextColumns.splice(removeIndex, removedCount);
+            }
+
+            const colCount = nextRange.e.c - nextRange.s.c + 1;
+            if (colCount <= 0) {
+                exists = false;
+                nextRange = null;
+            } else {
+                nextColumns = _buildNormalizedTableColumns(nextColumns, colCount);
+            }
+        }
+
+        snapshots.push({
+            table,
+            before,
+            after: {
+                exists,
+                range: nextRange,
+                columns: exists ? nextColumns : [],
+                showTotalsRow: table.showTotalsRow
+            }
+        });
+    });
+
+    return snapshots;
+}
+
+function _captureStructureStates(sheet) {
+    return {
+        pivotTable: sheet.PivotTable?._captureStructureState?.() ?? null,
+        comment: sheet.Comment?._captureState?.() ?? null,
+        crossSheet: sheet.SN.sheets.map(targetSheet => ({
+            sheet: targetSheet,
+            cf: targetSheet.CF?._captureState?.() ?? null,
+            sparkline: targetSheet.Sparkline?._captureState?.() ?? null
+        }))
+    };
+}
+
+function _applyStructureStates(sheet, states) {
+    if (!states) return;
+
+    sheet.PivotTable?._applyStructureState?.(states.pivotTable);
+    sheet.Comment?._applyState?.(states.comment);
+
+    states.crossSheet?.forEach(entry => {
+        entry.sheet?.CF?._applyState?.(entry.cf);
+        entry.sheet?.Sparkline?._applyState?.(entry.sparkline);
+    });
+}
+
+function _notifyStructureChanges(sheet, method, index, number) {
+    sheet.PivotTable?.[method]?.(index, number);
+    sheet.Comment?.[method]?.(index, number);
+    sheet.SN.sheets.forEach(targetSheet => {
+        targetSheet.CF?.[method]?.(index, number, sheet.name);
+        targetSheet.Sparkline?.[method]?.(index, number, sheet.name);
+    });
+}
+
+/**
+ * Insert Row
+ * @param {Number} r - Row Index to Insert Location
+ * @param {Number} number - Number of rows inserted
  */
 export function addRows(r, number = 1) {
     // 触发 beforeInsertRows 事件（可取消）
@@ -29,6 +267,8 @@ export function addRows(r, number = 1) {
     const oldStyledRows = new Set(this._styledRows); // 保存旧的样式行索引
     // 保存受影响的超级表信息（用于撤销）
     const affectedTables = [];
+    const autoFilterBefore = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const structureBefore = _captureStructureStates(this);
     if (this.Table && this.Table.size > 0) {
         this.Table.forEach(table => {
             const range = table.range;
@@ -100,6 +340,10 @@ export function addRows(r, number = 1) {
         }
     });
     applyRowInsertToTables();
+    this.AutoFilter?._onRowsInserted?.(r, number);
+    _notifyStructureChanges(this, '_onRowsInserted', r, number);
+    const autoFilterAfter = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const structureAfter = _captureStructureStates(this);
 
     // 添加撤销重做操作
     const newStyledRowsAfter = new Set(this._styledRows); // 保存新的样式行索引
@@ -123,6 +367,8 @@ export function addRows(r, number = 1) {
                 }
             });
             restoreTables();
+            this.AutoFilter?._applySheetScopeState?.(autoFilterBefore, { silent: true });
+            _applyStructureStates(this, structureBefore);
         },
         redo: () => {
             // 重新插入行
@@ -154,6 +400,8 @@ export function addRows(r, number = 1) {
                 }
             });
             applyRowInsertToTables();
+            this.AutoFilter?._applySheetScopeState?.(autoFilterAfter, { silent: true });
+            _applyStructureStates(this, structureAfter);
         }
     });
 
@@ -176,9 +424,9 @@ export function addRows(r, number = 1) {
 }
 
 /**
- * 插入列
- * @param {Number} c - 插入位置的列索引
- * @param {Number} number - 插入的列数
+ * Insert Columns
+ * @param {Number} c - Index of columns for inserting positions
+ * @param {Number} number - Number of columns inserted
  */
 export function addCols(c, number = 1) {
     // 触发 beforeInsertColumns 事件（可取消）
@@ -217,13 +465,8 @@ export function addCols(c, number = 1) {
     }
 
     // 保存受影响的自动筛选信息（非超级表）
-    let oldAutoFilterRange = null;
-    const autoFilter = this.AutoFilter;
-    const afRange = autoFilter?.range;
-    const autoFilterAffected = afRange && c >= afRange.s.c && c <= afRange.e.c + 1;
-    if (autoFilterAffected) {
-        oldAutoFilterRange = { s: { ...afRange.s }, e: { ...afRange.e } };
-    }
+    const autoFilterBefore = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const structureBefore = _captureStructureStates(this);
 
     // 在每一行插入新列
     this.rows.forEach(row => {
@@ -288,10 +531,10 @@ export function addCols(c, number = 1) {
     });
 
     // 更新普通自动筛选范围（非超级表）
-    if (autoFilterAffected && afRange) {
-        afRange.e.c += number;
-        autoFilter._ref = this.SN.Utils.rangeNumToStr(afRange);
-    }
+    this.AutoFilter?._onColsInserted?.(c, number);
+    _notifyStructureChanges(this, '_onColsInserted', c, number);
+    const autoFilterAfter = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const structureAfter = _captureStructureStates(this);
 
     // 添加撤销重做操作
     const newStyledColsAfter = new Set(this._styledCols); // 保存新的样式列索引
@@ -328,10 +571,8 @@ export function addCols(c, number = 1) {
             });
 
             // 恢复自动筛选范围
-            if (oldAutoFilterRange) {
-                autoFilter._range = oldAutoFilterRange;
-                autoFilter._ref = this.SN.Utils.rangeNumToStr(oldAutoFilterRange);
-            }
+            this.AutoFilter?._applySheetScopeState?.(autoFilterBefore, { silent: true });
+            _applyStructureStates(this, structureBefore);
         },
         redo: () => {
             // 重新插入列
@@ -383,10 +624,8 @@ export function addCols(c, number = 1) {
             });
 
             // 重新更新自动筛选
-            if (oldAutoFilterRange) {
-                afRange.e.c += number;
-                autoFilter._ref = this.SN.Utils.rangeNumToStr(afRange);
-            }
+            this.AutoFilter?._applySheetScopeState?.(autoFilterAfter, { silent: true });
+            _applyStructureStates(this, structureAfter);
         }
     });
 
@@ -409,9 +648,9 @@ export function addCols(c, number = 1) {
 }
 
 /**
- * 删除行
- * @param {Number} r - 删除起始位置的行索引
- * @param {Number} number - 删除的行数
+ * Delete Row
+ * @param {Number} r - Remove Row Index at Start Location
+ * @param {Number} number - Number of rows deleted
  */
 export function delRows(r, number = 1) {
     // 触发 beforeDeleteRows 事件（可取消）
@@ -432,6 +671,9 @@ export function delRows(r, number = 1) {
     // 存储删除前的合并单元格信息
     const mergesBefore = this.merges.slice();
     const oldStyledRows = new Set(this._styledRows); // 保存旧的样式行索引
+    const tableSnapshots = _buildRowDeleteTableSnapshots(this, r, number);
+    const autoFilterBefore = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const structureBefore = _captureStructureStates(this);
 
     // 检测并更新涉及合并单元格
     this.merges = this.merges.filter(m => {
@@ -488,8 +730,13 @@ export function delRows(r, number = 1) {
     })
 
     // 存储删除后的合并单元格信息
+    _applyTableSnapshots(this, tableSnapshots, 'after');
+    this.AutoFilter?._onRowsDeleted?.(r, number);
+    _notifyStructureChanges(this, '_onRowsDeleted', r, number);
     const mergesAfter = this.merges.slice();
-    const newStyledRowsAfter = new Set(this._styledRows); // 保存新的样式行索引
+    const autoFilterAfter = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const newStyledRowsAfter = new Set(this._styledRows);
+    const structureAfter = _captureStructureStates(this);
 
     // 添加撤销重做功能
     this.SN.UndoRedo.add({
@@ -501,6 +748,9 @@ export function delRows(r, number = 1) {
             this._styledRows = new Set(oldStyledRows);
             // 恢复删除前的合并单元格信息
             this.merges = mergesBefore.slice();
+            _applyTableSnapshots(this, tableSnapshots, 'before');
+            this.AutoFilter?._applySheetScopeState?.(autoFilterBefore, { silent: true });
+            _applyStructureStates(this, structureBefore);
         },
         redo: () => {
             // 重做操作
@@ -510,6 +760,9 @@ export function delRows(r, number = 1) {
             this._styledRows = new Set(newStyledRowsAfter);
             // 恢复删除后的合并单元格信息
             this.merges = mergesAfter.slice();
+            _applyTableSnapshots(this, tableSnapshots, 'after');
+            this.AutoFilter?._applySheetScopeState?.(autoFilterAfter, { silent: true });
+            _applyStructureStates(this, structureAfter);
         }
     });
 
@@ -532,9 +785,9 @@ export function delRows(r, number = 1) {
 }
 
 /**
- * 删除列
- * @param {Number} c - 删除起始位置的列索引
- * @param {Number} number - 删除的列数
+ * Delete Column
+ * @param {Number} c - Delete column index for starting position
+ * @param {Number} number - NUMBER OF ROWS REMOVED
  */
 export function delCols(c, number = 1) {
     // 触发 beforeDeleteColumns 事件（可取消）
@@ -555,6 +808,9 @@ export function delCols(c, number = 1) {
     const deletedCells = this.rows.map(row => row ? row.cells.slice(c, c + number) : null);
     const mergesBefore = this.merges.slice();
     const oldStyledCols = new Set(this._styledCols); // 保存旧的样式列索引
+    const tableSnapshots = _buildColDeleteTableSnapshots(this, c, number);
+    const autoFilterBefore = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const structureBefore = _captureStructureStates(this);
 
     // 检测并更新涉及合并单元格
     this.merges = this.merges.filter(m => {
@@ -611,8 +867,13 @@ export function delCols(c, number = 1) {
     })
 
     // 存储删除后的状态
+    _applyTableSnapshots(this, tableSnapshots, 'after');
+    this.AutoFilter?._onColsDeleted?.(c, number);
+    _notifyStructureChanges(this, '_onColsDeleted', c, number);
     const mergesAfter = this.merges.slice();
-    const newStyledColsAfter = new Set(this._styledCols); // 保存新的样式列索引
+    const autoFilterAfter = this.AutoFilter?._captureSheetScopeState?.() ?? null;
+    const newStyledColsAfter = new Set(this._styledCols);
+    const structureAfter = _captureStructureStates(this);
 
     // 添加撤销重做功能
     this.SN.UndoRedo.add({
@@ -629,6 +890,9 @@ export function delCols(c, number = 1) {
             this._styledCols = new Set(oldStyledCols);
             // 恢复合并单元格信息
             this.merges = mergesBefore.slice();
+            _applyTableSnapshots(this, tableSnapshots, 'before');
+            this.AutoFilter?._applySheetScopeState?.(autoFilterBefore, { silent: true });
+            _applyStructureStates(this, structureBefore);
         },
         redo: () => {
             // 重新删除列
@@ -640,6 +904,9 @@ export function delCols(c, number = 1) {
             this._styledCols = new Set(newStyledColsAfter);
             // 恢复删除后的合并单元格信息
             this.merges = mergesAfter.slice();
+            _applyTableSnapshots(this, tableSnapshots, 'after');
+            this.AutoFilter?._applySheetScopeState?.(autoFilterAfter, { silent: true });
+            _applyStructureStates(this, structureAfter);
         }
     });
 

@@ -1,14 +1,36 @@
 /**
- * 视图计算模块
- * 负责计算单元格和区域在可见视图中的位置信息，以及更新视图索引
+ * View Calculating Module
+ * Responsible for calculating information on the location of cells and areas in the visible view and updating the view index
  */
 
 /**
- * 获取单元格在可见视图中的信息
- * @param {Number} rowIndex - 行索引
- * @param {Number} colIndex - 列索引
- * @param {Boolean} posMerge - 是否处理合并单元格
- * @returns {Object} 包含位置和尺寸信息的对象
+ * View Calculating Module
+ * Responsible for calculating information on the location of cells and areas in the visible view and updating the view index
+ */
+
+function _hasVisibleIndexInRange(indexes, startIndex, endIndex) {
+    return indexes.some(index => index >= startIndex && index <= endIndex);
+}
+
+function _getAxisStartPosition(startIndex, frozenIndexes, scrollIndexes, headSize, freezeSize, getScrollOffset) {
+    const lastFrozenIndex = frozenIndexes[frozenIndexes.length - 1];
+    if (frozenIndexes.length && startIndex <= lastFrozenIndex) {
+        const firstFrozenIndex = frozenIndexes[0];
+        return headSize + (getScrollOffset.call(this, startIndex) - getScrollOffset.call(this, firstFrozenIndex));
+    }
+
+    const firstScrollIndex = scrollIndexes[0];
+    const baseIndex = firstScrollIndex ?? frozenIndexes[0] ?? startIndex;
+    const basePosition = firstScrollIndex != null ? freezeSize : headSize;
+    return basePosition + (getScrollOffset.call(this, startIndex) - getScrollOffset.call(this, baseIndex));
+}
+
+/**
+ * Fetch cell information in visible view
+ * @param {Number} rowIndex - Row index
+ * @param {Number} colIndex - Column Index
+ * @param {Boolean} posMerge - Whether to process merging cells
+ * @returns {Object} Objects with location and size information
  */
 export function getCellInViewInfo(rowIndex, colIndex, posMerge = true) {
 
@@ -79,9 +101,9 @@ export function getCellInViewInfo(rowIndex, colIndex, posMerge = true) {
 }
 
 /**
- * 获取区域在可见视图中的信息
- * @param {Object} area - 区域对象
- * @returns {Object} 包含位置和尺寸信息的对象
+ * Fetch area information in visible view
+ * @param {Object} area - Area Object
+ * @returns {Object} Objects with location and size information
  */
 export function getAreaInviewInfo(area) {
 
@@ -129,19 +151,23 @@ export function getAreaInviewInfo(area) {
 }
 
 /**
- * 获取区域在可见视图中的信息（方法2）
- * @param {Object} area - 区域对象
- * @returns {Object} 包含位置和尺寸信息的对象
+ * Get information on the area in visible view (method 2)
+ * @param {Object} area - Area Object
+ * @returns {Object} Objects with location and size information
  */
 export function _getAreaInviewInfo2(area) {
 
     let { s: { c: startCol, r: startRow }, e: { c: endCol, r: endRow } } = area;
 
-    const viewCol = this.vi.colsIndex
-    const viewRow = this.vi.rowsIndex
+    const frozenCols = this.vi.frozenCols || [];
+    const frozenRows = this.vi.frozenRows || [];
+    const viewCol = this.vi.colArr || [];
+    const viewRow = this.vi.rowArr || [];
 
     // area不在可视区域内就不需要计算了
-    if (endRow < viewRow[0] || startRow > viewRow[viewRow.length - 1] || endCol < viewCol[0] || startCol > viewCol[viewCol.length - 1]) return { inView: false }
+    const rowInView = _hasVisibleIndexInRange(frozenRows, startRow, endRow) || _hasVisibleIndexInRange(viewRow, startRow, endRow);
+    const colInView = _hasVisibleIndexInRange(frozenCols, startCol, endCol) || _hasVisibleIndexInRange(viewCol, startCol, endCol);
+    if (!rowInView || !colInView) return { inView: false }
 
     // 使用视图信息和滚动位置来确定区域的起始点，xy坐标原点要计算行列坐标的长度
     let totalWidth = 0;
@@ -192,13 +218,16 @@ export function _getAreaInviewInfo2(area) {
     }
     let startY = this.headHeight + offsetY;
 
+    startX = _getAxisStartPosition.call(this, startCol, frozenCols, viewCol, this.indexWidth, this.vi.fw, getScrollLeft);
+    startY = _getAxisStartPosition.call(this, startRow, frozenRows, viewRow, this.headHeight, this.vi.fh, getScrollTop);
+
     return { x: startX, y: startY, w: totalWidth, h: totalHeight, inView: true }
 }
 
 /**
- * 更新此表在画布中需要展示的索引信息
- * @param {Number} canvasWidth - 画布宽度
- * @param {Number} canvasHeight - 画布高度
+ * Update index information this table needs to display in the canvas
+ * @param {Number} canvasWidth - The width of the canvas
+ * @param {Number} canvasHeight - Layout height
  */
 export function _updView(canvasWidth, canvasHeight) {
     // 使用传入的宽高或默认使用画布的宽高（逻辑像素）
@@ -296,10 +325,10 @@ export function _updView(canvasWidth, canvasHeight) {
 }
 
 /**
- * 往前找指定距离非隐藏的行的索引
- * @param {Number} r - 当前行索引
- * @param {Number} number - 往前查找的距离
- * @returns {Number} 找到的行索引
+ * Find Index Forward for Lines Not Hidden
+ * @param {Number} r - Current Line Index
+ * @param {Number} number - Distance to Search Forward
+ * @returns {Number} Found Line Index
  */
 export function _findBeforeShowRow(r, number) {
     let count = 0
@@ -315,10 +344,10 @@ export function _findBeforeShowRow(r, number) {
 }
 
 /**
- * 往前找指定距离非隐藏的列的索引
- * @param {Number} c - 当前列索引
- * @param {Number} number - 往前查找的距离
- * @returns {Number} 找到的列索引
+ * Find Index Forward for Columns Not Hidden
+ * @param {Number} c - Current column index
+ * @param {Number} number - Distance to Search Forward
+ * @returns {Number} Found Column Index
  */
 export function _findBeforeShowCol(c, number) {
     let count = 0
@@ -334,10 +363,10 @@ export function _findBeforeShowCol(c, number) {
 }
 
 /**
- * 往后找指定距离非隐藏的行的索引
- * @param {Number} r - 当前行索引
- * @param {Number} number - 往后查找的距离
- * @returns {Number} 找到的行索引
+ * Find Index Back to Specified Non-hidden Lines
+ * @param {Number} r - Current Line Index
+ * @param {Number} number - Distance to Search Back
+ * @returns {Number} Found Line Index
  */
 export function _findNextShowRow(r, number) {
     let count = 0
@@ -353,10 +382,10 @@ export function _findNextShowRow(r, number) {
 }
 
 /**
- * 往后找指定距离非隐藏的列的索引
- * @param {Number} c - 当前列索引
- * @param {Number} number - 往后查找的距离
- * @returns {Number} 找到的列索引
+ * Find Index Back for Columns Not Hidden
+ * @param {Number} c - Current column index
+ * @param {Number} number - Distance to Search Back
+ * @returns {Number} Found Column Index
  */
 export function _findNextShowCol(c, number) {
     let count = 0
@@ -372,8 +401,8 @@ export function _findNextShowCol(c, number) {
 }
 
 /**
- * 获取所有行的总高度（缓存优化）
- * @returns {Number} 总高度
+ * Retrieving the total height of all rows (cache optimization)
+ * @returns {Number} Total Height
  */
 export function getTotalHeight() {
     if (this._totalHeightCache !== undefined) return this._totalHeightCache;
@@ -386,8 +415,8 @@ export function getTotalHeight() {
 }
 
 /**
- * 获取所有列的总宽度（缓存优化）
- * @returns {Number} 总宽度
+ * Get the total width of all columns (cache optimization)
+ * @returns {Number} Total width
  */
 export function getTotalWidth() {
     if (this._totalWidthCache !== undefined) return this._totalWidthCache;
@@ -400,7 +429,7 @@ export function getTotalWidth() {
 }
 
 /**
- * 清除尺寸缓存（行列变化时调用）
+ * Clear size cache (call when row changes)
  */
 export function _clearSizeCache() {
     this._totalHeightCache = undefined;
@@ -408,9 +437,9 @@ export function _clearSizeCache() {
 }
 
 /**
- * 获取指定行之前所有行的高度总和
- * @param {Number} rowIndex - 行索引
- * @returns {Number} 高度总和
+ * Get the sum of heights for all lines before the specified line
+ * @param {Number} rowIndex - Row index
+ * @returns {Number}High Sum
  */
 export function getScrollTop(rowIndex) {
     let total = 0;
@@ -421,9 +450,9 @@ export function getScrollTop(rowIndex) {
 }
 
 /**
- * 获取指定列之前所有列的宽度总和
- * @param {Number} colIndex - 列索引
- * @returns {Number} 宽度总和
+ * Sum of widths of all columns before the specified column
+ * @param {Number} colIndex - Column Index
+ * @returns {Number} Sum of width
  */
 export function getScrollLeft(colIndex) {
     let total = 0;
@@ -434,9 +463,9 @@ export function getScrollLeft(colIndex) {
 }
 
 /**
- * 根据垂直滚动像素位置找到对应行索引
- * @param {Number} scrollTop - 滚动像素位置
- * @returns {Number} 行索引
+ * Find line index from vertical scroll pixel position
+ * @param {Number} scrollTop - Scroll Pixels Position
+ * @returns{Number} Line Index
  */
 export function getRowIndexByScrollTop(scrollTop) {
     let total = 0;
@@ -449,9 +478,9 @@ export function getRowIndexByScrollTop(scrollTop) {
 }
 
 /**
- * 根据水平滚动像素位置找到对应列索引
- * @param {Number} scrollLeft - 滚动像素位置
- * @returns {Number} 列索引
+ * Find the corresponding column index from the horizontal scroll pixel position
+ * @param {Number} scrollLeft - Scroll Pixels Position
+ * @returns {Number} Column Index
  */
 export function getColIndexByScrollLeft(scrollLeft) {
     let total = 0;

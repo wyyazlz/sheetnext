@@ -1,6 +1,6 @@
 /**
- * 行列标渲染模块
- * 负责渲染行号、列标、全选按钮、高亮区域等
+ * Row and Column Marker Rendering Module
+ * Responsible for rendering line numbers, column marks, select all buttons, highlighted areas, etc.
  */
 
 import { syncToolbarState } from '../Layout/ToolbarBuilder.js';
@@ -53,6 +53,7 @@ export function rAllBtn() {
 }
 
 // 只渲染行标列标（提取出来供截图模式复用）
+/** @param {Object} sheet @param {Object} lightInfo */
 export function rRowColHeaders(sheet, lightInfo) {
     this.rAllBtn(); // 全选按钮
 
@@ -212,6 +213,7 @@ function resolveBoundaryPosition(sheet, index, indices, starts, startCoord, endC
 }
 
 // 绘制高亮条（行列背景，跳过选中区域）
+/** @param {Object} sheet @param {Object} lightInfo */
 export function rHighlightBars(sheet, lightInfo) {
     const color = this.highlightColor;
     if (!color) return;
@@ -270,6 +272,7 @@ export function rHighlightBars(sheet, lightInfo) {
 }
 
 // 绘制分页符辅助线（类似 Excel 分页线）
+/** @param {Object} sheet */
 export function rPageBreaks(sheet) {
     if (!sheet.showPageBreaks) return;
     const guides = this.SN.Print?.getPageBreakGuides?.(sheet);
@@ -335,6 +338,7 @@ export function rPageBreaks(sheet) {
 }
 
 // 渲染活动框和选区
+/** @param {Object} sheet @param {boolean} [isScreenshot=false] @param {Object} [renderOptions={}] */
 export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
 
     // 截图模式不清除buffer
@@ -460,10 +464,10 @@ export function _updateContextualToolbar(sheet, r, c) {
 }
 
 /**
- * 获取包含指定单元格的透视表
- * @param {Sheet} sheet - 工作表
- * @param {number} row - 行索引
- * @param {number} col - 列索引
+ * Gets the pivot table containing the specified cells
+ * @param {Sheet} sheet - Sheet
+ * @param {number} row - Row index
+ * @param {number} col - Column Index
  * @returns {PivotTable|null}
  */
 function getPivotTableAt(sheet, row, col) {
@@ -478,10 +482,10 @@ function getPivotTableAt(sheet, row, col) {
 }
 
 /**
- * 检查透视表是否包含指定单元格
- * @param {PivotTable} pt - 透视表
- * @param {number} row - 行索引
- * @param {number} col - 列索引
+ * Checks if the pivot table contains the specified cells
+ * @param {PivotTable} pt - PivotTable
+ * @param {number} row - Row index
+ * @param {number} col - Column Index
  * @returns {boolean}
  */
 function isPivotTableContainsCell(pt, row, col) {
@@ -496,8 +500,8 @@ function isPivotTableContainsCell(pt, row, col) {
 }
 
 /**
- * 简单解析区域引用
- * @param {string} ref - 区域引用 (如 "A1:E10")
+ * Simple resolution area reference
+ * @param {string} ref - Area reference (e.g. "A1: E10")
  * @returns {Object|null} {s:{r,c}, e:{r,c}}
  */
 function parseSimpleRange(ref) {
@@ -509,8 +513,8 @@ function parseSimpleRange(ref) {
 }
 
 /**
- * 解析单元格引用
- * @param {string} cellRef - 单元格引用 (如 "A1")
+ * Resolve cell references
+ * @param {string} cellRef - Cell reference (e.g. "A1")
  * @returns {Object|null} {r, c}
  */
 function parseCellRef(cellRef) {

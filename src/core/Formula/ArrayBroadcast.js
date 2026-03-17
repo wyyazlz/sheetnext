@@ -1,18 +1,29 @@
 /**
- * 数组广播引擎
- * 实现 Excel 风格的数组运算和广播机制
+ * Array Broadcast Engine
+ * Implement Excel-style array operations and broadcast mechanisms
  *
- * 广播规则：
- * - 标量 与 任意数组 → 标量扩展为相同维度
- * - 1×n 行向量 与 m×1 列向量 → 扩展为 m×n 矩阵
- * - 1×n 行向量 与 m×n 矩阵 → 行向量复制 m 次
- * - m×1 列向量 与 m×n 矩阵 → 列向量复制 n 次
+ * Broadcast Rules:
+ * - Scalar expands to the same → dimension as any array scalar
+ * - 1 × n row vectors and m × 1 column vectors are → extended to m × n matrices
+ * - 1 × n row vectors and m × n matrix → row vectors copied m times
+ * - m × 1 column vector copied n times with m × n matrix → column vector
  */
 
 /**
- * 获取数组的形状 [rows, cols]
- * @param {*} arr - 输入值（标量、一维数组、二维数组）
- * @returns {[number, number]} - [行数, 列数]
+ * Array Broadcast Engine
+ * Implement Excel-style array operations and broadcast mechanisms
+ *
+ * Broadcast Rules:
+ * - Scalar expands to the same → dimension as any array scalar
+ * - 1 × n row vectors and m × 1 column vectors are → extended to m × n matrices
+ * - 1 × n row vectors and m × n matrix → row vectors copied m times
+ * - m × 1 column vector copied n times with m × n matrix → column vector
+ */
+
+/**
+ * Gets the shape of the array [rows, cols]
+ * @param {*} arr - Input values (scalar, one-dimensional array, two-dimensional array)
+ * @returns {[number, number]} - [number of rows, number of columns]
  */
 export function shape(arr) {
     if (!Array.isArray(arr)) return [1, 1];  // 标量
@@ -22,16 +33,16 @@ export function shape(arr) {
 }
 
 /**
- * 判断是否为二维数组
+ * Determine if it is a two-dimensional array
  */
 export function is2DArray(arr) {
     return Array.isArray(arr) && arr.length > 0 && Array.isArray(arr[0]);
 }
 
 /**
- * 将任意值标准化为二维数组
- * @param {*} val - 输入值
- * @returns {Array<Array>} - 二维数组
+ * Normalize any value to a two-dimensional array
+ * @param {*} val - Input value
+ * @returns {Array<Array>} - 2-D Array
  */
 export function to2D(val) {
     if (!Array.isArray(val)) return [[val]];  // 标量 → 1×1
@@ -40,11 +51,11 @@ export function to2D(val) {
 }
 
 /**
- * 将二维数组扩展到指定维度
- * @param {Array<Array>} arr - 二维数组
- * @param {number} rows - 目标行数
- * @param {number} cols - 目标列数
- * @returns {Array<Array>} - 扩展后的数组
+ * Expand the 2D array to the specified dimension
+ * @param {Array<Array>} arr - 2-D Array
+ * @param {number} rows - Target Rows
+ * @param {number} cols - Target number of columns
+ * @returns {Array<Array>} - Expanded array
  */
 export function expand(arr, rows, cols) {
     const [srcRows, srcCols] = shape(arr);
@@ -75,10 +86,10 @@ export function expand(arr, rows, cols) {
 }
 
 /**
- * 广播两个数组到相同维度
- * @param {*} a - 第一个操作数
- * @param {*} b - 第二个操作数
- * @returns {[Array<Array>, Array<Array>]} - 扩展后的两个数组
+ * Broadcast two arrays to the same dimension
+ * @param {*} a - First operand
+ * @param {*} b - Second operand
+ * @returns {[Array<Array>, Array<Array>]} - Expanded two arrays
  */
 export function broadcast(a, b) {
     const [rowsA, colsA] = shape(a);
@@ -95,11 +106,11 @@ export function broadcast(a, b) {
 }
 
 /**
- * 对两个数组进行逐元素运算（支持广播）
- * @param {*} a - 第一个操作数
- * @param {*} b - 第二个操作数
- * @param {Function} op - 运算函数 (a, b) => result
- * @returns {*} - 运算结果（标量或二维数组）
+ * Element-by-element operation on two arrays (broadcast support)
+ * @param {*} a - First operand
+ * @param {*} b - Second operand
+ * @param {Function} op - Operating function (a, b) = > result
+ * @returns {*} - Result of the operation (scalar or two-dimensional array)
  */
 export function elementWise(a, b, op) {
     const aIs2D = is2DArray(a) || (Array.isArray(a) && a.length > 1);
@@ -125,10 +136,10 @@ export function elementWise(a, b, op) {
 }
 
 /**
- * 对单个数组进行逐元素一元运算
- * @param {*} a - 操作数
- * @param {Function} op - 运算函数 (a) => result
- * @returns {*} - 运算结果
+ * Perform element-by-element unary operations on individual arrays
+ * @param {*} a - Operand
+ * @param {Function} op - Operating function (a) = > result
+ * @returns {*} - Results of the operation
  */
 export function unaryOp(a, op) {
     if (!Array.isArray(a)) return op(a);
@@ -145,11 +156,11 @@ export function unaryOp(a, op) {
 }
 
 /**
- * 对多个数组进行逐元素运算（支持广播）
- * 用于 SUMPRODUCT 等需要多数组运算的场景
- * @param {Array} arrays - 数组列表
- * @param {Function} op - 运算函数 (values: Array) => result
- * @returns {*} - 运算结果
+ * Element-by-element operation on multiple arrays (broadcast support)
+ * For scenarios that require multiple sets of operations, such as SUMPRODUCT
+ * @param {Array} arrays - Array List
+ * @param {Function} op - Operating function (values: Array) = > result
+ * @returns {*} - Results of the operation
  */
 export function multiElementWise(arrays, op) {
     if (arrays.length === 0) return 0;
@@ -184,9 +195,9 @@ export function multiElementWise(arrays, op) {
 }
 
 /**
- * 对二维数组求和
- * @param {Array<Array>} arr - 二维数组
- * @returns {number} - 总和
+ * Sum of two-dimensional arrays
+ * @param {Array<Array>} arr - 2-D Array
+ * @returns {number} - Sum
  */
 export function sum2D(arr) {
     const arr2D = to2D(arr);
@@ -201,9 +212,9 @@ export function sum2D(arr) {
 }
 
 /**
- * 将值转换为数字（布尔值转换：true→1, false→0）
- * @param {*} val - 输入值
- * @returns {number} - 数字
+ * Convert value to number (Boolean conversion: true→ 1, false→ 0)
+ * @param {*} val - Input value
+ * @returns {number} - Number
  */
 export function toNumber(val) {
     if (typeof val === 'boolean') return val ? 1 : 0;

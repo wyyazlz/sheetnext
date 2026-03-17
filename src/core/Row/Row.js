@@ -1,10 +1,64 @@
 import Cell from '../Cell/Cell.js';
+import {
+    _cloneStyleValue,
+    _getCellExplicitStyle,
+    _getChangedStyleFields,
+    _getInheritedStyleField,
+    _isSameStyleValue,
+    _pruneStyleObject
+} from '../Cell/styleUtils.js';
 
 // xmlObj可不传，当赋值或设置此列东西时才去初始化一个
 
+function _resetCellStyleCache(cell) {
+    cell._showVal = undefined;
+    cell._fmtResult = undefined;
+}
+
+function _collectRowCellCleanupChanges(row, oldStyle, newStyle) {
+    const fields = _getChangedStyleFields(oldStyle, newStyle);
+    if (fields.length === 0) return [];
+
+    const changes = [];
+    row.cells.forEach((cell, cIndex) => {
+        if (!cell) return;
+        const explicitStyle = _getCellExplicitStyle(cell);
+        if (!explicitStyle || Object.keys(explicitStyle).length === 0) return;
+
+        const nextCellStyle = _cloneStyleValue(explicitStyle) || {};
+        let changed = false;
+
+        fields.forEach(field => {
+            if (!Object.prototype.hasOwnProperty.call(nextCellStyle, field)) return;
+            const inheritedValue = _getInheritedStyleField(field, oldStyle, row.sheet.cols[cIndex]?._colStyle);
+            if (_isSameStyleValue(nextCellStyle[field], inheritedValue)) {
+                delete nextCellStyle[field];
+                changed = true;
+            }
+        });
+
+        if (!changed) return;
+        changes.push({
+            cell,
+            oldStyle: _cloneStyleValue(explicitStyle) || {},
+            newStyle: _pruneStyleObject(nextCellStyle)
+        });
+    });
+
+    return changes;
+}
+
+function _applyRowStyleChange(row, style, cellChanges, changeKey) {
+    row._rowStyle = style ? _cloneStyleValue(style) : null;
+    cellChanges.forEach(change => {
+        change.cell._style = _cloneStyleValue(change[changeKey]) || {};
+        _resetCellStyleCache(change.cell);
+    });
+}
+
 /**
- * 行对象
- * @title ↔️ 行操作
+ * Row Objects
+ * @title Line Operations
  * @class
  */
 export default class Row {
@@ -16,23 +70,23 @@ export default class Row {
     #style = null;  // 行样式
 
     /**
-     * @param {Object} xmlObj - 行 XML 数据
-     * @param {Sheet} sheet - 所属工作表
-     * @param {number} rIndex - 行索引
+     * @param {Object} xmlObj - Line XML Data
+     * @param {Sheet} sheet - Sheet it belongs to
+     * @param {number} rIndex - Row index
      */
     constructor(xmlObj, sheet, rIndex) {
         /**
-         * 所属工作表
+         * Sheet it belongs to
          * @type {Sheet}
          */
         this.sheet = sheet
         /**
-         * 行索引
+         * Row index
          * @type {number}
          */
         this.rIndex = rIndex
         /**
-         * 行内单元格数组
+         * Line cell arrays
          * @type {Array<Cell>}
          */
         this.cells = [];
@@ -54,7 +108,7 @@ export default class Row {
     }
 
     /**
-     * 初始化行内单元格
+     * Initialise cell in line
      * @returns {void}
      */
     init() {
@@ -105,7 +159,7 @@ export default class Row {
 
     // ========== 公开属性（触发 UndoRedo）==========
     /**
-     * 行高（像素）
+     * Row height (pixels)
      * @type {number}
      */
     get height() { return this.#height; }
@@ -152,7 +206,7 @@ export default class Row {
     }
 
     /**
-     * 是否隐藏
+     * Whether to hide
      * @type {boolean}
      */
     get hidden() { return this.#hidden || this.#filterHidden; }
@@ -201,7 +255,7 @@ export default class Row {
     }
 
     /**
-     * 大纲层级（0-7）
+     * Outline Level (0-7)
      * @type {number}
      */
     get outlineLevel() { return this.#outlineLevel; }
@@ -232,7 +286,7 @@ export default class Row {
     }
 
     /**
-     * 大纲折叠标记
+     * Outline Collapse Marker
      * @type {boolean}
      */
     get collapsed() { return this.#collapsed; }
@@ -263,8 +317,12 @@ export default class Row {
     }
 
     /**
-     * 是否需要写入 XML
+     * Do you need to write XML
      * @type {boolean}     */
+    /**
+     * Do you need to write XML
+     * @type {boolean}     */
+
     get _needBuild() {
         if (this.#height !== this.sheet.defaultRowHeight || this.hidden || this.#style || this.#outlineLevel > 0 || this.#collapsed) return true
         if (this.cells.some(c => c?._needBuild)) return true
@@ -280,28 +338,29 @@ export default class Row {
     }
 
     /**
-     * 行样式
+     * Row Styles
      * @type {Object}
      */
     get style() { return this.#style || {}; }
     set style(obj) {
-        const old = this.#style;
-        const oldInSet = this.sheet._styledRows.has(this.rIndex);
-        this._rowStyle = obj ? { ...obj } : null;
+        const old = _cloneStyleValue(this.#style);
+        const nextStyle = obj ? _cloneStyleValue(obj) : null;
+        if (_isSameStyleValue(old, nextStyle)) return;
+
+        const cellChanges = _collectRowCellCleanupChanges(this, old, nextStyle);
+        _applyRowStyleChange(this, nextStyle, cellChanges, 'newStyle');
         this._SN.UndoRedo.add({
             undo: () => {
-                this.#style = old;
-                if (oldInSet) this.sheet._styledRows.add(this.rIndex);
-                else this.sheet._styledRows.delete(this.rIndex);
+                _applyRowStyleChange(this, old, cellChanges, 'oldStyle');
             },
             redo: () => {
-                this._rowStyle = obj ? { ...obj } : null;
+                _applyRowStyleChange(this, nextStyle, cellChanges, 'newStyle');
             }
         });
     }
 
     /**
-     * 字体样式
+     * Font style
      * @type {Object}
      */
     get font() { return this.#style?.font || {}; }
@@ -319,7 +378,7 @@ export default class Row {
     }
 
     /**
-     * 填充样式
+     * Fill Style
      * @type {Object}
      */
     get fill() { return this.#style?.fill || {}; }
@@ -330,7 +389,7 @@ export default class Row {
     }
 
     /**
-     * 对齐样式
+     * Alignment Style
      * @type {Object}
      */
     get alignment() { return this.#style?.alignment || {}; }
@@ -341,7 +400,7 @@ export default class Row {
     }
 
     /**
-     * 边框样式
+     * Border Style
      * @type {Object}
      */
     get border() { return this.#style?.border || {}; }
@@ -375,7 +434,7 @@ export default class Row {
     }
 
     /**
-     * 数字格式
+     * Number Format
      * @type {string|undefined}
      */
     get numFmt() { return this.#style?.numFmt; }

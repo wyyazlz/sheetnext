@@ -1,12 +1,12 @@
 /**
- * 拖拽处理模块
- * 负责处理AI聊天窗口的拖拽功能
+ * Drag and Drop Processing Module
+ * Responsible for the drag and drop functionality of the AI chat window
  */
 
 import { calculateDragBounds, constrainToBounds } from './helpers.js';
 
 /**
- * 初始化拖拽事件
+ * Initialize Drag Event
  */
 export function initDragEvents() {
     const chatHead = this.snChat.querySelector('.sn-chat-head');

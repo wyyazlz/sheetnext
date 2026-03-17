@@ -5,8 +5,8 @@ const DEFAULT_SLICER_COL_WIDTH = 2.6;
 const DEFAULT_SLICER_ROW_HEIGHT = 11;
 
 /**
- * 切片器管理器
- * 负责切片器的增删改查
+ * Slicer Manager
+ * We'll be in charge of the cutter.
  * @class
  */
 export default class Slicer {
@@ -25,8 +25,8 @@ export default class Slicer {
     }
 
     /**
-     * 添加切片器
-     * @param {Object} config - 配置对象
+     * Add Slicer
+     * @param {Object} config - Configure Object
      * @returns {Slicer}
      */
     add(config) {
@@ -91,7 +91,7 @@ export default class Slicer {
     }
 
     /**
-     * 内部添加（解析时使用，不触发事件）
+     * Internal addition (use when parsing, no trigger event)
      * @param {Slicer} slicer
      */
     _addParsed(slicer) {
@@ -100,7 +100,7 @@ export default class Slicer {
     }
 
     /**
-     * 删除切片器
+     * Remove Slicer
      * @param {string} id
      */
     remove(id) {
@@ -134,7 +134,7 @@ export default class Slicer {
     }
 
     /**
-     * 获取切片器
+     * Get Slice
      * @param {string} id
      * @returns {Slicer|null}
      */
@@ -143,7 +143,7 @@ export default class Slicer {
     }
 
     /**
-     * 获取所有切片器
+     * Get all the slicers.
      * @returns {Array<Slicer>}
      */
     getAll() {
@@ -151,7 +151,7 @@ export default class Slicer {
     }
 
     /**
-     * 遍历所有切片器
+     * All the slicers.
      * @param {Function} callback
      */
     forEach(callback) {

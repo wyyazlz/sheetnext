@@ -25,7 +25,7 @@ First full open-source release with complete source code and comprehensive sprea
 - **Canvas Rendering** — High-performance canvas-based virtual scrolling
 - **XLSX / CSV / JSON** — Native file import & export (getData API for open edition)
 - **I18n** — English (en-US) and Chinese (zh-CN) locale support
-- **API Documentation** — Full reference in `docs-detail.md` for AI-driven development
+- **API Documentation** — Full reference in `docs/detail/` for AI-driven development
 
 ### Changed
 

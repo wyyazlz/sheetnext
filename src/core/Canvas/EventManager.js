@@ -1,6 +1,6 @@
 /**
- * 事件管理模块
- * 负责为画布、滚动条、输入框等元素添加事件监听器
+ * Event Management Module
+ * Responsible for adding event listeners to elements such as canvas, scrollbars, input boxes, etc.
  */
 
 import { canvasWheel, baseMousedown, canvasMousemove, canvasDblclick, rightDown, canvasTouchStart, canvasTouchMove, canvasTouchEnd } from "./InteractionHandler.js"

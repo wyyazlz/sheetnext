@@ -1,12 +1,17 @@
 /**
- * 批注工具函数
- * VML解析和构建（简化版）
+ * comment Tool Functions
+ * VML Parsing and Building (Lite)
  */
 
 /**
- * 生成VML绘图XML（用于批注显示）
- * @param {Array} comments - Comment实例数组
- * @returns {Object} VML XML对象
+ * comment Tool Functions
+ * VML Parsing and Building (Lite)
+ */
+
+/**
+ * Generate VML Drawing XML (for comment display)
+ * @param {Array} comments - Comment instance array
+ * @ returns {Object} VML XML object
  */
 export function buildVmlXml(comments) {
     if (!comments || comments.length === 0) return null;
@@ -87,8 +92,8 @@ export function buildVmlXml(comments) {
 }
 
 /**
- * 从cellRef计算批注指示器位置（红色三角）
- * @param {Object} cellInfo - 单元格视图信息 {x, y, w, h}
+ * Calculate comment indicator position from cellRef (red triangle)
+ * @param {Object} cellInfo - Cell View Information {x, y, w, h}
  * @returns {Object} {x, y, size}
  */
 export function getIndicatorPosition(cellInfo) {

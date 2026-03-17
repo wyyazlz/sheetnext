@@ -1,33 +1,46 @@
 /**
- * DataBar规则 - 数据条
- * 支持：渐变/纯色、正负值、轴线、minLength/maxLength
+ * DataBar Rule - Data Bar
+ * Support: gradient/solid color, positive and negative values, axis, minLength/maxLength
  */
 import { CFRule } from '../CFRule.js';
 import { resolveCfvoValue, expandHex } from '../helpers.js';
 
 export class DataBarRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {Object} */
         this.minCfvo = config.minCfvo || { type: 'min' };
+        /** @type {Object} */
         this.maxCfvo = config.maxCfvo || { type: 'max' };
+        /** @type {string} */
         this.color = config.color || '#638EC6';
         this.showValue = config.showValue !== false;
         this.gradient = config.gradient !== false;
+        /** @type {string} */
         this.negativeColor = config.negativeColor || '#FF0000';
+        /** @type {string|null} */
         this.borderColor = config.borderColor || null;
+        /** @type {string|null} */
         this.negativeBorderColor = config.negativeBorderColor || null;
+        /** @type {string} */
         this.axisColor = config.axisColor || '#000000';
+        /** @type {string} */
         this.direction = config.direction || 'context';
         // Excel默认: minLength=10%, maxLength=90%
+        /** @type {number} */
         this.minLength = config.minLength ?? 10;
+        /** @type {number} */
         this.maxLength = config.maxLength ?? 90;
         this.needsRangeData = true;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         return typeof cell.calcVal === 'number' && !isNaN(cell.calcVal);
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {Object|null} */
     getFormat(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (typeof val !== 'number' || isNaN(val)) return null;

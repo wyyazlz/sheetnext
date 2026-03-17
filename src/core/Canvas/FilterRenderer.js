@@ -1,11 +1,16 @@
 /**
- * 筛选图标渲染模块
- * 负责在表头单元格中绘制筛选下拉图标
+ * Filter Icon Rendering Module
+ * Responsible for drawing the filter drop-down icon in the table header cell
  */
 
 /**
- * 渲染筛选图标
- * @param {Sheet} sheet - 工作表对象
+ * Filter Icon Rendering Module
+ * Responsible for drawing the filter drop-down icon in the table header cell
+ */
+
+/**
+ * Render Filter Icon
+ * @param {Sheet} sheet - Sheet Objects
  */
 export function rFilterIcons(sheet) {
     const autoFilter = sheet.AutoFilter;
@@ -13,7 +18,7 @@ export function rFilterIcons(sheet) {
     this._filterIconPositions = [];
 
     const scopes = autoFilter?.getEnabledScopes?.();
-    if (!Array.isArray(scopes) || scopes.length === 0) return;
+    if (Array.isArray(scopes) && scopes.length > 0) {
 
     // 预计算可视区列的 x 位置，避免每个 scope 重算
     const colPositions = new Map();
@@ -33,49 +38,67 @@ export function rFilterIcons(sheet) {
         rowY += rowHeight;
     }
 
-    scopes.forEach(scope => {
-        const range = scope.range;
-        const headerRow = scope.headerRow;
-        const rowPos = rowPositions.get(headerRow);
-        if (!range || !rowPos) return;
+        scopes.forEach(scope => {
+            const range = scope.range;
+            const headerRow = scope.headerRow;
+            const rowPos = rowPositions.get(headerRow);
+            if (!range || !rowPos) return;
 
-        for (const c of sheet.vi.colsIndex) {
-            if (c < range.s.c || c > range.e.c) continue;
-            const colPos = colPositions.get(c);
-            if (!colPos) continue;
+            for (const c of sheet.vi.colsIndex) {
+                if (c < range.s.c || c > range.e.c) continue;
+                const colPos = colPositions.get(c);
+                if (!colPos) continue;
 
-            const hasFilter = autoFilter.hasFilter(c, scope.scopeId);
-            const sortOrder = autoFilter.getSortOrder(c, scope.scopeId);
-            const iconSize = 15;
-            const padding = 2;
-            const iconX = colPos.x + colPos.w - iconSize - padding;
-            const iconY = rowPos.y + rowPos.h - iconSize - padding;
+                const hasFilter = autoFilter.hasFilter(c, scope.scopeId);
+                const sortOrder = autoFilter.getSortOrder(c, scope.scopeId);
+                const { iconSize, iconX, iconY } = getFilterIconLayout(colPos.x, rowPos.y, colPos.w, rowPos.h);
 
-            this._filterIconPositions.push({
-                x: iconX,
-                y: iconY,
-                w: iconSize,
-                h: iconSize,
-                colIndex: c,
-                scopeId: scope.scopeId
-            });
+                this._filterIconPositions.push({
+                    x: iconX,
+                    y: iconY,
+                    w: iconSize,
+                    h: iconSize,
+                    colIndex: c,
+                    scopeId: scope.scopeId
+                });
 
-            drawFilterIcon(this.bc, iconX, iconY, iconSize, hasFilter, sortOrder);
+                drawFilterIcon(this.bc, iconX, iconY, iconSize, hasFilter, sortOrder);
+            }
+        });
+    }
+
+    const cellPositions = this._cellRenderPositions || this._cfCellPositions;
+    if (!cellPositions?.size) return;
+
+    cellPositions.forEach(({ x, y, w, h, cellInfo }) => {
+        const pivotFilter = cellInfo?._pivotFilter;
+        if (!pivotFilter) {
+            if (cellInfo?._pivotFilterRect) delete cellInfo._pivotFilterRect;
+            return;
         }
+
+        const { iconSize, iconX, iconY } = getFilterIconLayout(x, y, w, h);
+        if (iconSize <= 0) {
+            if (cellInfo._pivotFilterRect) delete cellInfo._pivotFilterRect;
+            return;
+        }
+
+        drawFilterIcon(this.bc, iconX, iconY, iconSize, !!pivotFilter.active, null);
+        cellInfo._pivotFilterRect = { x: iconX, y: iconY, w: iconSize, h: iconSize };
     });
 }
 
 /**
- * 清除筛选图标位置信息
+ * Clear filter icon position information
  */
 export function clearFilterIconPositions() {
     this._filterIconPositions = [];
 }
 
 /**
- * 检测点击位置是否在筛选图标上
- * @param {number} x - 点击X坐标
- * @param {number} y - 点击Y坐标
+ * Detect if the click location is on the filter icon
+ * @param {number} x - Click on the X coordinates
+ * @param {number} y - Click on the Y position
  * @returns {{colIndex:number, scopeId:string}|null}
  */
 export function getFilterIconAtPosition(x, y) {
@@ -94,10 +117,26 @@ export function getFilterIconAtPosition(x, y) {
     return null;
 }
 
+export function getFilterIconLayout(boxX, boxY, boxW, boxH) {
+    const padding = 2;
+    const iconSize = Math.max(8, Math.min(15, Math.floor(boxH - padding * 2)));
+    return {
+        iconSize,
+        iconX: boxX + Math.max(0, boxW - iconSize - padding),
+        iconY: boxY + Math.max(0, boxH - iconSize - padding)
+    };
+}
+
 /**
- * 绘制单个筛选图标（Excel风格下拉按钮）
+ * Draw a single filter icon (Excel style drop-down button)
  * @private
  */
+/** @param {CanvasRenderingContext2D} ctx @param {number} iconX @param {number} iconY @param {number} iconSize @param {boolean} hasFilter @param {string|null} sortOrder */
+/**
+ * Draw a single filter icon (Excel style drop-down button)
+ * @private
+ */
+
 export function drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder) {
     const isActive = hasFilter || sortOrder; // 有筛选或排序时高亮
 

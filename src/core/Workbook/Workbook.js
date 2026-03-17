@@ -66,6 +66,7 @@ class SheetNext {
         dom.style.boxSizing = "border-box"
         dom.style.background = "#eef0f2"
 
+        /** @type {HTMLElement} */
         this.containerDom = dom
         /** @type {string} */
         this.namespace = this._setupGlobalNamespace()
@@ -80,6 +81,7 @@ class SheetNext {
         this.Event = new EventEmitter()
         this.#license = new License(this, options.licenseKey)
         this.Utils = new Utils(this)
+        /** @type {I18n} */
         this.I18n = this._createI18n(options)
         this.Print = new Print(this)
         this.Action = new Action(this)
@@ -275,6 +277,10 @@ class SheetNext {
     /** @param {string} locale */
     setLocale(locale) {
         this.I18n.setLocale(locale);
+        this.Canvas?.lazyDOM?.destroy('col-context-menu');
+        this.Canvas?.lazyDOM?.destroy('row-context-menu');
+        this.Canvas?.lazyDOM?.destroy('cell-context-menu');
+        this.Canvas?.lazyDOM?.destroy('drawing-context-menu');
         this.Layout?.refreshToolbar?.();
         this._updateZoomDisplay();
     }

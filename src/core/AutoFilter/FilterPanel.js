@@ -1,14 +1,16 @@
 /**
- * 筛选面板交互模块
- * 负责筛选面板的显示、隐藏和用户交互
- * 采用按需创建DOM的方式，避免overflow:hidden等问题
+ * Filter Panel Interaction Module
+ * Responsible for displaying, hiding, and user interaction of the filter panel
+ * Avoid issues like overflow: hidden by creating Dom on demand
  */
 
 import { sortRange } from '../Utils/SortUtils.js';
 import getSvg from '../../assets/mainSvgs.js';
 
 export default class FilterPanel {
+    /** @param {import('../Canvas/Canvas.js').default} canvas */
     constructor(canvas) {
+        /** @type {import('../Canvas/Canvas.js').default} */
         this.canvas = canvas;
         this._SN = canvas.SN;
         this._panel = null; // 按需创建
@@ -22,7 +24,8 @@ export default class FilterPanel {
     }
 
     /**
-     * 获取当前活动工作表的筛选器
+     * Get the filter of the active sheet.
+     * @type {import('./AutoFilter.js').default|null}
      */
     get autoFilter() {
         return this._SN.activeSheet?.AutoFilter;
@@ -34,7 +37,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 创建筛选面板DOM
+     * Create Filter Panel Dom
      */
     _createPanel() {
         if (this._panel) return this._panel;
@@ -83,7 +86,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 绑定面板事件
+     * Bind Panel Events
      */
     _bindEvents() {
         const panel = this._panel;
@@ -125,7 +128,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 点击外部关闭处理
+     * Click External Close Processing
      */
     _onClickOutside(e) {
         if (!this._panel) return;
@@ -137,10 +140,10 @@ export default class FilterPanel {
     }
 
     /**
-     * 显示筛选面板
-     * @param {number} colIndex - 列索引
-     * @param {number} x - 面板X位置（相对于视口）
-     * @param {number} y - 面板Y位置（相对于视口）
+     * Show filter panel
+     * @param {number} colIndex - Column Index
+     * @param {number} x - Panel X Position (Relative to Viewport)
+     * @param {number} y - Panel Y Position (Relative to Viewport)
      */
     show(colIndex, x, y, scopeId = null) {
         const autoFilter = this.autoFilter;
@@ -197,6 +200,7 @@ export default class FilterPanel {
         this._positionPanel(x, y);
     }
 
+    /** @param {Object} pivotTable @param {Object} filterInfo @param {number} x @param {number} y */
     showPivotFilter(pivotTable, filterInfo, x, y) {
         const fields = Array.isArray(filterInfo?.fields) ? filterInfo.fields : [];
         if (!pivotTable || fields.length === 0) return;
@@ -229,7 +233,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 隐藏筛选面板
+     * Hide filter panel
      */
     hide() {
         if (this._panel) {
@@ -242,7 +246,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 销毁面板（释放资源）
+     * Destruction panel (release resources)
      */
     destroy() {
         this.hide();
@@ -253,7 +257,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 渲染值列表
+     * Render Value List
      */
     _renderList(values) {
         const list = this._panel.querySelector('.sn-filter-list');
@@ -305,7 +309,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 搜索过滤
+     * Search filters
      */
     _onSearch(keyword) {
         keyword = keyword.toLowerCase().trim();
@@ -316,7 +320,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 全选
+     * Select all
      */
     _selectAll() {
         if (this._customContext?.type === 'pivot') {
@@ -341,7 +345,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 清除选择
+     * Clear Selection
      */
     _clearAll() {
         if (this._customContext?.type === 'pivot') {
@@ -363,7 +367,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 执行排序
+     * Execute Sort
      */
     _doSort(type) {
         if (this._customContext?.type === 'pivot') {
@@ -397,7 +401,7 @@ export default class FilterPanel {
     }
 
     /**
-     * 应用筛选
+     * Apply filters
      */
     _apply() {
         if (this._customContext?.type === 'pivot') {
@@ -562,7 +566,7 @@ export default class FilterPanel {
     }
 
     /**
-     * HTML转义
+     * HTML Escape
      */
     _escapeHtml(str) {
         if (str === null || str === undefined) return '';

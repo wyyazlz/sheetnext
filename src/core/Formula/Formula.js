@@ -15,14 +15,14 @@ const VOLATILE_FUNCTIONS = new Set([
 ]);
 
 /**
- * 公式计算器
- * @title 🔢 公式
+ * Formula Calculator
+ * @title 🔢 Formula
  * @class
  */
 export default class Formula {
 
     /**
-     * @param {Object} SN - SheetNext 主实例
+     * @param {Object} SN - SheetNext Main Instance
      */
     constructor(SN) {
         this.SN = SN;
@@ -38,9 +38,9 @@ export default class Formula {
     }
 
     /**
-     * 检测 tokens 是否包含 volatile 函数
-     * @param {Array} tokens - tokenize 后的 token 数组
-     * @returns {boolean} 是否包含 volatile 函数
+     * Detect if tokens contain volatile functions
+     * @param {Array} tokens - array of tokens after tokenize
+     * Does @ returns {boolean} contain the volatile function?
      */
     hasVolatileFunction(tokens) {
         for (const token of tokens) {
@@ -56,23 +56,31 @@ export default class Formula {
     }
 
     /**
-     * 上次计算是否为 volatile
+     * Whether the last calculation was volatile
      * @type {boolean}     */
+    /**
+     * Whether the last calculation was volatile
+     * @type {boolean}     */
+
     get lastCalcVolatile() {
         return this._lastCalcVolatile;
     }
 
     /**
-     * 上次计算结果是否为日期类型
+     * Whether the last calculated result is a date type
      * @type {boolean}     */
+    /**
+     * Whether the last calculated result is a date type
+     * @type {boolean}     */
+
     get lastResultIsDate() {
         return this._lastResultIsDate;
     }
 
     /**
-     * 计算公式
-     * @param {string} formulaStr - 公式字符串（不含等号）
-     * @param {Cell} cell - 当前单元格
+     * Calculation Formula
+     * @param {string} formulaStr - Equation String (without Equals)
+     * @param {Cell} cell - Current Cell
      * @returns {any}
      */
     calcFormula(formulaStr, cell) {
@@ -94,9 +102,9 @@ export default class Formula {
     }
 
     /**
-     * 从 tokens 中提取所有依赖的单元格坐标
-     * @param {Array} tokens - tokenize 后的 token 数组
-     * @returns {CellNum[]} 依赖列表
+     * Extract all dependent cell coordinates from tokens
+     * @param {Array} tokens - array of tokens after tokenize
+     * @ returns {CellNum []} dependencies list
      */
     parseDeps(tokens) {
         const deps = [];
@@ -127,8 +135,8 @@ export default class Formula {
     }
 
     /**
-     * 解析公式为 tokens
-     * @param {string} formula - 公式字符串（不含等号）
+     * The parsing formula is tokens
+     * @param {string} formula - Equation String (without Equals)
      * @returns {Array}
      */
     tokenize(formula) {
@@ -409,8 +417,8 @@ export default class Formula {
 
 
     /**
-     * 计算 tokens
-     * @param {Array} tokens - tokenize 后的 token 数组
+     * Calculate tokens
+     * @param {Array} tokens - array of tokens after tokenize
      * @returns {any}
      */
     evaluate(tokens) {
@@ -550,9 +558,9 @@ export default class Formula {
     }
 
     /**
-     * 执行操作符（支持数组广播）
-     * @param {string} operator - 操作符
-     * @param {Array} stack - 计算栈
+     * Execution Operator (Supports Array Broadcasting)
+     * @param {string} operator - Operator
+     * @param {Array} stack - Calculation Stack
      * @returns {any}
      */
     executeOperator(operator, stack) {
@@ -709,9 +717,9 @@ export default class Formula {
     // gVal:获取单个参数的值，结果是单个值或二维数组
 
     /**
-     * 执行函数
-     * @param {string} funcName - 函数名
-     * @param {Array} stack - 参数栈
+     * Execute Function
+     * @param {string} funcName - Function name
+     * @param {Array} stack - Parameter Stack
      * @returns {any}
      */
     executeFunction(funcName, stack) {

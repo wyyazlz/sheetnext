@@ -1,6 +1,6 @@
 /**
- * 规则工厂函数
- * 单独文件避免循环依赖
+ * Rule Factory Function
+ * Separate files to avoid circular dependencies
  */
 import { CFRule } from './CFRule.js';
 import { CellIsRule } from './rules/CellIsRule.js';
@@ -16,10 +16,10 @@ import { BlankErrorRule } from './rules/BlankErrorRule.js';
 import { ExpressionRule } from './rules/ExpressionRule.js';
 
 /**
- * 规则工厂函数
- * @param {Object} config - 规则配置
- * @param {Object} sheet - Sheet实例
- * @returns {CFRule} 规则实例
+ * Rule Factory Function
+ * @param {Object} config - Rule Configuration
+ * @param {Object} sheet - Sheet instance
+ * @ returns {CFRule} rule instance
  */
 export function createRule(config, sheet) {
     const type = config.type;

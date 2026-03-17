@@ -1,14 +1,14 @@
 /**
- * 批注渲染模块
- * 负责渲染批注指示器（红色三角）和批注浮动框
- * 高性能设计：仅渲染视图内的批注
+ * comment Rendering Module
+ * Responsible for rendering comment indicators (red triangle) and comment floating boxes
+ * High-performance design: only render comment within the view
  */
 
 import { getIndicatorPosition } from '../Comment/helpers.js';
 
 /**
- * 渲染批注指示器
- * @param {Sheet} sheet - 工作表实例
+ * Render comment Indicator
+ * @param {Sheet} sheet - Sheet Instance
  */
 export function rCommentIndicators(sheet) {
     const comments = sheet.Comment.getAll();
@@ -47,8 +47,8 @@ export function rCommentIndicators(sheet) {
 }
 
 /**
- * 渲染批注浮动框
- * @param {Sheet} sheet - 工作表实例
+ * Render comment Floating Box
+ * @param {Sheet} sheet - Sheet Instance
  */
 export function rCommentBoxes(sheet) {
     const ctx = this.bc;
@@ -169,7 +169,7 @@ export function rCommentBoxes(sheet) {
 }
 
 /**
- * 文本换行处理
+ * Text wrapping
  * @private
  */
 function wrapText(ctx, text, maxWidth) {

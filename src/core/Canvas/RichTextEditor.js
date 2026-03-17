@@ -1,18 +1,18 @@
 // ==================== 富文本编辑器工具函数 ====================
 
 /**
- * HTML 转义
+ * HTML Escape
  */
 function escapeHTML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /**
- * 根据 font 对象生成 CSS style 字符串
- * @param {Object} font - run 的 font 属性
- * @param {Object} cellFont - 单元格级别 font（fallback）
- * @param {number} zoom - 缩放比例
- * @returns {string} CSS style 字符串
+ * Generate CSS style string from font object
+ * @param {Object} font - font property of run
+ * @param {Object} cellFont - Cell level font (fallback)
+ * @param {number} zoom - Zoom scale
+ * @ returns {string} CSS style string
  */
 function fontToCSS(font, cellFont, zoom) {
     const f = { ...cellFont, ...font };
@@ -33,11 +33,11 @@ function fontToCSS(font, cellFont, zoom) {
 }
 
 /**
- * 将 _richText 数组转为 contenteditable 可显示的 HTML
+ * Convert the_richText array to contenteditable displayable HTML
  * @param {Array} runs - [{text, font}]
- * @param {Object} cellFont - 单元格级别 font
- * @param {number} zoom - 缩放比例
- * @returns {string} HTML 字符串
+ * @param {Object} cellFont - Cell level font
+ * @param {number} zoom - Zoom scale
+ * @ returns {string} HTML string
  */
 export function richTextToHTML(runs, cellFont, zoom = 1) {
     if (!runs || !runs.length) return '';
@@ -49,10 +49,10 @@ export function richTextToHTML(runs, cellFont, zoom = 1) {
 }
 
 /**
- * 从 DOM 节点提取 font 属性（向上查找 span/b/i/u/s 标签）
- * @param {Node} node - DOM 节点
- * @param {HTMLElement} root - 编辑器根元素
- * @returns {Object} font 对象
+ * Extract font properties from Dom nodes (look up for span/b/i/u/s tags)
+ * @param {Node} node - DOM Node
+ * @param {HTMLElement} root - Editor Root Element
+ * @ returns {Object} font object
  */
 function _getFontFromNode(node, root) {
     const font = {};
@@ -97,7 +97,7 @@ function _getFontFromNode(node, root) {
 }
 
 /**
- * 将 CSS 颜色值标准化为 #RRGGBB
+ * Normalize CSS color values to # RRGGBB
  */
 function _normalizeColor(cssColor) {
     if (!cssColor) return '';
@@ -111,7 +111,7 @@ function _normalizeColor(cssColor) {
 }
 
 /**
- * 去除与 cellFont 相同的属性，保持 run.font 精简
+ * Removes the same attributes as cellFont and keeps run.font thin
  */
 function _stripCellFont(font, cellFont) {
     const result = {};
@@ -131,7 +131,7 @@ function _stripCellFont(font, cellFont) {
 }
 
 /**
- * 递归遍历 DOM 收集 runs
+ * Recursively traverse Dom collection runs
  */
 function _walkNodes(node, root, cellFont, runs, prevIsBlock) {
     for (let child = node.firstChild; child; child = child.nextSibling) {
@@ -165,7 +165,7 @@ function _walkNodes(node, root, cellFont, runs, prevIsBlock) {
 }
 
 /**
- * 合并相邻同格式 run
+ * Merge adjacencies with the same format run
  */
 function _mergeRuns(runs) {
     if (!runs.length) return runs;
@@ -183,10 +183,10 @@ function _mergeRuns(runs) {
 }
 
 /**
- * 解析 contenteditable DOM 树，还原为 _richText 数组
- * @param {HTMLElement} inputElement - 编辑器元素
- * @param {Object} cellFont - 单元格级别 font
- * @returns {Array|null} richText 数组，或 null（纯文本）
+ * Resolve contenteditable Dom tree, revert to_richText array
+ * @param {HTMLElement} inputElement - Builder Elements
+ * @param {Object} cellFont - Cell level font
+ * @ returns {Array | null} richText array, or null (plain text)
  */
 export function htmlToRichText(inputElement, cellFont) {
     const runs = [];
@@ -202,7 +202,7 @@ export function htmlToRichText(inputElement, cellFont) {
 }
 
 /**
- * 收集 range 内所有文本节点
+ * Collect all text nodes in range
  */
 function _getTextNodesInRange(range, root) {
     const nodes = [];
@@ -215,10 +215,10 @@ function _getTextNodesInRange(range, root) {
 }
 
 /**
- * 获取当前选区/光标位置的字体属性
- * @param {HTMLElement} inputElement - 编辑器元素
- * @param {Object} cellFont - 单元格级别 font
- * @returns {Object} font 对象（含 bold, italic, underline, strike, size, name, color）
+ * Gets the font properties of the current selection/cursor position
+ * @param {HTMLElement} inputElement - Builder Elements
+ * @param {Object} cellFont - Cell level font
+ * @ returns {Object} font object (including bold, italic, underline, strike, size, name, color)
  */
 export function getSelectionFont(inputElement, cellFont) {
     const sel = window.getSelection();
@@ -255,7 +255,7 @@ export function getSelectionFont(inputElement, cellFont) {
 const TOGGLE_PROPS = new Set(['bold', 'italic', 'strike', 'underline']);
 
 /**
- * 为 span 设置单个 font 属性对应的 CSS
+ * Set the CSS corresponding to a single font property for the span
  */
 function _setSpanStyle(span, prop, value) {
     if (prop === 'bold') {
@@ -284,10 +284,10 @@ function _setSpanStyle(span, prop, value) {
 }
 
 /**
- * 对选中文字应用格式
- * @param {HTMLElement} inputElement - 编辑器元素
- * @param {string} fontProp - 属性名（bold/italic/strike/underline/size/name/color）
- * @param {*} value - 属性值
+ * Format selected text
+ * @param {HTMLElement} inputElement - Builder Elements
+ * @param {string} fontProp - Attribute name (bold/italic/strike/underline/size/name/color)
+ * @param {*} value - Attribute value
  */
 export function applyFormatToSelection(inputElement, fontProp, value) {
     const sel = window.getSelection();
@@ -371,7 +371,7 @@ export function applyFormatToSelection(inputElement, fontProp, value) {
 }
 
 /**
- * 对 fragment 中的所有 span 应用格式
+ * Apply formatting to all spans in the fragment
  */
 function _applyFormatToFragment(fragment, root, prop, value) {
     const spans = fragment.querySelectorAll('span[style]');
@@ -391,7 +391,7 @@ function _applyFormatToFragment(fragment, root, prop, value) {
 }
 
 /**
- * 快速检测编辑器内是否含格式化内容
+ * Quickly detect if there is formatted content in the editor
  * @param {HTMLElement} inputElement
  * @returns {boolean}
  */

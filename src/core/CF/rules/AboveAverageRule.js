@@ -1,18 +1,22 @@
 /**
- * AboveAverage规则 - 高于/低于平均值
+ * AboveAverage Rule - Above/Below Average
  */
 import { CFRule } from '../CFRule.js';
 import { getStdDev } from '../helpers.js';
 
 export class AboveAverageRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
         this.aboveAverage = config.aboveAverage !== false; // true=高于, false=低于
+        /** @type {boolean} */
         this.equalAverage = config.equalAverage || false;  // 是否包含等于
+        /** @type {number} */
         this.stdDev = config.stdDev || 0;                  // 标准差倍数
         this.needsRangeData = true;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (typeof val !== 'number' || isNaN(val)) return false;

@@ -1,6 +1,6 @@
 /**
- * Ribbon工具栏配置
- * 定义各面板的工具组和工具项
+ * Ribbon Toolbar Configuration
+ * Define tool sets and tools for panels
  */
 import { FormulaCatalog } from '../Formula/FormulaCatalog.js';
 
@@ -24,9 +24,9 @@ function applyMinimalTextToItems(items) {
 }
 
 /**
- * 创建工具栏配置
- * @param {string} ns - 命名空间
- * @returns {Object} 工具栏配置
+ * Create Toolbar Configuration
+ * @param {string} ns - Namespace
+ * @returns {Object} Toolbar Configuration
  */
 export function createToolbarConfig(ns) {
     const config = [
@@ -832,7 +832,7 @@ function buildFormulaMenu(ns, categoryKey, options = {}) {
 }
 
 /**
- * 创建下拉菜单配置
+ * Create Dropdown Menu Configuration
  */
 export function createMenuConfig(ns) {
     return {

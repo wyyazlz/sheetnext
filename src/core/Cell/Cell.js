@@ -3,44 +3,44 @@ import { compareValue, dateTrans, numFmtFun, dateStrToDate, formatValue } from '
 import { buildCellXml } from './xmlBuilder.js';
 
 /**
- * 单元格类
- * @title 📝 单元格操作
+ * Cell classes
+ * @title Cell Actions
  * @class
  */
 export default class Cell {
     /**
-     * @param {Object} xmlObj - 单元格 XML 对象
-     * @param {Row} row - 行对象
-     * @param {number} cIndex - 列索引
+     * @param {Object} xmlObj - Cell XML Object
+     * @param {Row} row - Row Objects
+     * @param {number} cIndex - Column Index
      */
     constructor(xmlObj, row, cIndex) {
         /**
-         * 列索引
+         * Column Index
          * @type {number}
          */
         this.cIndex = cIndex;
         /**
-         * 所属行
+         * Rows belonging to
          * @type {Row}
          */
         this.row = row;
         /**
-         * SheetNext 主实例
+         * SheetNext Main Instance
          * @type {Object}
          */
         this._SN = row._SN;
         /**
-         * 单元格 XML 对象
+         * Cell XML Object
          * @type {Object}
          */
         this._xmlObj = xmlObj ?? {};
         /**
-         * 是否为合并单元格
+         * Whether or not to merge cells
          * @type {boolean}
          */
         this.isMerged = false;
         /**
-         * 合并单元格主单元格引用
+         * Merge Cell Main Cell References
          * @type {{r:number, c:number}|null}
          */
         this.master = null;
@@ -298,7 +298,7 @@ export default class Cell {
     }
 
     /**
-     * 编辑值或公式
+     * Edit value or formula
      * @type {string}
      */
     get editVal() {
@@ -312,7 +312,7 @@ export default class Cell {
     }
 
     /**
-     * 富文本 runs 数组
+     * Rich text runs array
      * @type {Array|null}
      */
     get richText() { return this._richText; }
@@ -334,8 +334,12 @@ export default class Cell {
     }
 
     /**
-     * 显示值
+     * Show values
      * @type {string}     */
+    /**
+     * Show values
+     * @type {string}     */
+
     get showVal() {
         if (this._showVal != undefined) return this._showVal;
         if (this.type == 'boolean') return this._showVal = this.calcVal ? 'TRUE' : 'FALSE';
@@ -349,16 +353,24 @@ export default class Cell {
     }
 
     /**
-     * 获取会计格式结构化数据（供渲染使用）
+     * Get Accounting Format Structured Data (for Rendering)
      * @type {Object|undefined}     */
+    /**
+     * Get Accounting Format Structured Data (for Rendering)
+     * @type {Object|undefined}     */
+
     get accountingData() {
         if (this._showVal === undefined) this.showVal; // 触发计算
         return this._fmtResult?.accounting;
     }
 
     /**
-     * 计算值
+     * Calculated value
      * @type {any}     */
+    /**
+     * Calculated value
+     * @type {any}     */
+
     get calcVal() {
         if (this._calcVal != undefined) return this._calcVal;
 
@@ -503,8 +515,12 @@ export default class Cell {
     }
 
     /**
-     * 获取完整的 spill 数组结果
+     * Get full spill array results
      * @type {Array[]|null}     */
+    /**
+     * Get full spill array results
+     * @type {Array[]|null}     */
+
     get spillArray() {
         if (!this._spillRange || !this.isFormula) return null;
         const calcRes = this._SN.Formula.calcFormula(this.editVal.trim().substring(1), this);
@@ -512,22 +528,34 @@ export default class Cell {
     }
 
     /**
-     * 是否是 spill 源单元格
+     * Whether it is a spill source cell
      * @type {boolean}     */
+    /**
+     * Whether it is a spill source cell
+     * @type {boolean}     */
+
     get isSpillSource() {
         return this._spillRange !== null;
     }
 
     /**
-     * 是否是 spill 引用单元格
+     * Whether it is a spill reference cell
      * @type {boolean}     */
+    /**
+     * Whether it is a spill reference cell
+     * @type {boolean}     */
+
     get isSpillRef() {
         return this._spillParent !== null;
     }
 
     /**
-     * 计算后的水平对齐方式
+     * Calculated Horizontal Alignment
      * @type {string}     */
+    /**
+     * Calculated Horizontal Alignment
+     * @type {string}     */
+
     get horizontalAlign() {
         if (this.alignment?.horizontal) return this.alignment.horizontal;
         if (this.numFmt === '@') return 'left';
@@ -539,14 +567,18 @@ export default class Cell {
     }
 
     /**
-     * 计算后的垂直对齐方式
+     * Calculated Vertical Alignment
      * @type {string}     */
+    /**
+     * Calculated Vertical Alignment
+     * @type {string}     */
+
     get verticalAlign() {
         return this.alignment?.vertical || 'center';
     }
 
     /**
-     * 超链接配置
+     * Hyperlink Configuration
      * @type {Object|null}
      */
     get hyperlink() { return this._hyperlink; }
@@ -590,7 +622,7 @@ export default class Cell {
     }
 
     /**
-     * 数据验证配置
+     * Data Validation Configuration
      * @type {Object|null}
      */
     get dataValidation() { return this._dataValidation; }
@@ -610,7 +642,7 @@ export default class Cell {
     }
 
     /**
-     * 单元格保护配置
+     * Cell Protection Configuration
      * @type {{locked: boolean, hidden: boolean}}
      */
     get protection() {
@@ -658,15 +690,23 @@ export default class Cell {
     }
 
     /**
-     * 是否锁定
+     * Is it locked
      * @type {boolean}     */
+    /**
+     * Is it locked
+     * @type {boolean}     */
+
     get isLocked() {
         return this.protection.locked !== false;
     }
 
     /**
-     * 数据验证结果
+     * Data validation results
      * @type {boolean}     */
+    /**
+     * Data validation results
+     * @type {boolean}     */
+
     get validData() {
         if (!this._dataValidation) return true;
         const val = this.calcVal;
@@ -700,12 +740,16 @@ export default class Cell {
     }
 
     /**
-     * 是否为公式
+     * Is it a formula
      * @type {boolean}     */
+    /**
+     * Is it a formula
+     * @type {boolean}     */
+
     get isFormula() { return typeof this._editVal == 'string' && this._editVal.startsWith("="); }
 
     /**
-     * 单元格类型
+     * Cell Type
      * @type {string}
      */
     get type() {
@@ -727,7 +771,7 @@ export default class Cell {
     set type(val) { this._type = val; }
 
     /**
-     * 单元格样式
+     * Cell Styles
      * @type {Object}
      */
     get style() {
@@ -767,7 +811,7 @@ export default class Cell {
     }
 
     /**
-     * 边框样式
+     * Border Style
      * @type {Object}
      */
     get border() {
@@ -817,7 +861,7 @@ export default class Cell {
     }
 
     /**
-     * 填充样式
+     * Fill Style
      * @type {Object}
      */
     get fill() {
@@ -866,7 +910,7 @@ export default class Cell {
     }
 
     /**
-     * 字体样式
+     * Font style
      * @type {Object}
      */
     get font() {
@@ -903,7 +947,7 @@ export default class Cell {
     }
 
     /**
-     * 对齐方式
+     * Alignment
      * @type {Object}
      */
     get alignment() {
@@ -931,7 +975,7 @@ export default class Cell {
     }
 
     /**
-     * 数字格式
+     * Number Format
      * @type {string|undefined}
      */
     get numFmt() {
@@ -962,13 +1006,21 @@ export default class Cell {
     }
 
     /**
-     * 构建单元格 XML
+     * Build Cell XML
      * @type {Object}     */
+    /**
+     * Build Cell XML
+     * @type {Object}     */
+
     get buildXml() { return buildCellXml(this); }
 
     /**
-     * 是否需要构建 XML
+     * Do you need to build XML
      * @type {boolean}     */
+    /**
+     * Do you need to build XML
+     * @type {boolean}     */
+
     get _needBuild() {
         return ![undefined, null, ""].includes(this.editVal) || Object.keys(this.style).length > 0 || this._dataValidation || this._hyperlink;
     }

@@ -1,6 +1,6 @@
 /**
- * 公式目录模块
- * 提供公式分类、搜索、快捷访问等功能
+ * Formula Catalog Module
+ * Provides formula classification, search, quick access, and more
  */
 import { FORMULA_DATA } from '../../assets/formulaData.js';
 

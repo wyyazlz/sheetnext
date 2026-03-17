@@ -1,16 +1,22 @@
 /**
- * 条件格式渲染模块
- * 负责在Canvas上渲染条件格式效果（数据条、图标）
- * 注意：背景色和字体色已在 rBaseData 中预计算并合并渲染
+ * conditional formatting Rendering Module
+ * Responsible for rendering conditional formatting effects (data bars, icons) on Canvas
+ * Note: Background and font colors have been pre-calculated and merged in rBaseData for rendering
  */
 import { getIconCanvas } from '../CF/icons.js';
 import { lightenColor } from '../CF/helpers.js';
 import { ICON_SETS } from '../CF/rules/IconSetRule.js';
 
 /**
- * 渲染条件格式（仅图标）
- * 数据条已在 rBaseData 中渲染，避免覆盖文字
+ * Render Conditional Formatting (Icons Only)
+ * The data bar has been rendered in rBaseData to avoid overwriting the text
  */
+/** @param {Object} sheet */
+/**
+ * Render Conditional Formatting (Icons Only)
+ * The data bar has been rendered in rBaseData to avoid overwriting the text
+ */
+
 export function rConditionalFormats(sheet) {
     const cf = sheet.CF;
     if (!cf || cf.rules.length === 0) return;
@@ -36,14 +42,19 @@ export function rConditionalFormats(sheet) {
 }
 
 /**
- * 渲染数据条（导出供 CellRenderer 使用）
+ * Render Data Bar (Export for CellRenderer)
  */
+/** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} dataBar */
+/**
+ * Render Data Bar (Export for CellRenderer)
+ */
+
 export function rDataBar(x, y, w, h, dataBar) {
     _rDataBar(this.bc, x, y, w, h, dataBar, this.pixelRatio);
 }
 
 /**
- * 内部数据条渲染函数
+ * Internal Data Bar Rendering Function
  */
 function _rDataBar(ctx, x, y, w, h, dataBar, pixelRatio) {
     const snap = (value) => Math.round(value * pixelRatio) / pixelRatio;
@@ -116,7 +127,7 @@ function _rDataBar(ctx, x, y, w, h, dataBar, pixelRatio) {
 }
 
 /**
- * 渲染图标
+ * Render Icon
  */
 function _rIcon(ctx, x, y, w, h, iconConfig, cell, pixelRatio) {
     const snap = (value) => Math.round(value * pixelRatio) / pixelRatio;
@@ -148,10 +159,10 @@ function _rIcon(ctx, x, y, w, h, iconConfig, cell, pixelRatio) {
 }
 
 /**
- * 获取条件格式应用后的样式（用于文本渲染）
- * @param {Cell} cell - 单元格
- * @param {Object} format - 条件格式结果
- * @returns {Object} 合并后的样式
+ * Gets the style after the conditional formatting is applied (for text rendering)
+ * @param {Cell} cell - Cell
+ * @param {Object} format - Conditional Formatting Results
+ * @ returns {Object} merged style
  */
 export function getCFMergedStyle(cell, format) {
     if (!format) return cell.style;

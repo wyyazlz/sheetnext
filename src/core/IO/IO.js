@@ -1,5 +1,8 @@
 import * as JsonIO from './JsonIO.js';
 
+const _lm = new WeakMap();
+export const _gl = (io) => _lm.get(io);
+
 const OPEN_IO_MESSAGE = 'IO import/export is not available in SheetNext Open Edition.';
 
 function notifyUnavailable(SN) {
@@ -8,10 +11,14 @@ function notifyUnavailable(SN) {
 }
 
 export default class IO {
-    /** @param {import('../Workbook/Workbook.js').default} SN */
-    constructor(SN) {
+    /**
+     * @param {import('../Workbook/Workbook.js').default} SN
+     * @param {import('../License/License.js').default} [license]
+     */
+    constructor(SN, license) {
         /** @type {import('../Workbook/Workbook.js').default} */
         this._SN = SN;
+        _lm.set(this, license);
     }
 
     async import() {

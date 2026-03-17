@@ -33,10 +33,13 @@ export default class Sheet {
 
     /** @param {Object} meta @param {SheetNext} SN */
     constructor(meta, SN) {
+        /** @type {import('../Workbook/Workbook.js').default} */
         this.SN = SN;
         /** @type {string} */
         this.rId = meta['_$r:id'];
+        /** @type {Utils} */
         this.Utils = SN.Utils;
+        /** @type {import('../Canvas/Canvas.js').default} */
         this.Canvas = SN.Canvas;
         /** @type {RangeNum[]} */
         this.merges = [];

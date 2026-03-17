@@ -159,18 +159,22 @@ function _changeOutline(sheet, range, options = {}, axis = 'row', delta = 1) {
     });
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function groupRows(range, options = {}) {
     return _changeOutline(this, range, options, 'row', 1);
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function ungroupRows(range, options = {}) {
     return _changeOutline(this, range, options, 'row', -1);
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function groupCols(range, options = {}) {
     return _changeOutline(this, range, options, 'col', 1);
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function ungroupCols(range, options = {}) {
     return _changeOutline(this, range, options, 'col', -1);
 }

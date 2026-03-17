@@ -2,6 +2,7 @@
 export default class SparklineItem {
     /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
+        /** @type {Sheet} */
         this.sheet = sheet;
         /** @type {number} */
         this.r = config.r;
@@ -11,6 +12,7 @@ export default class SparklineItem {
         this.sqref = config.sqref;
         /** @type {string} */
         this.formula = config.formula;
+        /** @type {Object} */
         this.group = config.group;
         this._dataCache = null;
         this._renderCache = null;

@@ -3,6 +3,7 @@
 // 虚拟截图功能
 // csType: 'topleft' | 'center' - 单元格作为左上角还是中心点
 // option: { width, height, compress, hideSelectionFrame } - compress: true(默认0.45) | false(PNG) | 0-1(WebP质量)
+/** @param {string} cellAddress @param {string} [csType='topleft'] @param {Object} [option={}] @returns {Promise<void>} */
 async function captureScreenshot(cellAddress, csType = 'topleft', option = {}) {
     const { width = 1600, height = 1000, compress = true, hideSelectionFrame = false } = option
 

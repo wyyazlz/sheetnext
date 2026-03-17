@@ -1,6 +1,6 @@
 /**
- * 工具栏构建器
- * 生成Ribbon风格工具栏HTML，使用自带sn-dropdown组件
+ * Toolbar Builder
+ * Generates the Ribbon style toolbar HTML, using the belt-dropdown component
  */
 
 import { createToolbarConfig, createMenuConfig } from './ToolbarConfig.js';
@@ -16,13 +16,18 @@ import { getIconCanvas } from '../CF/icons.js';
 import { ICON_SETS } from '../CF/rules/IconSetRule.js';
 
 export class ToolbarBuilder {
+    /** @param {string} ns @param {import('../Workbook/Workbook.js').default|null} [SN=null] @param {Function|null} [menuListCallback=null] */
     constructor(ns, SN = null, menuListCallback = null) {
+        /** @type {string} */
         this.ns = ns;
+        /** @type {import('../Workbook/Workbook.js').default|null} */
         this.SN = SN; // SN 实例，用于调用 checked getter
+        /** @type {Array<Object>} */
         this.config = createToolbarConfig(ns);
         if (typeof menuListCallback === 'function') {
             this.config = menuListCallback(this.config);
         }
+        /** @type {Object} */
         this.menuConfig = createMenuConfig(ns);
         this._disabledItemUidSeed = 0;
         this._disabledItemUidMap = new WeakMap();
@@ -51,10 +56,11 @@ export class ToolbarBuilder {
             '1900\u5e741\u67081\u65e5': '1900/1/1'
         };
         // 默认选中第二个面板（第一个通常是"文件"）
+        /** @type {string} */
         this.activePanel = this.config[1]?.key || this.config[0]?.key || 'start';
     }
 
-    /** 设置 SN 实例（延迟绑定，用于 checked getter） */
+    /** @param {import('../Workbook/Workbook.js').default} SN */
     setSN(SN) {
         this.SN = SN;
     }
@@ -121,12 +127,13 @@ export class ToolbarBuilder {
         return this._trEn(fallback);
     }
 
+    /** @param {string|number} uid @returns {Object|null} */
     getToolbarItemByDisabledUid(uid) {
         if (typeof uid === 'undefined' || uid === null) return null;
         return this._disabledItemByUid.get(String(uid)) || null;
     }
 
-    /** 生成面板HTML - 按需渲染，只渲染活动面板 */
+    /** Generate panel HTML - Render only active panel on demand */
     buildPanelsOnly() {
         const html = this.config.map(panel => {
             const isActive = panel.key === this.activePanel;
@@ -136,7 +143,8 @@ export class ToolbarBuilder {
         return this._trHtml(html);
     }
 
-    /** 按需渲染单个面板（首次切换时调用） */
+    /** Render individual panels on demand (call on first switch) */
+    /** @param {HTMLElement} panelEl @returns {boolean} */
     renderPanelIfNeeded(panelEl) {
         if (panelEl.dataset.rendered) return false;
         const key = panelEl.dataset.panel;
@@ -147,11 +155,13 @@ export class ToolbarBuilder {
         return true; // 返回true表示新渲染了面板
     }
 
+    /** @param {Object} panel @returns {string} */
     buildPanel(panel) {
         const html = panel.groups.map((group, idx) => this.buildGroup(group, idx === panel.groups.length - 1)).join('');
         return this._trHtml(html);
     }
 
+    /** @param {Object} group @param {boolean} isLast @returns {string} */
     buildGroup(group, isLast) {
         // 将相邻的 row 合并到 rows 容器中
         const result = [];
@@ -177,6 +187,7 @@ export class ToolbarBuilder {
         return `<div class="sn-tools-group${isLast ? ' last' : ''}"><div class="sn-tools-group-content">${result.join('')}</div></div>`;
     }
 
+    /** @param {Object} item @returns {string} */
     buildItem(item) {
         switch (item.type) {
             case 'large': return this.buildLargeItem(item);
@@ -248,7 +259,8 @@ export class ToolbarBuilder {
         };
     }
 
-    /** 大图标 */
+    /** Large Icon */
+    /** @param {Object} item @returns {string} */
     buildLargeItem(item) {
         const fieldAttr = item.id ? `data-field="${item.id}"` : '';
         const disabledMeta = this._buildDisabledMeta(item);
@@ -280,7 +292,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 小图标 */
+    /** Small Icon */
+    /** @param {Object} item @returns {string} */
     buildSmallItem(item) {
         const fieldAttr = item.id ? `data-field="${item.id}"` : '';
         const disabledMeta = this._buildDisabledMeta(item);
@@ -290,7 +303,8 @@ export class ToolbarBuilder {
         return `<div class="sn-tools-item small${disabledMeta.disabledClass}" ${fieldAttr} ${action} ${dblAction} ${disabledMeta.disabledGetterAttr} ${disabledMeta.disabledUidAttr} ${disabledMeta.ariaDisabledAttr} title="${title}">${getSvg(item.icon)}</div>`;
     }
 
-    /** 堆叠布局 */
+    /** Stack Layout */
+    /** @param {Object} item @returns {string} */
     buildStack(item) {
         const items = item.items.map(i => {
             if (i.type === 'dropdown') return this.buildStackDropdown(i);
@@ -301,6 +315,7 @@ export class ToolbarBuilder {
         return `<div class="sn-tools-stack">${items}</div>`;
     }
 
+    /** @param {Object} item @returns {string} */
     buildStackItem(item) {
         const fieldAttr = item.id ? `data-field="${item.id}"` : '';
         const disabledMeta = this._buildDisabledMeta(item);
@@ -316,6 +331,7 @@ export class ToolbarBuilder {
         return `<div class="sn-tools-stack-item${activeClass}${disabledMeta.disabledClass}" ${fieldAttr} ${action} ${activeGetterAttr} ${disabledMeta.disabledGetterAttr} ${disabledMeta.disabledUidAttr} ${disabledMeta.ariaDisabledAttr} title="${title}">${getSvg(item.icon)}${label}</div>`;
     }
 
+    /** @param {Object} item @returns {string} */
     buildStackDropdown(item) {
         const label = this._buildItemLabel(item);
         const menuStyle = item.menuWidth ? `style="width:${item.menuWidth}"` : '';
@@ -327,6 +343,7 @@ export class ToolbarBuilder {
             </div>`;
     }
 
+    /** @param {Object} item @returns {string} */
     buildStackSplitDropdown(item) {
         const keepOpen = item.keepOpen ? 'data-keep-open="true"' : '';
         const label = this._buildItemLabel(item);
@@ -341,12 +358,14 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 行布局 */
+    /** Line Layout */
+    /** @param {Object} item @returns {string} */
     buildRow(item) {
         const items = item.items.map(i => this.buildRowItem(i)).join('');
         return `<div class="sn-tools-row">${items}</div>`;
     }
 
+    /** @param {Object} item @returns {string} */
     buildRowItem(item) {
         if (item.type === 'dropdown') {
             // 有width时用inline样式（带边框），否则用纯图标样式
@@ -363,7 +382,8 @@ export class ToolbarBuilder {
         return `<div class="sn-tools-item small${disabledMeta.disabledClass}" ${fieldAttr} ${action} ${disabledMeta.disabledGetterAttr} ${disabledMeta.disabledUidAttr} ${disabledMeta.ariaDisabledAttr} title="${title}">${getSvg(item.icon)}${label}</div>`;
     }
 
-    /** 行内下拉（带边框，用于字体名、字号等）- 不懒加载，因为 combobox 搜索需要菜单项 */
+    /** Line Drop Down (with border for font names, fonts, etc.) - Not lazy, because combobox search requires menu entries */
+    /** @param {Object} item @returns {string} */
     buildInlineDropdown(item) {
         const menuHTML = this.buildMenuHTML(item.menu);
         const width = item.width ? `style="width:${item.width}"` : '';
@@ -388,7 +408,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 分裂按钮（左边执行，右边下拉） */
+    /** Split button (execution left, pull right down) */
+    /** @param {Object} item @returns {string} */
     buildSplitDropdown(item) {
         const keepOpen = item.keepOpen ? 'data-keep-open="true"' : '';
         const menuStyle = item.menuWidth ? `style="width:${item.menuWidth}"` : '';
@@ -410,7 +431,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 下拉按钮（纯图标，用于下划线、边框等） */
+    /** Pull down buttons (pure icons for underlineds, borders, etc.) */
+    /** @param {Object} item @returns {string} */
     buildDropdown(item) {
         const keepOpen = item.keepOpen ? 'data-keep-open="true"' : '';
         const label = this._buildItemLabel(item);
@@ -422,7 +444,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 颜色选择器 */
+    /** Colour Selector */
+    /** @param {Object} item @returns {string} */
     buildColorPicker(item) {
         const colorType = item.colorType || 'font';
         const actionFn = colorType === 'font' ? 'fontColorBtn' : 'fillColorBtn';
@@ -434,7 +457,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 分裂颜色选择器（左边直接应用，右边打开面板） */
+    /** Split Colour Selector (Put Left Direct, Open Right) */
+    /** @param {Object} item @returns {string} */
     buildSplitColorPicker(item) {
         const colorType = item.colorType || 'font';
         const actionFn = colorType === 'font' ? 'fontColorBtn' : 'fillColorBtn';
@@ -451,7 +475,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 复选框 - 支持 checked 为 getter 函数 */
+    /** Checkbox - Support checked as getter function */
+    /** @param {Object} item @returns {string} */
     buildCheckbox(item) {
         // checked can be a static boolean or a getter function
         let isChecked = false;
@@ -471,6 +496,7 @@ export class ToolbarBuilder {
         return `<label class="sn-tools-checkbox${disabledMeta.disabledClass}" ${disabledMeta.ariaDisabledAttr} title="${this._itemTitle(item)}"><input type="checkbox" data-field="${item.id}" ${checked} ${action} ${getterAttr} ${disabledMeta.disabledGetterAttr} ${disabledMeta.disabledUidAttr} ${disabledMeta.disabledAttr}><span>${label}</span></label>`;
     }
 
+    /** @param {Object} item @returns {string} */
     buildLabelInput(item) {
         const action = item.action ? `onchange="${item.action}"` : '';
         const disabledMeta = this._buildDisabledMeta(item);
@@ -481,7 +507,8 @@ export class ToolbarBuilder {
             </div>`;
     }
 
-    /** 生成菜单项HTML（使用sn-dropdown格式） */
+    /** Generate menu entry HTML (in `sn-dropdown` format) */
+    /** @param {string} menuKey @returns {string} */
     buildMenuHTML(menuKey) {
         if (menuKey === 'border') return this.buildBorderMenuHTML();
         if (menuKey === 'condFormat') return this.buildCondFormatMenuHTML();
@@ -513,7 +540,7 @@ export class ToolbarBuilder {
         return this._trHtml(html);
     }
 
-    /** 行和列菜单（含二级下拉与自定义输入） */
+    /** Rows and Columns Menu (with secondary drops and custom input) */
     buildRowColMenuHTML() {
         const ns = this.ns;
         const insertMenu = `
@@ -577,7 +604,8 @@ export class ToolbarBuilder {
         `);
     }
 
-    /** 图表快捷下拉菜单 */
+    /** Chart Quick Drop Menu */
+    /** @param {string} menuKey @returns {string} */
     buildChartMenuHTML(menuKey) {
         const categoryKey = CHART_SHORTCUT_MENUS[menuKey];
         const chartCategories = getLocalizedChartCategories(this.SN);
@@ -594,7 +622,7 @@ export class ToolbarBuilder {
         return html;
     }
 
-    /** 条件格式菜单 */
+    /** Conditional Format Menu */
     buildCondFormatMenuHTML() {
         const ns = this.ns;
         const cf = `${ns}.Action.condFormat`;
@@ -785,7 +813,7 @@ export class ToolbarBuilder {
         `);
     }
 
-    /** 边框菜单 */
+    /** Border Menu */
     buildBorderMenuHTML() {
         const ns = this.ns;
         // 位置图标 (10种)
@@ -825,7 +853,7 @@ export class ToolbarBuilder {
         `);
     }
 
-    /** 形状菜单 - 复刻Excel形状下拉列表 */
+    /** Shape Menu - Reset Excel Shape Down Draw List */
     buildShapesMenuHTML() {
         const ns = this.ns;
 
@@ -1021,7 +1049,7 @@ export class ToolbarBuilder {
         return this._trHtml(`<div class="sn-shapes-menu">${shapeCategories.map((category, idx) => renderCategory(category, idx)).join('')}</div>`);
     }
 
-    /** 表格样式菜单 */
+    /** Table Style Menu */
     buildTableStylesMenuHTML() {
         const ns = this.ns;
 
@@ -1062,7 +1090,7 @@ export class ToolbarBuilder {
             </div>`);
     }
 
-    /** 套用表格格式菜单（开始面板） */
+    /** Table format menu (start panel) */
     buildFormatAsTableMenuHTML() {
         const ns = this.ns;
 
@@ -1096,7 +1124,7 @@ export class ToolbarBuilder {
             </div>`);
     }
 
-    /** 单元格样式菜单 */
+    /** Cell Style Menu */
     buildCellStylesMenuHTML() {
         const ns = this.ns;
 
@@ -1140,7 +1168,7 @@ export class ToolbarBuilder {
         return this._trHtml(`<div class="sn-cell-styles-menu sn-scrollbar">${groups}</div>`);
     }
 
-    /** 高亮行列颜色面板 */
+    /** Highlight colour panel */
     buildHighlightMenuHTML() {
         const ns = this.ns;
         const colors = [
@@ -1165,7 +1193,7 @@ export class ToolbarBuilder {
     }
 }
 
-/** 初始化工具栏事件（标签切换 + 懒加载 + combobox优化 + checkbox状态同步） */
+/** Initialization toolbar event (label toggle + lazy load + combobox optimization + checkbox status sync) */
 export function initToolsEvents(container, builder, colorInitFn) {
     const tools = container.querySelector('.sn-tools');
     const menuList = container.querySelector('.sn-menu-list');
@@ -1256,7 +1284,7 @@ export function initToolsEvents(container, builder, colorInitFn) {
     initComboboxEnhancements(tools, container);
 }
 
-/** 初始化 Combobox 增强功能 */
+/** Initialize Combobox Enhancement */
 function initComboboxEnhancements(tools, container) {
     // 打开下拉时标记当前选中项
     tools.addEventListener('mousedown', (e) => {
@@ -1327,8 +1355,8 @@ function getDefaultFontName(cell) {
 let _numFmtMenuMap = null;
 
 /**
- * 从菜单配置构建格式映射
- * @param {Object} menuConfig - 菜单配置对象
+ * Map from Menu Configuration Build Format
+ * @param {Object} menuConfig - Menu Configuration Object
  */
 function buildNumFmtMap(menuConfig) {
     if (_numFmtMenuMap) return _numFmtMenuMap;
@@ -1350,8 +1378,8 @@ function buildNumFmtMap(menuConfig) {
 }
 
 /**
- * 获取数值格式显示标签
- * 直接从菜单配置匹配，匹配不到显示"自定义"
+ * Get Numeric Format Show Tabs
+ * Match directly from the menu configuration and not match the display "Definite"
  */
 function getNumFmtLabel(numFmt, menuConfig, t = (key) => key) {
     if (!numFmt || numFmt === 'General') return t('toolbar.numFmt.general');
@@ -1369,12 +1397,12 @@ function getNumFmtLabel(numFmt, menuConfig, t = (key) => key) {
 }
 
 /**
- * 同步工具栏状态（高性能版）
- * - 纯状态差量对比，不依赖 cellKey
- * - 对齐按钮：只有明确设置时才高亮
- * @param {HTMLElement} container - 容器元素
- * @param {Cell} cell - 单元格对象
- * @param {Object} menuConfig - 菜单配置（用于数值格式匹配）
+ * Synchronization Toolbar Status (High Performance)
+ * - Pure state differential, not dependent on cellKey
+ * - Alignment button: Highlight only when clearly set
+ * @param {HTMLElement} container - Container Elements
+ * @param {Cell} cell - Cell Object
+ * @param {Object} menuConfig - Menu Configuration (for numerical format matching)
  */
 export function syncToolbarState(container, cell, menuConfig) {
     const tools = container.querySelector('.sn-tools');
@@ -1435,7 +1463,7 @@ export function syncToolbarState(container, cell, menuConfig) {
     _lastStateStr = currentStateStr;
 }
 
-/** 批量更新工具栏 DOM */
+/** Batch Update Toolbar DOM */
 function updateToolbarDOM(tools, state, updates) {
     for (const key of updates) {
         switch (key) {
@@ -1517,16 +1545,16 @@ function updateToolbarDOM(tools, state, updates) {
     }
 }
 
-/** 重置缓存（切换工作表时调用） */
+/** Reset cache (calls when changing sheets) */
 export function resetToolbarCache() {
     _lastState = null;
     _lastStateStr = '';
 }
 
 /**
- * 刷新工具栏中带有 disabled getter 的项
- * @param {HTMLElement} container - 容器元素
- * @param {ToolbarBuilder} builder - 工具栏构建器实例
+ * Refresh entries with disabled getter in the toolbar
+ * @param {HTMLElement} container - Container Elements
+ * @param {ToolbarBuilder} builder - Toolbar Builder Example
  */
 export function refreshDisabledToolbarItems(container, builder) {
     if (!container || !builder?.SN) return;
@@ -1574,9 +1602,9 @@ export function refreshDisabledToolbarItems(container, builder) {
 }
 
 /**
- * 刷新工具栏中带有 active getter 的按钮状态
- * @param {HTMLElement} container - 容器元素
- * @param {ToolbarBuilder} builder - 工具栏构建器实例
+ * Refresh button state with active getter in toolbar
+ * @param {HTMLElement} container - Container Elements
+ * @param {ToolbarBuilder} builder - Toolbar Builder Example
  */
 export function refreshActiveButtons(container, builder) {
     if (!container || !builder?.SN) return;
@@ -1601,10 +1629,10 @@ export function refreshActiveButtons(container, builder) {
 export default ToolbarBuilder;
 
 /**
- * 从工具栏配置中查找指定 id 的 checkbox 项
- * @param {Array} config - 工具栏配置
- * @param {string} fieldId - checkbox 的 id
- * @returns {Object|null} checkbox 配置项
+ * Find checkbox entry for specified id from the toolbar configuration
+ * @param {Array} config - Toolbar Configuration
+ * @param {string} fieldId - Checkbox's id
+ * @returns {Objection|checkbox configuration
  */
 function findCheckboxItem(config, fieldId) {
     for (const panel of config) {
@@ -1631,10 +1659,10 @@ function findCheckboxItem(config, fieldId) {
 }
 
 /**
- * 从工具栏配置中查找指定 id 的带 active getter 的项
- * @param {Array} config - 工具栏配置
- * @param {string} fieldId - 项的 id
- * @returns {Object|null} 配置项
+ * Find specified id items with active getter from the toolbar configuration
+ * @param {Array} config - Toolbar Configuration
+ * @param {string} fieldId - id of item
+ * @returns {Object|configator
  */
 function findActiveItem(config, fieldId) {
     for (const panel of config) {

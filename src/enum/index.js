@@ -1,60 +1,60 @@
 /**
- * SheetNext 常量枚举
- * 通过 SN.Enum 访问
+ * SheetNext enum constants.
+ * Access via `SN.Enum`.
  */
 
 /**
- * 事件优先级（越小越先执行）
+ * Event priority. Lower values run earlier.
  */
 export const EventPriority = Object.freeze({
-    SYSTEM: -2000,      // 系统内部
-    PROTECTION: -1000,  // 保护检查
-    PLUGIN: -500,       // 插件
-    NORMAL: 0,          // 默认
-    LATE: 500,          // 后置处理
-    AUDIT: 1000         // 审计日志
+    SYSTEM: -2000,      // Internal system
+    PROTECTION: -1000,  // Protection checks
+    PLUGIN: -500,       // Plugin
+    NORMAL: 0,          // Default
+    LATE: 500,          // Post-processing
+    AUDIT: 1000         // Audit log
 });
 
 /**
- * 粘贴模式
+ * Paste mode.
  */
 export const PasteMode = Object.freeze({
-    ALL: 'all',                           // 全部（默认）
-    VALUE: 'value',                       // 仅值
-    FORMULA: 'formula',                   // 仅公式
-    FORMAT: 'format',                     // 仅格式
-    NO_BORDER: 'noBorder',                // 无边框
-    COLUMN_WIDTH: 'colWidth',             // 列宽
-    COMMENT: 'comment',                   // 批注
-    VALIDATION: 'validation',             // 数据验证
-    TRANSPOSE: 'transpose',               // 转置
-    VALUE_NUMBER_FORMAT: 'valueNumberFormat',       // 值和数字格式
-    ALL_MERGE_CONDITIONAL: 'allMergeConditional',   // 全部使用源主题
-    FORMULA_NUMBER_FORMAT: 'formulaNumberFormat'    // 公式和数字格式
+    ALL: 'all',                           // All (default)
+    VALUE: 'value',                       // Values only
+    FORMULA: 'formula',                   // Formulas only
+    FORMAT: 'format',                     // Formats only
+    NO_BORDER: 'noBorder',                // Without borders
+    COLUMN_WIDTH: 'colWidth',             // Column widths
+    COMMENT: 'comment',                   // Comment
+    VALIDATION: 'validation',             // Data validation
+    TRANSPOSE: 'transpose',               // Transpose
+    VALUE_NUMBER_FORMAT: 'valueNumberFormat',       // Values and number formats
+    ALL_MERGE_CONDITIONAL: 'allMergeConditional',   // All with source theme
+    FORMULA_NUMBER_FORMAT: 'formulaNumberFormat'    // Formulas and number formats
 });
 
 /**
- * 运算粘贴模式
+ * Paste operation mode.
  */
 export const PasteOperation = Object.freeze({
-    NONE: 'none',       // 无
-    ADD: 'add',         // 加
-    SUBTRACT: 'sub',    // 减
-    MULTIPLY: 'mul',    // 乘
-    DIVIDE: 'div'       // 除
+    NONE: 'none',       // None
+    ADD: 'add',         // Add
+    SUBTRACT: 'sub',    // Subtract
+    MULTIPLY: 'mul',    // Multiply
+    DIVIDE: 'div'       // Divide
 });
 
 /**
- * 图纸锚点类型
+ * Drawing anchor type.
  */
 export const AnchorType = Object.freeze({
-    TWO_CELL: 'twoCell',    // 随单元格移动和缩放
-    ONE_CELL: 'oneCell',    // 仅随单元格移动
-    ABSOLUTE: 'absolute'    // 固定位置
+    TWO_CELL: 'twoCell',    // Move and resize with cells
+    ONE_CELL: 'oneCell',    // Move with cells only
+    ABSOLUTE: 'absolute'    // Fixed position
 });
 
 /**
- * 图纸类型
+ * Drawing type.
  */
 export const DrawingType = Object.freeze({
     CHART: 'chart',
@@ -64,87 +64,87 @@ export const DrawingType = Object.freeze({
 });
 
 /**
- * 数据验证类型
+ * Data validation type.
  */
 export const ValidationType = Object.freeze({
-    LIST: 'list',               // 下拉列表
-    WHOLE: 'whole',             // 整数
-    DECIMAL: 'decimal',         // 小数
-    DATE: 'date',               // 日期
-    TIME: 'time',               // 时间
-    TEXT_LENGTH: 'textLength',  // 文本长度
-    CUSTOM: 'custom'            // 自定义公式
+    LIST: 'list',               // Dropdown list
+    WHOLE: 'whole',             // Integer
+    DECIMAL: 'decimal',         // Decimal
+    DATE: 'date',               // Date
+    TIME: 'time',               // Time
+    TEXT_LENGTH: 'textLength',  // Text length
+    CUSTOM: 'custom'            // Custom formula
 });
 
 /**
- * 数据验证操作符
+ * Data validation operator.
  */
 export const ValidationOperator = Object.freeze({
-    BETWEEN: 'between',                     // 介于
-    NOT_BETWEEN: 'notBetween',              // 未介于
-    EQUAL: 'equal',                         // 等于
-    NOT_EQUAL: 'notEqual',                  // 不等于
-    GREATER_THAN: 'greaterThan',            // 大于
-    GREATER_THAN_OR_EQUAL: 'greaterThanOrEqual',  // 大于等于
-    LESS_THAN: 'lessThan',                  // 小于
-    LESS_THAN_OR_EQUAL: 'lessThanOrEqual'   // 小于等于
+    BETWEEN: 'between',                     // Between
+    NOT_BETWEEN: 'notBetween',              // Not between
+    EQUAL: 'equal',                         // Equal
+    NOT_EQUAL: 'notEqual',                  // Not equal
+    GREATER_THAN: 'greaterThan',            // Greater than
+    GREATER_THAN_OR_EQUAL: 'greaterThanOrEqual',  // Greater than or equal
+    LESS_THAN: 'lessThan',                  // Less than
+    LESS_THAN_OR_EQUAL: 'lessThanOrEqual'   // Less than or equal
 });
 
 /**
- * 筛选条件操作符
+ * Filter condition operator.
  */
 export const FilterOperator = Object.freeze({
-    EQUAL: 'equal',                         // 等于
-    NOT_EQUAL: 'notEqual',                  // 不等于
-    GREATER_THAN: 'greaterThan',            // 大于
-    GREATER_THAN_OR_EQUAL: 'greaterThanOrEqual',  // 大于等于
-    LESS_THAN: 'lessThan',                  // 小于
-    LESS_THAN_OR_EQUAL: 'lessThanOrEqual',  // 小于等于
-    BEGINS_WITH: 'beginsWith',              // 开头是
-    ENDS_WITH: 'endsWith',                  // 结尾是
-    CONTAINS: 'contains',                   // 包含
-    NOT_CONTAINS: 'notContains'             // 不包含
+    EQUAL: 'equal',                         // Equal
+    NOT_EQUAL: 'notEqual',                  // Not equal
+    GREATER_THAN: 'greaterThan',            // Greater than
+    GREATER_THAN_OR_EQUAL: 'greaterThanOrEqual',  // Greater than or equal
+    LESS_THAN: 'lessThan',                  // Less than
+    LESS_THAN_OR_EQUAL: 'lessThanOrEqual',  // Less than or equal
+    BEGINS_WITH: 'beginsWith',              // Begins with
+    ENDS_WITH: 'endsWith',                  // Ends with
+    CONTAINS: 'contains',                   // Contains
+    NOT_CONTAINS: 'notContains'             // Does not contain
 });
 
 /**
- * 条件格式类型
+ * Conditional formatting type.
  */
 export const CFType = Object.freeze({
-    CELL_VALUE: 'cellIs',           // 单元格值
-    TEXT_CONTAINS: 'containsText',  // 包含文本
-    DATE_OCCURRING: 'timePeriod',   // 发生日期
-    TOP_BOTTOM: 'top10',            // 前/后 N 项
-    ABOVE_AVERAGE: 'aboveAverage',  // 高于/低于平均值
-    DUPLICATE: 'duplicateValues',   // 重复值
-    UNIQUE: 'uniqueValues',         // 唯一值
-    DATA_BAR: 'dataBar',            // 数据条
-    COLOR_SCALE: 'colorScale',      // 色阶
-    ICON_SET: 'iconSet',            // 图标集
-    EXPRESSION: 'expression'        // 公式
+    CELL_VALUE: 'cellIs',           // Cell Value
+    TEXT_CONTAINS: 'containsText',  // Text contains
+    DATE_OCCURRING: 'timePeriod',   // Date occurring
+    TOP_BOTTOM: 'top10',            // Top/bottom N
+    ABOVE_AVERAGE: 'aboveAverage',  // Above/below average
+    DUPLICATE: 'duplicateValues',   // Duplicate values
+    UNIQUE: 'uniqueValues',         // Unique values
+    DATA_BAR: 'dataBar',            // DATA BAR
+    COLOR_SCALE: 'colorScale',      // COLOUR STEP
+    ICON_SET: 'iconSet',            // ICON SET
+    EXPRESSION: 'expression'        // FORMULA
 });
 
 /**
- * 排序方向
+ * Sort direction.
  */
 export const SortOrder = Object.freeze({
-    ASC: 'asc',     // 升序
-    DESC: 'desc'    // 降序
+    ASC: 'asc',     // Ascending
+    DESC: 'desc'    // Descending
 });
 
 /**
- * 对齐方式 - 水平
+ * Horizontal alignment.
  */
 export const HorizontalAlign = Object.freeze({
     LEFT: 'left',
     CENTER: 'center',
     RIGHT: 'right',
-    JUSTIFY: 'justify',     // 两端对齐
-    FILL: 'fill',           // 填充
-    DISTRIBUTED: 'distributed'  // 分散对齐
+    JUSTIFY: 'justify',     // Justify
+    FILL: 'fill',           // Fill
+    DISTRIBUTED: 'distributed'  // Distributed
 });
 
 /**
- * 对齐方式 - 垂直
+ * Vertical alignment.
  */
 export const VerticalAlign = Object.freeze({
     TOP: 'top',
@@ -155,7 +155,7 @@ export const VerticalAlign = Object.freeze({
 });
 
 /**
- * 边框样式
+ * Border Style
  */
 export const BorderStyle = Object.freeze({
     NONE: 'none',
@@ -167,7 +167,7 @@ export const BorderStyle = Object.freeze({
     DOUBLE: 'double'
 });
 
-// 统一导出
+// Unified export
 export default {
     EventPriority,
     PasteMode,

@@ -1,6 +1,6 @@
 /**
- * TimePeriod规则 - 日期时间段
- * 支持：today, yesterday, tomorrow, last7Days, lastWeek, thisWeek, nextWeek, lastMonth, thisMonth, nextMonth
+ * TimePeriod Rule - Date Time Period
+ * Support: today, yesterday, tomorrow, last7Days, lastWeek, thisWeek, nextWeek, lastMonth, thisMonth, nextMonth
  */
 import { CFRule } from '../CFRule.js';
 import { getTodayStart, getWeekStart, getMonthStart, excelDateToTimestamp } from '../helpers.js';
@@ -9,11 +9,15 @@ const DAY_MS = 86400000;
 const WEEK_MS = 7 * DAY_MS;
 
 export class TimePeriodRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {string} */
         this.timePeriod = config.timePeriod || 'today';
+        this._formula1 = config.formula1 ?? null;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         const val = cell.calcVal;
         if (typeof val !== 'number' || isNaN(val)) return false;
@@ -75,5 +79,8 @@ export class TimePeriodRule extends CFRule {
 
     _addXmlAttributes(node, cf) {
         node['_$timePeriod'] = this.timePeriod;
+        if (this._formula1 !== null && this._formula1 !== undefined && this._formula1 !== '') {
+            node.formula = String(this._formula1);
+        }
     }
 }

@@ -1,8 +1,11 @@
 import getSvg from '../../assets/mainSvgs.js';
 
 export default class LazyDOM {
+    /** @param {import('../Workbook/Workbook.js').default} SN */
     constructor(SN) {
+        /** @type {import('../Workbook/Workbook.js').default} */
         this.SN = SN;
+        /** @type {string} */
         this.ns = SN.namespace;
         this.cache = new Map();
     }
@@ -38,6 +41,38 @@ export default class LazyDOM {
     destroyAll() {
         this.cache.forEach((element) => element.remove());
         this.cache.clear();
+    }
+
+    _bindContextMenuAutoHide(el) {
+        el.onclick = (event) => {
+            if (event?.target?.tagName === 'INPUT') return;
+            el.style.display = 'none';
+        };
+    }
+
+    _createContextMenuDividerHTML() {
+        return '<div class="sn-rc-divider"></div>';
+    }
+
+    _createContextMenuItemHTML(action, labelHTML, iconHTML = '', extraClass = '') {
+        const className = ['sn-rc-item', extraClass].filter(Boolean).join(' ');
+        return `
+            <div class="${className}" onclick="${action}">
+                <span class="sn-rc-item-icon${iconHTML ? '' : ' sn-rc-item-icon-empty'}">${iconHTML}</span>
+                <span class="sn-rc-item-label">${labelHTML}</span>
+            </div>
+        `;
+    }
+
+    /** Sync drawing context menu item visibility. */
+    syncDrawingContextMenu() {
+        const menu = this.cache.get('drawing-context-menu');
+        if (!menu) return;
+        const downloadItem = menu.querySelector('.sn-rc-download-image');
+        if (!downloadItem) return;
+        const drawing = this.SN.Canvas?.activeDrawing;
+        const canDownload = drawing && ['chart', 'image', 'shape'].includes(drawing.type);
+        downloadItem.style.display = canDownload ? '' : 'none';
     }
 
     creators = {
@@ -107,13 +142,24 @@ export default class LazyDOM {
 
         'col-context-menu': function () {
             const ns = this.ns;
+            const t = (key, params = {}) => this.SN.t(key, params);
+            const countInput = '<input type="number" min="1" max="10" value="1">';
             const el = document.createElement('div');
-            el.className = 'rc-box sn-col-rc';
+            el.className = 'rc-box sn-scrollbar sn-col-rc';
+            this._bindContextMenuAutoHide(el);
             const html = `
-                <div onclick="${ns}.Action.addCols(event,'left')">Insert <input type="number" min="1" max="10" value="1"> column(s) left</div>
-                <div onclick="${ns}.Action.addCols(event,'right')">Insert <input type="number" min="1" max="10" value="1"> column(s) right</div>
-                <div onclick="${ns}.Action.hidCols()">Hide Columns</div>
-                <div onclick="${ns}.Action.delCols()">Delete Columns</div>
+                ${this._createContextMenuItemHTML(`${ns}.Action.addCols(event,'left')`, t('contextMenu.column.insertLeft', { countInput }), getSvg('plus'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.addCols(event,'right')`, t('contextMenu.column.insertRight', { countInput }), getSvg('plus'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.hidCols()`, t('contextMenu.column.hide'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.unhideColAction()`, t('contextMenu.column.unhide'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.delCols()`, t('contextMenu.column.delete'), getSvg('clear'), 'sn-rc-item-danger')}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.setColWidthDialog()`, t('contextMenu.column.width'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.autoFitColWidth()`, t('contextMenu.column.autoFit'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.groupRows()`, t('contextMenu.column.group'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.ungroupRows()`, t('contextMenu.column.ungroup'))}
             `;
             el.innerHTML = html;
             this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
@@ -122,13 +168,24 @@ export default class LazyDOM {
 
         'row-context-menu': function () {
             const ns = this.ns;
+            const t = (key, params = {}) => this.SN.t(key, params);
+            const countInput = '<input type="number" min="1" max="10" value="1">';
             const el = document.createElement('div');
-            el.className = 'rc-box sn-row-rc';
+            el.className = 'rc-box sn-scrollbar sn-row-rc';
+            this._bindContextMenuAutoHide(el);
             const html = `
-                <div onclick="${ns}.Action.addRows(event,'top')">Insert <input type="number" min="1" max="10" value="1"> row(s) above</div>
-                <div onclick="${ns}.Action.addRows(event,'bottom')">Insert <input type="number" min="1" max="10" value="1"> row(s) below</div>
-                <div onclick="${ns}.Action.hidRows()">Hide Rows</div>
-                <div onclick="${ns}.Action.delRows()">Delete Rows</div>
+                ${this._createContextMenuItemHTML(`${ns}.Action.addRows(event,'top')`, t('contextMenu.row.insertAbove', { countInput }), getSvg('plus'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.addRows(event,'bottom')`, t('contextMenu.row.insertBelow', { countInput }), getSvg('plus'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.hidRows()`, t('contextMenu.row.hide'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.unhideRowAction()`, t('contextMenu.row.unhide'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.delRows()`, t('contextMenu.row.delete'), getSvg('clear'), 'sn-rc-item-danger')}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.setRowHeightDialog()`, t('contextMenu.row.height'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.autoFitRowHeight()`, t('contextMenu.row.autoFit'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.groupRows()`, t('contextMenu.row.group'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.ungroupRows()`, t('contextMenu.row.ungroup'))}
             `;
             el.innerHTML = html;
             this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
@@ -137,15 +194,34 @@ export default class LazyDOM {
 
         'cell-context-menu': function () {
             const ns = this.ns;
+            const t = (key, params = {}) => this.SN.t(key, params);
             const el = document.createElement('div');
-            el.className = 'rc-box sn-cell-rc';
-            el.onclick = () => { el.style.display = 'none'; };
+            el.className = 'rc-box sn-scrollbar sn-cell-rc';
+            this._bindContextMenuAutoHide(el);
             const html = `
-                <div onclick="${ns}.Action.fontInversion('bold');">${getSvg('bold')} Bold</div>
-                <div onclick="${ns}.Action.fontInversion('italic');">${getSvg('italic')} Italic</div>
-                <div onclick="${ns}.Action.fontInversion('underline','single');">${getSvg('underline')} Underline</div>
-                <div onclick="${ns}.Action.fontInversion('strike');">${getSvg('strikethrough')} Strikethrough</div>
-                <div onclick="${ns}.AI.chatInput(areaDom.innerText)">${getSvg('gengduo')} More</div>
+                ${this._createContextMenuItemHTML(`${ns}.Action.copy()`, t('contextMenu.cell.copy'), getSvg('sort_copy'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.cut()`, t('contextMenu.cell.cut'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.paste()`, t('contextMenu.cell.paste'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.activeSheet.mergeCells(null,'center');${ns}._r()`, t('contextMenu.cell.mergeCenter'))}
+                ${this._createContextMenuItemHTML(`${ns}.activeSheet.mergeCells();${ns}._r()`, t('contextMenu.cell.merge'))}
+                ${this._createContextMenuItemHTML(`${ns}.activeSheet.unMergeCells();${ns}._r()`, t('contextMenu.cell.unmerge'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.insertHyperlink()`, t('contextMenu.cell.hyperlink'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.insertComment()`, t('contextMenu.cell.note'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.sortAsc()`, t('contextMenu.cell.sortAsc'), getSvg('filter_sortAsc'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.sortDesc()`, t('contextMenu.cell.sortDesc'), getSvg('filter_sortDesc'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.toggleAutoFilter()`, t('contextMenu.cell.autoFilter'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.clearFilter()`, t('contextMenu.cell.clearFilter'), getSvg('clear'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.toggleWrapText()`, t('contextMenu.cell.wrapText'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.clearAreaFormat()`, t('contextMenu.cell.clearFormat'), getSvg('clear'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.fontInversion('bold');`, t('contextMenu.cell.bold'), getSvg('bold'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.fontInversion('italic');`, t('contextMenu.cell.italic'), getSvg('italic'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.fontInversion('underline','single');`, t('contextMenu.cell.underline'), getSvg('underline'))}
+                ${this._createContextMenuItemHTML(`${ns}.Action.fontInversion('strike');`, t('contextMenu.cell.strikethrough'), getSvg('strikethrough'))}
             `;
             el.innerHTML = html;
             this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
@@ -154,16 +230,21 @@ export default class LazyDOM {
 
         'drawing-context-menu': function () {
             const ns = this.ns;
+            const t = (key, params = {}) => this.SN.t(key, params);
+            const aiAdjustPrompt = JSON.stringify(t('contextMenu.drawing.aiAdjustPrompt', { id: '__SN_DRAWING_ID__' })).replace(/"/g, '&quot;');
             const el = document.createElement('div');
-            el.className = 'rc-box sn-drawing-rc';
-            el.onclick = () => { el.style.display = 'none'; };
+            el.className = 'rc-box sn-scrollbar sn-drawing-rc';
+            this._bindContextMenuAutoHide(el);
             const html = `
-                <div onclick="${ns}.AI.chatInput('Please adjust drawing ID ' + ${ns}.Canvas.activeDrawing?.id + ': ')">${getSvg('monifenxi')} AI Adjust</div>
-                <div onclick="${ns}.Canvas.activeDrawing.updIndex('top');${ns}._r('s');">${getSvg('alignTop')} Bring to Front</div>
-                <div onclick="${ns}.Canvas.activeDrawing.updIndex('bottom');${ns}._r('s');">${getSvg('alignBottom')} Send to Back</div>
-                <div onclick="${ns}.Canvas.activeDrawing.updIndex('up');${ns}._r('s');">${getSvg('plus')} Bring Forward</div>
-                <div onclick="${ns}.Canvas.activeDrawing.updIndex('down');${ns}._r('s');">${getSvg('minus')} Send Backward</div>
-                <div onclick="${ns}.activeSheet.Drawing.remove(${ns}.Canvas.activeDrawing.id);${ns}._r('s');">${getSvg('clear')} Delete Drawing</div>
+                ${this._createContextMenuItemHTML(`${ns}.AI.chatInput(${aiAdjustPrompt}.replace('__SN_DRAWING_ID__', ${ns}.Canvas.activeDrawing?.id ?? ''))`, t('contextMenu.drawing.aiAdjust'), getSvg('monifenxi'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Canvas.activeDrawing.updIndex('top');${ns}._r('s');`, t('contextMenu.drawing.bringToFront'), getSvg('alignTop'))}
+                ${this._createContextMenuItemHTML(`${ns}.Canvas.activeDrawing.updIndex('bottom');${ns}._r('s');`, t('contextMenu.drawing.sendToBack'), getSvg('alignBottom'))}
+                ${this._createContextMenuItemHTML(`${ns}.Canvas.activeDrawing.updIndex('up');${ns}._r('s');`, t('contextMenu.drawing.bringForward'), getSvg('plus'))}
+                ${this._createContextMenuItemHTML(`${ns}.Canvas.activeDrawing.updIndex('down');${ns}._r('s');`, t('contextMenu.drawing.sendBackward'), getSvg('minus'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuItemHTML(`${ns}.Action.downloadActiveDrawingImage()`, t('contextMenu.drawing.downloadImage'), '', 'sn-rc-download-image')}
+                ${this._createContextMenuItemHTML(`${ns}.activeSheet.Drawing.remove(${ns}.Canvas.activeDrawing.id);${ns}._r('s');`, t('contextMenu.drawing.delete'), getSvg('clear'), 'sn-rc-item-danger')}
             `;
             el.innerHTML = html;
             this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
@@ -171,15 +252,26 @@ export default class LazyDOM {
         }
     };
 
+    /** @type {HTMLElement|null} */
     get dragLine() { return this.get('drag-line'); }
+    /** @type {HTMLElement|null} */
     get scrollTip() { return this.get('scroll-tip'); }
+    /** @type {HTMLElement|null} */
     get paddingType() { return this.get('padding-type'); }
+    /** @type {HTMLElement|null} */
     get hyperlinkBtn() { return this.get('hyperlink-btn'); }
+    /** @type {HTMLElement|null} */
     get hyperlinkTip() { return this.get('hyperlink-tip'); }
+    /** @type {HTMLElement|null} */
     get validTip() { return this.get('valid-tip'); }
+    /** @type {HTMLElement|null} */
     get validSelect() { return this.get('valid-select'); }
+    /** @type {HTMLElement|null} */
     get colContextMenu() { return this.get('col-context-menu'); }
+    /** @type {HTMLElement|null} */
     get rowContextMenu() { return this.get('row-context-menu'); }
+    /** @type {HTMLElement|null} */
     get cellContextMenu() { return this.get('cell-context-menu'); }
+    /** @type {HTMLElement|null} */
     get drawingContextMenu() { return this.get('drawing-context-menu'); }
 }

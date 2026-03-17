@@ -1070,8 +1070,8 @@ a {
 .ai-response-content .md-h3 { font-size: 16px; font-weight: 600; margin: 10px 0 6px; }
 .ai-response-content .md-h4 { font-size: 15px; font-weight: 600; margin: 8px 0 4px; }
 .ai-response-content .md-code-block {
-    background: #f4f4f5; padding: 10px; border-radius: 6px;
-    overflow-x: auto; font-family: Consolas, monospace; font-size: 13px; margin: 8px 0;
+    background: #333; padding: 10px;border-radius: var(--radius);color: #fff;
+    overflow-x: auto; font-family: Consolas, monospace; font-size: 13px;
 }
 .ai-response-content .md-code-inline {
     background: #f4f4f5; padding: 2px 6px; border-radius: 4px;
@@ -1607,32 +1607,112 @@ a {
 }
 
 .rc-box {
-    padding: 8px 0;
+    padding: 6px;
     position: absolute;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08);
     background-color: #fff;
     display: none;
-    min-width: 150px;
-    border-radius: var(--radius);
-    border: 1px solid #ddd;
+    min-width: 220px;
+    max-height: min(420px, calc(100vh - 24px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    z-index: 30;
 }
 
-.rc-box>div {
+.rc-box .sn-rc-divider {
+    height: 1px;
+    margin: 6px 4px;
+    background: #eef2f7;
+}
+
+.rc-box .sn-rc-item {
     cursor: pointer;
-    padding: 4px 12px;
+    min-height: 28px;
+    padding: 4px 10px;
     font-size: 12px;
+    line-height: 1.35;
     text-align: left;
-    transition: .3s;
+    transition: background-color .2s ease, color .2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 7px;
+    color: #1f2937;
+    user-select: none;
 }
 
-.rc-box>div>input {
-    max-width: 50px;
-    border: 1px solid #eeeeee;
-    margin: 0 2px;
+.rc-box .sn-rc-item-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
 }
 
-.rc-box>div:hover {
-    background-color: #eee;
+.rc-box .sn-rc-item-icon-empty {
+    color: transparent;
+}
+
+.rc-box .sn-rc-item-icon .sn-svg {
+    display: block;
+    font-size: 14px;
+}
+
+.rc-box .sn-rc-item-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.rc-box .sn-rc-item:hover {
+    background-color: #f3f6fb;
+    color: #111827;
+}
+
+.rc-box .sn-rc-item:hover .sn-rc-item-icon {
+    color: #36c;
+}
+
+.rc-box .sn-rc-item-danger {
+    color: #c62828;
+}
+
+.rc-box .sn-rc-item-danger .sn-rc-item-icon {
+    color: #c62828;
+}
+
+.rc-box .sn-rc-item-danger:hover {
+    background-color: #fff3f2;
+    color: #a61b1b;
+}
+
+.rc-box .sn-rc-item-danger:hover .sn-rc-item-icon {
+    color: #a61b1b;
+}
+
+.rc-box .sn-rc-item input {
+    width: 46px;
+    height: 22px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    margin: 0 4px;
+    padding: 0 6px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    vertical-align: middle;
+    background-color: #fff;
+    color: inherit;
+}
+
+.rc-box .sn-rc-item input:focus {
+    outline: none;
+    border-color: #36c;
+    box-shadow: 0 0 0 2px rgba(51, 102, 204, 0.12);
 }
 
 .sn-loading-div {

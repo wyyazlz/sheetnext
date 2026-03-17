@@ -1,18 +1,23 @@
 /**
- * CellIs规则 - 单元格值比较
- * 支持：大于、小于、等于、不等于、介于、不介于等
+ * CellIs Rule - Cell Value Comparison
+ * Support: greater than, less than, equal to, not equal to, between, not between etc.
  */
 import { CFRule } from '../CFRule.js';
 import { compareValue } from '../helpers.js';
 
 export class CellIsRule extends CFRule {
+    /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
         super(config, sheet);
+        /** @type {string} */
         this.operator = config.operator || 'equal';
+        /** @type {string|number|null|undefined} */
         this.formula1 = config.formula1;
+        /** @type {string|number|null|undefined} */
         this.formula2 = config.formula2;
     }
 
+    /** @param {Cell} cell @param {number} r @param {number} c @param {Object} rangeData @returns {boolean} */
     evaluate(cell, r, c, rangeData) {
         const val = cell.calcVal;
 

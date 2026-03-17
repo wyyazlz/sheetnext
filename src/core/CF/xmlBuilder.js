@@ -1,13 +1,13 @@
 /**
- * 条件格式XML构建模块
- * 负责将条件格式导出为Excel XML格式
+ * conditional formatting XML Building Block
+ * Responsible for exporting conditional formatting to Excel XML format
  */
 import { expandHex } from './helpers.js';
 
 /**
- * 构建条件格式XML节点
- * @param {ConditionalFormat} cf - 条件格式管理器实例
- * @returns {Array|null} conditionalFormatting节点数组
+ * Construct a conditional formatting XML node
+ * @param {ConditionalFormat} cf - conditional formatting Manager Instance
+ * @ returns {Array | null} array of conditionalFormatting nodes
  */
 export function buildConditionalFormattingXml(cf) {
     if (!cf || cf.rules.length === 0) return null;
@@ -15,9 +15,9 @@ export function buildConditionalFormattingXml(cf) {
 }
 
 /**
- * 构建dxf样式数组
- * @param {ConditionalFormat} cf - 条件格式管理器实例
- * @returns {Array} dxf节点数组
+ * Build a dxf style array
+ * @param {ConditionalFormat} cf - conditional formatting Manager Instance
+ * @ returns {Array} dxf node array
  */
 export function buildDxfXml(cf) {
     if (!cf) return [];
@@ -27,9 +27,9 @@ export function buildDxfXml(cf) {
 }
 
 /**
- * 构建单个dxf节点
- * @param {Object} dxf - 差异化样式对象
- * @returns {Object} dxf XML节点
+ * Build a single dxf node
+ * @param {Object} dxf - Differentiated Style Objects
+ * @ returns {Object} dxf XML node
  */
 function buildSingleDxf(dxf) {
     const node = {};
@@ -97,9 +97,9 @@ function buildSingleDxf(dxf) {
 }
 
 /**
- * 合并dxf到styles.xml
- * @param {Object} styleSheet - styles.xml的styleSheet节点
- * @param {Array} dxfArray - dxf数组
+ * Merge dxf to styles.xml
+ * @param {Object} styleSheet - styleSheet node for styles.xml
+ * @param {Array} dxfArray - dxf array
  */
 export function mergeDxfToStyleSheet(styleSheet, dxfArray) {
     if (!dxfArray || dxfArray.length === 0) {

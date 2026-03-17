@@ -1,6 +1,7 @@
 // ==================== Cell XML构建 ====================
 import { BUILTIN_NUMFMTS } from './constants.js';
 import { expandHex } from './helpers.js';
+import { _getCellEffectiveStyle } from './styleUtils.js';
 
 function buildFontColorNode(font) {
     if (font.colorTheme !== undefined && font.colorTheme !== null && font.colorTheme !== '') {
@@ -67,7 +68,7 @@ function buildBorderNode(border) {
 }
 
 /**
- * 检查单元格是否在超级表的数据区域（非表头）
+ * Check if the cell is in the data range of the supertable (not the header)
  * @param {Cell} cell
  * @returns {boolean}
  */
@@ -86,10 +87,10 @@ function isInTableDataArea(cell) {
 }
 
 /**
- * 构建通用样式 XF 对象（供行/列/单元格使用）
- * @param {Object} style - 样式对象 { font, fill, alignment, border, numFmt, protection }
- * @param {Object} SN - SheetNext 实例
- * @param {Object} options - 可选配置 { skipFillForTable: boolean }
+ * Build generic style XF objects (for rows/columns/cells)
+ * @param {Object} style - Style object {font, fill, alignment, border, numFmt, protection}
+ * @param {Object} SN - SheetNext Instance
+ * @param {Object} options - Optionally configure {skipFillForTable: boolean}
  * @returns {Object} xfObj
  */
 export function buildStyleXfFromObject(style, SN, options = {}) {
@@ -230,10 +231,10 @@ export function buildStyleXfFromObject(style, SN, options = {}) {
 }
 
 /**
- * 获取样式索引（供行/列使用）
- * @param {Object} style - 样式对象
- * @param {Object} SN - SheetNext 实例
- * @returns {number|null} 样式索引
+ * Get style index (for rows/columns)
+ * @param {Object} style - Style Objects
+ * @param {Object} SN - SheetNext Instance
+ * @ returns {number | null} style indexes
  */
 export function getStyleIndex(style, SN) {
     const xfObj = buildStyleXfFromObject(style, SN);
@@ -251,6 +252,9 @@ export function getStyleIndex(style, SN) {
 
 // 构建样式对象
 export function buildStyleXf(cell) {
+    const { style, xfObj: effectiveXfObj } = _buildCellEffectiveStyleXf(cell);
+    if (Object.keys(style).length > 0) return effectiveXfObj;
+
     const xfObj = {
         _$numFmtId: 0,
         _$fontId: 0,
@@ -464,9 +468,8 @@ export function buildCellXml(cell) {
 
     // 样式构建
     const hasLineBreak = typeof cell.editVal === 'string' && cell.editVal.includes('\n');
-    if (Object.keys(cell.style).length == 0 && !hasLineBreak) return obj;
-
-    const xfObj = buildStyleXf(cell);
+    const { style: effectiveStyle, xfObj } = _buildCellEffectiveStyleXf(cell);
+    if (Object.keys(effectiveStyle).length == 0 && !hasLineBreak) return obj;
     // 含换行符时强制设置 wrapText，Excel 需要此属性才能显示换行
     if (hasLineBreak) {
         if (!xfObj.alignment) xfObj.alignment = {};
@@ -482,4 +485,21 @@ export function buildCellXml(cell) {
     }
 
     return obj;
+}
+
+function _buildCellEffectiveStyleXf(cell) {
+    const style = _getCellEffectiveStyle(cell);
+    const xfObj = buildStyleXfFromObject(
+        style,
+        cell._SN,
+        { skipFillForTable: isInTableDataArea(cell) }
+    ) || {
+        _$numFmtId: 0,
+        _$fontId: 0,
+        _$fillId: 0,
+        _$borderId: 0,
+        _$xfId: 0
+    };
+
+    return { style, xfObj };
 }

@@ -54,12 +54,12 @@ npm install sheetnext
 
 ```javascript
 import SheetNext from 'sheetnext';
-import 'sheetnext/dist/sheetnext.css';
+import 'sheetnext.css';
 
 const SN = new SheetNext(document.querySelector('#SNContainer'));
 ```
 
-#### Browser Direct Import (UMD)
+#### Browser Direct Import (CDN)
 
 ```html
 <!DOCTYPE html>
@@ -68,11 +68,11 @@ const SN = new SheetNext(document.querySelector('#SNContainer'));
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SheetNext Demo</title>
-  <link rel="stylesheet" href="dist/sheetnext.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.css">
 </head>
 <body>
   <div id="SNContainer" style="width:100vw;height:100vh;padding:0 7px 7px"></div>
-  <script src="dist/sheetnext.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.umd.js"></script>
   <script>
     const SN = new SheetNext(document.querySelector('#SNContainer'));
   </script>
@@ -97,11 +97,11 @@ const SN = new SheetNext(document.querySelector('#SNContainer'), {
 });
 ```
 
-Import locale via UMD:
+Import locale via CDN:
 
 ```html
-<script src="dist/sheetnext.umd.js"></script>
-<script src="dist/locales/zh-CN.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.locale.zh-CN.umd.js"></script>
 <script>
   const SN = new SheetNext(document.querySelector('#SNContainer'), {
     locale: 'zh-CN'
@@ -113,22 +113,25 @@ Import locale via UMD:
 
 #### Step 1: Download the AI Development Reference
 
-- Download `docs-detail.md` from the repository root: [docs-detail.md](https://github.com/wyyazlz/sheetnext/blob/master/docs/docs-detail.md)
+- Open `docs/detail/` in the repository.
+- The core references are `docs/detail/core-api.md`, `docs/detail/events.md`, and `docs/detail/enums.md`.
+- Protocol supplements are `docs/detail/ai-relay.md` and `docs/detail/json-format.md`.
 
-#### Step 2: Feed `docs-detail` to Your AI Tool
+#### Step 2: Feed `docs/detail` to Your AI Tool
 
-Use Cursor / Claude / ChatGPT / Copilot or any AI coding assistant. Provide `docs-detail` first, then describe your requirements.
+Use Cursor / Claude / ChatGPT / Copilot or any AI coding assistant. Provide the `docs/detail/` reference set first, then describe your requirements.
 
 Recommended prompt template:
 
 ```text
 You are a senior SheetNext AI development expert. Please read and understand the documentation I provide, then give a directly implementable solution.
 Execution order:
-1) Read: docs-detail
-2) Identify user goals (business goals + technical goals)
-3) Output a minimum viable implementation (get it running first, then optimize)
-4) All APIs and code must strictly follow the documentation
-5) Provide verification steps and risk points
+1) Read: docs/detail/core-api.md
+2) Read as needed: docs/detail/events.md, docs/detail/enums.md, docs/detail/ai-relay.md, and docs/detail/json-format.md
+3) Identify user goals (business goals + technical goals)
+4) Output a minimum viable implementation (get it running first, then optimize)
+5) All APIs and code must strictly follow the documentation
+6) Provide verification steps and risk points
 Constraints:
 - Do not fabricate APIs
 - Do not skip edge cases

@@ -403,14 +403,6 @@ const enUS = {
         },
         "insert": {
             "content": {
-                "chart": {
-                    "assist": "Assist",
-                    "defaultItem": "Item {index}",
-                    "defaultSeries": "Data",
-                    "volume": "Volume"
-                },
-                "imageFileDescription": "Image files",
-                "imagePickerNotSupported": "This feature is not supported in current browser. Please use a newer Chrome or Edge browser.",
                 "sparkline": {
                     "locationInvalid": "Invalid insert location",
                     "locationLabel": "Insert Location",
@@ -427,9 +419,6 @@ const enUS = {
                         "winLoss": "Win/Loss"
                     },
                     "typeLabel": "Sparkline Type"
-                },
-                "textBox": {
-                    "defaultText": "Text Box"
                 }
             },
             "modal": {
@@ -470,7 +459,6 @@ const enUS = {
                 }
             },
             "toast": {
-                "msg001": "The selected range has no valid data",
                 "msg002": "Please select a data range first",
                 "msg003": "Sparkline module is not initialized",
                 "pleaseEnterALinkAddress": "Please enter a link address"
@@ -998,16 +986,6 @@ const enUS = {
             "sunburst_basic": "Sunburst",
             "treemap_basic": "Treemap",
             "waterfall_basic": "Waterfall"
-        },
-        "modal": {
-            "confirm": "Insert",
-            "title": "Insert Chart"
-        },
-        "toast": {
-            "noType": "No chart type selected",
-            "rangeEmpty": "Selected range has no data",
-            "selectRange": "Please select a data range first",
-            "unsupportedType": "Unsupported chart type: {label}"
         }
     },
     "color": {
@@ -1077,6 +1055,60 @@ const enUS = {
                 "msg001": "Please select a data range to sort first",
                 "msg002": "The sort range contains merged cells; please unmerge first"
             }
+        }
+    },
+    "contextMenu": {
+        "cell": {
+            "autoFilter": "Auto Filter",
+            "bold": "Bold",
+            "clearFilter": "Clear Filter",
+            "clearFormat": "Clear Format",
+            "copy": "Copy",
+            "cut": "Cut",
+            "hyperlink": "Hyperlink",
+            "italic": "Italic",
+            "merge": "Merge Cells",
+            "mergeCenter": "Merge & Center",
+            "note": "Note",
+            "paste": "Paste",
+            "sortAsc": "Sort Ascending",
+            "sortDesc": "Sort Descending",
+            "strikethrough": "Strikethrough",
+            "underline": "Underline",
+            "unmerge": "Unmerge",
+            "wrapText": "Wrap Text"
+        },
+        "column": {
+            "autoFit": "Auto Fit Column Width",
+            "delete": "Delete Columns",
+            "group": "Group Columns",
+            "hide": "Hide Columns",
+            "insertLeft": "Insert {countInput} column(s) left",
+            "insertRight": "Insert {countInput} column(s) right",
+            "ungroup": "Ungroup Columns",
+            "unhide": "Unhide Columns",
+            "width": "Column Width"
+        },
+        "drawing": {
+            "aiAdjust": "AI Adjust",
+            "aiAdjustPrompt": "Please adjust drawing ID {id}: ",
+            "bringForward": "Bring Forward",
+            "bringToFront": "Bring to Front",
+            "delete": "Delete Drawing",
+            "downloadImage": "Download Image",
+            "sendBackward": "Send Backward",
+            "sendToBack": "Send to Back"
+        },
+        "row": {
+            "autoFit": "Auto Fit Row Height",
+            "delete": "Delete Rows",
+            "group": "Group Rows",
+            "height": "Row Height",
+            "hide": "Hide Rows",
+            "insertAbove": "Insert {countInput} row(s) above",
+            "insertBelow": "Insert {countInput} row(s) below",
+            "ungroup": "Ungroup Rows",
+            "unhide": "Unhide Rows"
         }
     },
     "core": {

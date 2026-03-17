@@ -403,14 +403,6 @@ const zhCN = {
         },
         "insert": {
             "content": {
-                "chart": {
-                    "assist": "辅助",
-                    "defaultItem": "项目 {index}",
-                    "defaultSeries": "数据",
-                    "volume": "成交量"
-                },
-                "imageFileDescription": "图片文件",
-                "imagePickerNotSupported": "当前浏览器不支持此功能，请使用较新的 Chrome 或 Edge 浏览器。",
                 "sparkline": {
                     "locationInvalid": "插入位置无效",
                     "locationLabel": "插入位置",
@@ -427,9 +419,6 @@ const zhCN = {
                         "winLoss": "盈亏"
                     },
                     "typeLabel": "迷你图类型"
-                },
-                "textBox": {
-                    "defaultText": "文本框"
                 }
             },
             "modal": {
@@ -470,7 +459,6 @@ const zhCN = {
                 }
             },
             "toast": {
-                "msg001": "选中区域无有效内容",
                 "msg002": "请先选择数据区域",
                 "msg003": "迷你图模块未初始化",
                 "pleaseEnterALinkAddress": "请输入链接地址"
@@ -998,16 +986,6 @@ const zhCN = {
             "sunburst_basic": "旭日图",
             "treemap_basic": "矩形树图",
             "waterfall_basic": "瀑布图"
-        },
-        "modal": {
-            "confirm": "插入",
-            "title": "插入图表"
-        },
-        "toast": {
-            "noType": "未选择图表类型",
-            "rangeEmpty": "所选区域没有数据",
-            "selectRange": "请先选择数据区域",
-            "unsupportedType": "不支持的图表类型：{label}"
         }
     },
     "color": {
@@ -1077,6 +1055,60 @@ const zhCN = {
                 "msg001": "请先选择要排序的数据区域",
                 "msg002": "排序区域存在合并单元格，请先取消合并"
             }
+        }
+    },
+    "contextMenu": {
+        "cell": {
+            "autoFilter": "自动筛选",
+            "bold": "粗体",
+            "clearFilter": "清除筛选",
+            "clearFormat": "清除格式",
+            "copy": "复制",
+            "cut": "剪切",
+            "hyperlink": "超链接",
+            "italic": "斜体",
+            "merge": "合并单元格",
+            "mergeCenter": "合并后居中",
+            "note": "批注",
+            "paste": "粘贴",
+            "sortAsc": "升序排序",
+            "sortDesc": "降序排序",
+            "strikethrough": "删除线",
+            "underline": "下划线",
+            "unmerge": "取消合并",
+            "wrapText": "自动换行"
+        },
+        "column": {
+            "autoFit": "自动调整列宽",
+            "delete": "删除列",
+            "group": "组合列",
+            "hide": "隐藏列",
+            "insertLeft": "向左插入 {countInput} 列",
+            "insertRight": "向右插入 {countInput} 列",
+            "ungroup": "取消组合列",
+            "unhide": "取消隐藏列",
+            "width": "列宽"
+        },
+        "drawing": {
+            "aiAdjust": "AI 调整",
+            "aiAdjustPrompt": "请调整图形 ID {id}: ",
+            "bringForward": "上移一层",
+            "bringToFront": "置于顶层",
+            "delete": "删除图形",
+            "downloadImage": "下载图片",
+            "sendBackward": "下移一层",
+            "sendToBack": "置于底层"
+        },
+        "row": {
+            "autoFit": "自动调整行高",
+            "delete": "删除行",
+            "group": "组合行",
+            "height": "行高",
+            "hide": "隐藏行",
+            "insertAbove": "向上插入 {countInput} 行",
+            "insertBelow": "向下插入 {countInput} 行",
+            "ungroup": "取消组合行",
+            "unhide": "取消隐藏行"
         }
     },
     "core": {

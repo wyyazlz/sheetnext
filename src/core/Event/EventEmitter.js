@@ -1,29 +1,34 @@
 /**
- * SheetNext 事件系统
- * 高性能、极简的事件发射器
+ * SheetNext event system
+ * High-performance, minimal event transmitter
  */
 
 import { EventPriority } from '../../enum/index.js';
 export { EventPriority };
 
 /**
- * 事件对象
+ * Event object
  */
 export class SheetEvent {
+    /** @param {string} type @param {Object} data @param {Object} target */
     constructor(type, data, target) {
+        /** @type {string} */
         this.type = type;
+        /** @type {Object} */
         this.data = data;
+        /** @type {Object} */
         this.target = target;
         this.canceled = false;
         this.stopped = false;
         this.cancelReason = null;
+        /** @type {number} */
         this.timestamp = Date.now();
         this._waitUntil = null;
     }
 
     /**
-     * 取消事件（阻止默认行为）
-     * @param {string} reason - 取消原因（可选，用于提示）
+     * Cancel event (block default behavior)
+     * @param {string} reason - Reason for canceling (optional, used as a reminder)
      */
     cancel(reason = '') {
         this.canceled = true;
@@ -34,7 +39,7 @@ export class SheetEvent {
     }
 
     /**
-     * 停止事件传播（不再执行后续监听器）
+     * Stop event propagation (no longer performing follow-up listener)
      */
     stopPropagation() {
         this.stopped = true;
@@ -52,7 +57,7 @@ export class SheetEvent {
 }
 
 /**
- * 事件发射器
+ * Event Transmitter
  */
 export default class EventEmitter {
     constructor() {
@@ -61,14 +66,14 @@ export default class EventEmitter {
     }
 
     /**
-     * 注册事件监听器
-     * @param {string} event - 事件名
-     * @param {Function} handler - 处理函数
-     * @param {Object} options - 选项
-     * @param {string} options.id - 唯一标识（防重复绑定）
-     * @param {number} options.priority - 优先级（越小越先执行）
-     * @param {boolean} options.once - 是否只执行一次
-     * @returns {EventEmitter} - 支持链式调用
+     * Register Event Listener
+     * @param {string} event - Event Name
+     * @param {Function} handler - Handling function
+     * @param {Object} options - Options
+     * @param {string} options.id - Unique identity (anti duplicate binding)
+     * @param {number} options.priority - Priority (execute as soon as possible)
+     * @param {boolean} options.once - Whether to execute only once
+     * @returns {EventEmitter} - Chain Calls Supported
      */
     on(event, handler, options = {}) {
         if (typeof handler !== 'function') return this;
@@ -98,10 +103,10 @@ export default class EventEmitter {
     }
 
     /**
-     * 注册一次性事件监听器
-     * @param {string} event - 事件名
-     * @param {Function} handler - 处理函数
-     * @param {Object} options - 选项
+     * Sign up for a one-time event listener
+     * @param {string} event - Event Name
+     * @param {Function} handler - Handling function
+     * @param {Object} options - Options
      * @returns {EventEmitter}
      */
     once(event, handler, options = {}) {
@@ -109,9 +114,9 @@ export default class EventEmitter {
     }
 
     /**
-     * 移除事件监听器
-     * @param {string} event - 事件名
-     * @param {string|Function} idOrHandler - id 或 handler 引用
+     * Remove Event Listener
+     * @param {string} event - Event Name
+     * @param {string|Function} idOrHandler - id or handler reference
      * @returns {EventEmitter}
      */
     off(event, idOrHandler) {
@@ -136,7 +141,7 @@ export default class EventEmitter {
     }
 
     /**
-     * 移除所有事件监听器
+     * Remove all event listeners
      * @returns {EventEmitter}
      */
     offAll() {
@@ -145,10 +150,10 @@ export default class EventEmitter {
     }
 
     /**
-     * 触发事件
-     * @param {string} event - 事件名
-     * @param {Object} data - 事件数据
-     * @returns {SheetEvent} - 事件对象（可检查 canceled 状态）
+     * Trigger event
+     * @param {string} event - Event Name
+     * @param {Object} data - Event Data
+     * @returns {SheetEvent} - Event object (canceled status can be checked)
      */
     emit(event, data = {}) {
         const e = new SheetEvent(event, data, this);
@@ -241,8 +246,8 @@ export default class EventEmitter {
     }
 
     /**
-     * 检查是否有监听器
-     * @param {string} event - 事件名
+     * Check for listeners
+     * @param {string} event - Event Name
      * @returns {boolean}
      */
     hasListeners(event) {
@@ -251,8 +256,8 @@ export default class EventEmitter {
     }
 
     /**
-     * 获取监听器数量
-     * @param {string} event - 事件名（可选，不传则返回总数）
+     * Get the number of listeners
+     * @param {string} event - Event name (optional, return total if not passed)
      * @returns {number}
      */
     listenerCount(event) {
@@ -268,7 +273,7 @@ export default class EventEmitter {
     }
 
     /**
-     * 获取所有事件名与监听数量
+     * Get all event names and number of monitors
      * @returns {Array<{event: string, count: number}>}
      */
     listEvents() {
@@ -280,7 +285,7 @@ export default class EventEmitter {
     }
 
     /**
-     * 二分查找插入位置（按 priority 升序）
+     * Binary Find Insertion Position (ascending priority)
      * @private
      */
     _binarySearchInsert(arr, priority) {

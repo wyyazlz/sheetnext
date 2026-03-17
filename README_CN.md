@@ -54,12 +54,12 @@ npm install sheetnext
 
 ```javascript
 import SheetNext from 'sheetnext';
-import 'sheetnext/dist/sheetnext.css';
+import 'sheetnext.css';
 
 const SN = new SheetNext(document.querySelector('#SNContainer'));
 ```
 
-#### 浏览器直接引入（UMD）
+#### 浏览器直接引入（CDN）
 
 ```html
 <!DOCTYPE html>
@@ -68,11 +68,11 @@ const SN = new SheetNext(document.querySelector('#SNContainer'));
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SheetNext Demo</title>
-  <link rel="stylesheet" href="dist/sheetnext.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.css">
 </head>
 <body>
   <div id="SNContainer" style="width:100vw;height:100vh;padding:0 7px 7px"></div>
-  <script src="dist/sheetnext.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.umd.js"></script>
   <script>
     const SN = new SheetNext(document.querySelector('#SNContainer'));
   </script>
@@ -97,11 +97,11 @@ const SN = new SheetNext(document.querySelector('#SNContainer'), {
 });
 ```
 
-UMD 方式引入语言包：
+CDN 方式引入语言包：
 
 ```html
-<script src="dist/sheetnext.umd.js"></script>
-<script src="dist/locales/zh-CN.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.locale.zh-CN.umd.js"></script>
 <script>
   const SN = new SheetNext(document.querySelector('#SNContainer'), {
     locale: 'zh-CN'
@@ -113,22 +113,24 @@ UMD 方式引入语言包：
 
 #### Step 1：下载 AI 开发资料
 
-- 下载仓库根目录的 `docs-detail.md`：[docs-detail.md](https://github.com/wyyazlz/sheetnext/blob/master/docs/docs-detail.md)
+- 打开仓库中的 `docs/detail/` 目录。
+- 核心参考文档为 `docs/detail/core-api.md`、`docs/detail/events.md`、`docs/detail/enums.md`。
 
-#### Step 2：把 `docs-detail` 交给 AI
+#### Step 2：把 `docs/detail` 交给 AI
 
-可使用 Cursor / Claude / ChatGPT / Copilot 等工具，先喂 `docs-detail` 再提需求。
+可使用 Cursor / Claude / ChatGPT / Copilot 等工具，先喂 `docs/detail/` 这组资料再提需求。
 
 推荐指令模板：
 
 ```text
 你是资深 SheetNext AI 开发专家，请先阅读并理解我提供的文档，再给出可直接落地的方案。
 执行顺序：
-1) 先阅读：docs-detail
-2) 识别用户目标（业务目标 + 技术目标）
-3) 输出最小可行实现（先能跑，再优化）
-4) 所有 API 与代码写法必须严格对齐文档
-5) 给出验证步骤和风险点
+1) 先阅读：docs/detail/core-api.md
+2) 再按需阅读：docs/detail/events.md、docs/detail/enums.md
+3) 识别用户目标（业务目标 + 技术目标）
+4) 输出最小可行实现（先能跑，再优化）
+5) 所有 API 与代码写法必须严格对齐文档
+6) 给出验证步骤和风险点
 约束：
 - 不编造 API
 - 不跳过边界条件

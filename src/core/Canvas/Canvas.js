@@ -20,222 +20,230 @@ const _clm = new WeakMap();
 export const _cgl = (canvas) => _clm.get(canvas);
 
 /**
- * 画布渲染与交互管理
- * @title 🖱️ 绑定操作
+ * Canvas Rendering and Interaction Management
+ * @title 🖱️ Binding Actions
  * @class
  */
 export default class Canvas {
+    /** @type {number} */
+    dpr;
+    /** @type {CanvasRenderingContext2D|null} */
+    ctx;
+    /** @type {CanvasRenderingContext2D|null} */
+    ctxKZ;
+    /** @type {CanvasRenderingContext2D|null} */
+    HDctx;
 
     /**
-     * @param {Object} SN - SheetNext 主实例
+     * @param {Object} SN - SheetNext Main Instance
      * @param {Object} license
      */
     constructor(SN, license) {
         /**
-         * SheetNext 主实例
+         * SheetNext Main Instance
          * @type {Object}
          */
         this.SN = SN
         _clm.set(this, license);
         /**
-         * 工具方法集合
+         * Tool Method Collection
          * @type {Utils}
          */
         this.Utils = SN.Utils
         /**
-         * 画布容器
+         * Canvas Container
          * @type {HTMLElement}
          */
         this.dom = SN.containerDom.querySelector('.sn-canvas')
 
         /**
-         * 显示层画布
+         * Show Layer Canvas
          * @type {HTMLCanvasElement}
          */
         this.showLayer = SN.containerDom.querySelector(".sn-show-layer")
 
         /**
-         * 操作层画布
+         * Operating Layer Canvas
          * @type {HTMLCanvasElement}
          */
         this.handleLayer = SN.containerDom.querySelector(".sn-handle-layer")
         // 缓冲画布
         /**
-         * 缓冲画布
+         * Buffer Canvas
          * @type {HTMLCanvasElement}
          */
         this.buffer = document.createElement('canvas');
         /**
-         * 快照画布
+         * Snapshot Canvas
          * @type {HTMLCanvasElement}
          */
         this.showLayerKZ = document.createElement('canvas');
         /**
-         * 画笔预览画布
+         * Brush preview canvas
          * @type {HTMLCanvasElement}
          */
         this.pCanvas = document.createElement('canvas');
         this.pCanvas.width = this.pCanvas.height = 8;
         /**
-         * 画笔预览上下文
+         * Brush Preview Context
          * @type {CanvasRenderingContext2D}
          */
         this.pCtx = this.pCanvas.getContext('2d');
         // 其他画布信息
         /**
-         * 当前激活边框信息
+         * Current Active Border Information
          * @type {Object|null}
          */
         this.activeBorderInfo = null;
         /**
-         * 多选边框信息
+         * Multi-select border information
          * @type {Object}
          */
         this.mpBorder = {}
         /**
-         * 最近一次 padding 信息
+         * Last padding information
          * @type {Object|null}
          */
         this.lastPadding = null;
         // 鼠标事件
         /**
-         * 鼠标指针当前指向区域
+         * Mouse pointer is currently pointing to an area
          * @type {string|null}
          */
         this.moveAreaName = null; // 鼠标指针当前指向区域 row-col-resize drawing fill-handle active-border
         /**
-         * 是否禁用移动检测
+         * Whether to disable mobile detection
          * @type {boolean}
          */
         this.disableMoveCheck = false;
         /**
-         * 是否禁用滚动
+         * Whether to disable scrolling
          * @type {boolean}
          */
         this.disableScroll = false; // 是否禁用滚动功能
         // 必要DOM（初始化时获取）
         /**
-         * 输入编辑器
+         * Input Editor
          * @type {HTMLElement}
          */
         this.input = SN.containerDom.querySelector('.sn-input-editor'); // 画布富文本输入框
         /**
-         * 公式栏输入框
+         * Formula Bar Input Box
          * @type {HTMLElement}
          */
         this.formulaBar = SN.containerDom.querySelector('.sn-formula-bar'); //工具栏输入框
         this.inputEditing = false;
         /**
-         * 区域输入框
+         * Area input box
          * @type {HTMLInputElement}
          */
         this.areaInput = SN.containerDom.querySelector('.sn-area-input');
         /**
-         * 区域选择容器
+         * Area Selection Container
          * @type {HTMLElement}
          */
         this.areaBox = SN.containerDom.querySelector('.sn-area-box');
         /**
-         * 区域下拉容器
+         * Area Dropdown Container
          * @type {HTMLElement}
          */
         this.areaDropdown = SN.containerDom.querySelector('.sn-area-dropdown');
         /**
-         * 横向滚动条
+         * Landscape scrollbar
          * @type {HTMLElement}
          */
         this.rollX = SN.containerDom.querySelector('.sn-roll-x')
         /**
-         * 横向滚动条滑块
+         * Landscape Scrollbar Slider
          * @type {HTMLElement}
          */
         this.rollXS = SN.containerDom.querySelector('.sn-roll-x>div')
         /**
-         * 纵向滚动条
+         * Portrait scrollbar
          * @type {HTMLElement}
          */
         this.rollY = SN.containerDom.querySelector('.sn-roll-y')
         /**
-         * 纵向滚动条滑块
+         * Portrait Scrollbar Slider
          * @type {HTMLElement}
          */
         this.rollYS = SN.containerDom.querySelector('.sn-roll-y>div')
         /**
-         * 图形容器
+         * Graphics Container
          * @type {HTMLElement}
          */
         this.drawingsCon = SN.containerDom.querySelector('.sn-drawings-con')
         /**
-         * 切片器容器
+         * Slicer Container
          * @type {HTMLElement}
          */
         this.slicersCon = SN.containerDom.querySelector('.sn-slicers-con')
 
         /**
-         * 最大纵向滚动距离
+         * Maximum longitudinal scrolling distance
          * @type {number}
          */
         this.maxTop = 0;
         /**
-         * 最大横向滚动距离
+         * Maximum lateral scrolling distance
          * @type {number}
          */
         this.maxLeft = 0;
 
         /**
-         * 懒加载 DOM 管理器
+         * Lazy loading Dom manager
          * @type {LazyDOM}
          */
         this.lazyDOM = new LazyDOM(SN);
 
         /**
-         * 筛选面板管理器
+         * Filter Panel Manager
          * @type {FilterPanel}
          */
         this.filterPanelManager = new FilterPanel(this);
 
         /**
-         * 渲染计数
+         * Render Count
          * @type {number}
          */
         this.rCount = 0
 
         /**
-         * 当前悬停批注
+         * Current hover comment
          * @type {Object|null}
          */
         this.hoveredComment = null;
 
         /**
-         * 统计求和：DOM
+         * Statistical Sum: Dom
          * @type {HTMLElement|null}
          */
         this.statSum = SN.containerDom.querySelector('[data-stat="sum"]');
         /**
-         * 统计计数：DOM
+         * Statistics Count: Dom
          * @type {HTMLElement|null}
          */
         this.statCount = SN.containerDom.querySelector('[data-stat="count"]');
         /**
-         * 统计平均：DOM
+         * Statistical average: Dom
          * @type {HTMLElement|null}
          */
         this.statAvg = SN.containerDom.querySelector('[data-stat="avg"]');
         this._statRafId = null;
 
         /**
-         * 高亮颜色，null 表示关闭
+         * Highlight color, null means closed
          * @type {string|null}
          */
         this.highlightColor = null; // 高亮颜色，null 表示关闭
         // 护眼模式
         /**
-         * 是否开启护眼模式
+         * Whether to turn on eye protection mode
          * @type {boolean}
          */
         this.eyeProtectionMode = false;
         /**
-         * 护眼颜色
+         * Eye protection color
          * @type {string}
          */
         this.eyeProtectionColor = 'rgb(204,232,207)';
@@ -247,42 +255,69 @@ export default class Canvas {
 
 
     /**
-     * 内边距类型
+     * Padding Type
      * @type {string}     */
+    /**
+     * Padding Type
+     * @type {string}     */
+
     get paddingType() { return this.lazyDOM.paddingType; }
     /**
-     * 超链接跳转按钮
+     * Hyperlink Jump Button
      * @type {HTMLElement|null}     */
+    /**
+     * Hyperlink Jump Button
+     * @type {HTMLElement|null}     */
+
     get hyperlinkJumpBtn() { return this.lazyDOM.hyperlinkBtn; }
     /**
-     * 超链接提示
+     * Hyperlink Tips
      * @type {HTMLElement|null}     */
+    /**
+     * Hyperlink Tips
+     * @type {HTMLElement|null}     */
+
     get hyperlinkTip() { return this.lazyDOM.hyperlinkTip; }
     /**
-     * 数据验证选择器
+     * Data Validation Selector
      * @type {HTMLElement|null}     */
+    /**
+     * Data Validation Selector
+     * @type {HTMLElement|null}     */
+
     get validSelect() { return this.lazyDOM.validSelect; }
     /**
-     * 数据验证提示
+     * Tips for data validation
      * @type {HTMLElement|null}     */
+    /**
+     * Tips for data validation
+     * @type {HTMLElement|null}     */
+
     get validTip() { return this.lazyDOM.validTip; }
     /**
-     * 滚动提示
+     * Scroll Tips
      * @type {HTMLElement|null}     */
+    /**
+     * Scroll Tips
+     * @type {HTMLElement|null}     */
+
     get scrollTip() { return this.lazyDOM.scrollTip; }
 
     /**
-     * 更新画布缩放/长宽后重新获取 dom 长高
-     * @returns {void}
+     * Re-fetch dom length after updating canvas zoom/length-width
+     * @returns {boolean}
      */
     viewResize() {
         this.dpr = window.devicePixelRatio || 1;
         const { clientWidth: w, clientHeight: h } = this.dom;
+        const hasViewport = this.dom.isConnected && w > 0 && h > 0;
         [this.showLayer, this.handleLayer, this.buffer, this.showLayerKZ].forEach(canvas => {
-            canvas.width = w * this.dpr;
-            canvas.height = h * this.dpr;
-            canvas.style.width = w + 'px'
-            canvas.style.height = h + 'px'
+            const canvasWidth = hasViewport ? w * this.dpr : 0;
+            const canvasHeight = hasViewport ? h * this.dpr : 0;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            canvas.style.width = (hasViewport ? w : 0) + 'px'
+            canvas.style.height = (hasViewport ? h : 0) + 'px'
         })
 
         this._width = null
@@ -292,6 +327,8 @@ export default class Canvas {
         this.ctxKZ = this.showLayerKZ.getContext('2d'); // 快照1
         this.HDctx = this.handleLayer.getContext('2d');
 
+        if (!hasViewport) return false;
+
         this.#initBufferContext();
 
         // 窗口变化时更新滚动条尺寸
@@ -299,39 +336,56 @@ export default class Canvas {
             this.updateScrollBarSize();
             this.updateOverlayContainers();
         }
+        return true;
     }
 
     /**
-     * 可视宽度
+     * Visible Width
      * @type {number}     */
+    /**
+     * Visible Width
+     * @type {number}     */
+
     get width() {
         return this._width ?? (this._width = this.showLayer.offsetWidth)
     }
 
     /**
-     * 可视高度
+     * Visible Height
      * @type {number}     */
+    /**
+     * Visible Height
+     * @type {number}     */
+
     get height() {
         return this._height ?? (this._height = this.showLayer.offsetHeight)
     }
 
     /**
-     * 逻辑视图宽度
+     * Logical View Width
      * @type {number}     */
+    /**
+     * Logical View Width
+     * @type {number}     */
+
     get viewWidth() {
         return this.width / (this.activeSheet?.zoom ?? 1);
     }
 
     /**
-     * 逻辑视图高度
+     * Logical View Height
      * @type {number}     */
+    /**
+     * Logical View Height
+     * @type {number}     */
+
     get viewHeight() {
         return this.height / (this.activeSheet?.zoom ?? 1);
     }
 
     /**
-     * 物理像素转逻辑坐标
-     * @param {number} value - 物理像素
+     * Physical pixel to logical coordinates
+     * @param {number} value - Physical pixels
      * @returns {number}
      */
     toLogical(value) {
@@ -339,8 +393,8 @@ export default class Canvas {
     }
 
     /**
-     * 逻辑坐标转物理像素
-     * @param {number} value - 逻辑坐标
+     * Logical Coordinates to Physical Pixels
+     * @param {number} value - Logical coordinates
      * @returns {number}
      */
     toPhysical(value) {
@@ -348,22 +402,30 @@ export default class Canvas {
     }
 
     /**
-     * 像素比
+     * Pixel Ratio
      * @type {number}     */
+    /**
+     * Pixel Ratio
+     * @type {number}     */
+
     get pixelRatio() {
         return this._pixelRatio ?? ((this.dpr || 1) * (this.activeSheet?.zoom ?? 1));
     }
 
     /**
-     * 半像素偏移
+     * Half Pixel Offset
      * @type {number}     */
+    /**
+     * Half Pixel Offset
+     * @type {number}     */
+
     get halfPixel() {
         return 0.5 / this.pixelRatio;
     }
 
     /**
-     * 转换为像素比下的值
-     * @param {number} value - 原始值
+     * Convert to value in pixel ratio
+     * @param {number} value - Raw Value
      * @returns {number}
      */
     px(value) {
@@ -371,8 +433,8 @@ export default class Canvas {
     }
 
     /**
-     * 对齐像素比
-     * @param {number} value - 原始值
+     * Alignment Pixel Ratio
+     * @param {number} value - Raw Value
      * @returns {number}
      */
     snap(value) {
@@ -381,11 +443,11 @@ export default class Canvas {
     }
 
     /**
-     * 对齐矩形到像素比
+     * Align Rectangle to Pixel Ratio
      * @param {number} x - X
      * @param {number} y - Y
-     * @param {number} w - 宽
-     * @param {number} h - 高
+     * @param {number} w - Wide
+     * @param {number} h - High
      * @returns {{x: number, y: number, w: number, h: number}}
      */
     snapRect(x, y, w, h) {
@@ -398,14 +460,18 @@ export default class Canvas {
     }
 
     /**
-     * 当前活动工作表
+     * Current Active Sheet
      * @type {Sheet}     */
+    /**
+     * Current Active Sheet
+     * @type {Sheet}     */
+
     get activeSheet() {
         return this.SN.activeSheet
     }
 
     /**
-     * 是否处于输入编辑状态
+     * Whether or not in input edit state
      * @type {boolean}
      */
     get inputEditing() {
@@ -433,8 +499,8 @@ export default class Canvas {
     }
 
     /**
-     * 获取事件在画布中的位置（逻辑坐标）
-     * @param {MouseEvent|{clientX:number, clientY:number}} event - 鼠标事件或带坐标对象
+     * Gets the position of the event in the canvas (logical coordinates)
+     * @ param {MouseEvent | {clientX: number, clientY: number}} event - Mouse event or object with coordinates
      * @returns {{x: number, y: number}}
      */
     getEventPosition(event) {
@@ -445,9 +511,9 @@ export default class Canvas {
     }
 
     /**
-     * 通过位置获取单元格索引
-     * @param {number} x - 逻辑坐标 X
-     * @param {number} y - 逻辑坐标 Y
+     * Get cell index by location
+     * @param {number} x - Logical coordinates X
+     * @param {number} y - Logical coordinates Y
      * @returns {{c: number, r: number}}
      */
     getCellIndexByPosition(x, y) {
@@ -480,7 +546,7 @@ export default class Canvas {
     }
 
     /**
-     * 应用缩放比例并同步滚动条与输入框位置
+     * Apply zoom and synchronize scrollbar and input box positions
      * @returns {void}
      */
     applyZoom() {
@@ -503,9 +569,9 @@ export default class Canvas {
     }
 
     /**
-     * 清除缓冲画布（物理像素）
-     * @param {number} [width=this.buffer.width] - 宽度
-     * @param {number} [height=this.buffer.height] - 高度
+     * Clear Buffered Canvas (Physical Pixels)
+     * @param {number} [width=this.buffer.width] - Width
+     * @param {number} [height=this.buffer.height] - Height
      * @returns {void}
      */
     clearBuffer(width = this.buffer.width, height = this.buffer.height) {
@@ -530,7 +596,7 @@ export default class Canvas {
 
     // 更新滚动条尺寸（窗口变化或切换sheet时调用）
     /**
-     * 更新滚动条尺寸
+     * Update scrollbar dimensions
      * @returns {void}
      */
     updateScrollBarSize() {
@@ -561,7 +627,7 @@ export default class Canvas {
 
 
     /**
-     * 更新覆盖层容器尺寸
+     * Update Overlay Container Dimensions
      * @returns {void}
      */
     updateOverlayContainers() {
@@ -588,7 +654,7 @@ export default class Canvas {
 
 
     /**
-     * 更新滚动条位置
+     * Update scrollbar position
      * @returns {void}
      */
     updateScrollBar() {
@@ -655,8 +721,8 @@ export default class Canvas {
     }
 
     /**
-     * 获取事件对应的单元格索引
-     * @param {MouseEvent|{clientX:number, clientY:number}} event - 鼠标事件或带坐标对象
+     * Get the cell index corresponding to the event
+     * @ param {MouseEvent | {clientX: number, clientY: number}} event - Mouse event or object with coordinates
      * @returns {{r:number, c:number}}
      */
     getCellIndex(event) {
@@ -693,8 +759,8 @@ export default class Canvas {
     }
 
     /**
-     * 设置高亮颜色并同步工具栏状态
-     * @param {MouseEvent} event - 触发事件
+     * Set highlight color and sync toolbar status
+     * @param {MouseEvent} event - Trigger event
      * @returns {void}
      */
     setHighlight(event) {
@@ -716,7 +782,7 @@ export default class Canvas {
     }
 
     /**
-     * 切换护眼模式
+     * Toggle eye protection mode
      * @returns {void}
      */
     toggleEyeProtection() {
@@ -732,14 +798,14 @@ export default class Canvas {
 
 
     /**
-     * 渲染画布（支持截图模式）
-     * @param {string} [type] - 渲染类型，'s' 为快照渲染
-     * @param {Object} [options] - 渲染选项
-     * @param {HTMLCanvasElement} [options.targetCanvas] - 目标画布（截图模式）
-     * @param {number} [options.width] - 截图宽度
-     * @param {number} [options.height] - 截图高度
-     * @param {number} [options.dpr] - 指定 dpr
-     * @param {Sheet} [options.sheet] - 指定工作表
+     * Render Canvas (Snapshot mode supported)
+     * @param {string} [type] - Rendering type, 's' for snapshot rendering
+     * @param {Object} [options] - Rendering Options
+     * @param {HTMLCanvasElement} [options.targetCanvas] - Target Canvas (Screenshot Mode)
+     * @param {number} [options.width] - Screenshot Width
+     * @param {number} [options.height] - Screenshot height
+     * @param {number} [options.dpr] - Specify dpr
+     * @param {Sheet} [options.sheet] - Assign Sheets
      * @returns {Promise<void>}
      */
     async r(type, options = {}) {
@@ -755,6 +821,10 @@ export default class Canvas {
         let sheet = this.activeSheet;
 
         try {
+            const hasViewport = isScreenshot
+                ? options.width > 0 && options.height > 0
+                : this.dom.isConnected && this.showLayer.width > 0 && this.showLayer.height > 0 && this.buffer.width > 0 && this.buffer.height > 0;
+            if (!sheet || !hasViewport) return;
             if (!isScreenshot) {
                 // 节流非截图模式的渲染频率（rAF + 脏标记，保证不丢最终帧）
                 if (this._rThrottleLock) {
@@ -1066,8 +1136,8 @@ Canvas.prototype._initAreaSelector = function() {
 };
 
 /**
- * 渲染追踪箭头
- * @param {Sheet} sheet - 工作表对象
+ * Rendering trace arrow
+ * @param {Sheet} sheet - Sheet Objects
  * @returns {void}
  */
 Canvas.prototype.renderTraceArrows = function(sheet) {
@@ -1099,12 +1169,12 @@ Canvas.prototype.renderTraceArrows = function(sheet) {
 };
 
 /**
- * 绘制单个追踪箭头
- * @param {CanvasRenderingContext2D} ctx - 绘图上下文
- * @param {Sheet} sheet - 工作表对象
- * @param {{r:number, c:number}} from - 起点单元格
- * @param {{r:number, c:number}} to - 终点单元格
- * @param {number} scale - 缩放系数
+ * Draw a single trace arrow
+ * @param {CanvasRenderingContext2D} ctx - Drawing Context
+ * @param {Sheet} sheet - Sheet Objects
+ * @ param {{r: number, c: number}} from - starting cell
+ * @ param {{r: number, c: number}} to - end cell
+ * @param {number} scale - Scaling coefficient
  * @returns {void}
  */
 Canvas.prototype.drawTraceArrow = function(ctx, sheet, from, to, scale) {

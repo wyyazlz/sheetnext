@@ -1,6 +1,11 @@
 /**
- * 菜单配置模块
- * 只保留右侧菜单配置
+ * Menu Configuration Module
+ * Keep only the menu configuration on the right
+ */
+
+/**
+ * Menu Configuration Module
+ * Keep only the menu configuration on the right
  */
 
 /**

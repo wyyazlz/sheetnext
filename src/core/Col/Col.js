@@ -1,6 +1,62 @@
+import {
+    _cloneStyleValue,
+    _getCellExplicitStyle,
+    _getChangedStyleFields,
+    _getInheritedStyleField,
+    _isSameStyleValue,
+    _pruneStyleObject
+} from '../Cell/styleUtils.js';
+
+function _resetCellStyleCache(cell) {
+    cell._showVal = undefined;
+    cell._fmtResult = undefined;
+}
+
+function _collectColCellCleanupChanges(col, oldStyle, newStyle) {
+    const fields = _getChangedStyleFields(oldStyle, newStyle);
+    if (fields.length === 0) return [];
+
+    const changes = [];
+    col.sheet.rows.forEach(row => {
+        const cell = row?.cells?.[col.cIndex];
+        if (!cell) return;
+        const explicitStyle = _getCellExplicitStyle(cell);
+        if (!explicitStyle || Object.keys(explicitStyle).length === 0) return;
+
+        const nextCellStyle = _cloneStyleValue(explicitStyle) || {};
+        let changed = false;
+
+        fields.forEach(field => {
+            if (!Object.prototype.hasOwnProperty.call(nextCellStyle, field)) return;
+            const inheritedValue = _getInheritedStyleField(field, row?._rowStyle, oldStyle);
+            if (_isSameStyleValue(nextCellStyle[field], inheritedValue)) {
+                delete nextCellStyle[field];
+                changed = true;
+            }
+        });
+
+        if (!changed) return;
+        changes.push({
+            cell,
+            oldStyle: _cloneStyleValue(explicitStyle) || {},
+            newStyle: _pruneStyleObject(nextCellStyle)
+        });
+    });
+
+    return changes;
+}
+
+function _applyColStyleChange(col, style, cellChanges, changeKey) {
+    col._colStyle = style ? _cloneStyleValue(style) : null;
+    cellChanges.forEach(change => {
+        change.cell._style = _cloneStyleValue(change[changeKey]) || {};
+        _resetCellStyleCache(change.cell);
+    });
+}
+
 /**
- * 列对象
- * @title ↕️ 列操作
+ * Column object
+ * @title ↕️ Column Actions
  * @class
  */
 export default class Col {
@@ -11,18 +67,18 @@ export default class Col {
     #style = null;  // 列样式
 
     /**
-     * @param {Object} xmlObj - 列 XML 数据
-     * @param {Sheet} sheet - 所属工作表
-     * @param {number} cIndex - 列索引
+     * @param {Object} xmlObj - Column XML Data
+     * @param {Sheet} sheet - Sheet it belongs to
+     * @param {number} cIndex - Column Index
      */
     constructor(xmlObj, sheet, cIndex) {
         /**
-         * 所属工作表
+         * Sheet it belongs to
          * @type {Sheet}
          */
         this.sheet = sheet
         /**
-         * 列索引
+         * Column Index
          * @type {number}
          */
         this.cIndex = cIndex
@@ -42,8 +98,12 @@ export default class Col {
     }
 
     /**
-     * 获取列内所有单元格
+     * Get all cells in a column
      * @type {Array<Cell>}     */
+    /**
+     * Get all cells in a column
+     * @type {Array<Cell>}     */
+
     get cells() {
         return this.sheet.rows.map(row => row.cells[this.cIndex]);
     }
@@ -73,7 +133,7 @@ export default class Col {
 
     // ========== 公开属性（触发 UndoRedo）==========
     /**
-     * 列宽（像素）
+     * Column Width (px)
      * @type {number}
      */
     get width() { return this.#width; }
@@ -120,7 +180,7 @@ export default class Col {
     }
 
     /**
-     * 是否隐藏
+     * Whether to hide
      * @type {boolean}
      */
     get hidden() { return this.#hidden; }
@@ -169,7 +229,7 @@ export default class Col {
     }
 
     /**
-     * 大纲层级（0-7）
+     * Outline Level (0-7)
      * @type {number}
      */
     get outlineLevel() { return this.#outlineLevel; }
@@ -200,7 +260,7 @@ export default class Col {
     }
 
     /**
-     * 大纲折叠标记
+     * Outline Collapse Marker
      * @type {boolean}
      */
     get collapsed() { return this.#collapsed; }
@@ -231,8 +291,12 @@ export default class Col {
     }
 
     /**
-     * 是否需要写入 XML
+     * Do you need to write XML
      * @type {boolean}     */
+    /**
+     * Do you need to write XML
+     * @type {boolean}     */
+
     get _needBuild() {
         if (this.#width !== this.sheet.defaultColWidth || this.#hidden || this.#style || this.#outlineLevel > 0 || this.#collapsed) return true
         return false;
@@ -247,28 +311,29 @@ export default class Col {
     }
 
     /**
-     * 列样式
+     * Column Styles
      * @type {Object}
      */
     get style() { return this.#style || {}; }
     set style(obj) {
-        const old = this.#style;
-        const oldInSet = this.sheet._styledCols.has(this.cIndex);
-        this._colStyle = obj ? { ...obj } : null;
+        const old = _cloneStyleValue(this.#style);
+        const nextStyle = obj ? _cloneStyleValue(obj) : null;
+        if (_isSameStyleValue(old, nextStyle)) return;
+
+        const cellChanges = _collectColCellCleanupChanges(this, old, nextStyle);
+        _applyColStyleChange(this, nextStyle, cellChanges, 'newStyle');
         this._SN.UndoRedo.add({
             undo: () => {
-                this.#style = old;
-                if (oldInSet) this.sheet._styledCols.add(this.cIndex);
-                else this.sheet._styledCols.delete(this.cIndex);
+                _applyColStyleChange(this, old, cellChanges, 'oldStyle');
             },
             redo: () => {
-                this._colStyle = obj ? { ...obj } : null;
+                _applyColStyleChange(this, nextStyle, cellChanges, 'newStyle');
             }
         });
     }
 
     /**
-     * 字体样式
+     * Font style
      * @type {Object}
      */
     get font() { return this.#style?.font || {}; }
@@ -286,7 +351,7 @@ export default class Col {
     }
 
     /**
-     * 填充样式
+     * Fill Style
      * @type {Object}
      */
     get fill() { return this.#style?.fill || {}; }
@@ -297,7 +362,7 @@ export default class Col {
     }
 
     /**
-     * 对齐样式
+     * Alignment Style
      * @type {Object}
      */
     get alignment() { return this.#style?.alignment || {}; }
@@ -308,7 +373,7 @@ export default class Col {
     }
 
     /**
-     * 边框样式
+     * Border Style
      * @type {Object}
      */
     get border() { return this.#style?.border || {}; }
@@ -342,7 +407,7 @@ export default class Col {
     }
 
     /**
-     * 数字格式
+     * Number Format
      * @type {string|undefined}
      */
     get numFmt() { return this.#style?.numFmt; }

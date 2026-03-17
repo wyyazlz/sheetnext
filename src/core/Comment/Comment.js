@@ -1,16 +1,33 @@
 import CommentItem from './CommentItem.js';
+import { shiftAreaRef, shiftCell } from '../Sheet/structureRef.js';
 
 function emitIfListeners(SN, event, data) {
     if (!SN?.Event?.hasListeners?.(event)) return null;
     return SN.Event.emit(event, data);
 }
 
+function _createCommentState(comment) {
+    return {
+        id: comment.id,
+        cellRef: comment.cellRef,
+        author: comment.author,
+        text: comment.text,
+        visible: comment.visible,
+        width: comment.width,
+        height: comment.height,
+        marginLeft: comment.marginLeft,
+        marginTop: comment.marginTop,
+        uid: comment.uid
+    };
+}
+
 /**
- * Comment 批注管理器
- * 高性能设计：Map索引（cellRef -> CommentItem）+ O(1)查找
- * 架构参考：完全复刻 Drawing 的设计模式
+ * Comment Manager
+ * High-performance design: Map index (cellRef - > CommentItem) + O (1) lookup
+ * Architectural Reference: Fully Replicated Drawing Design Patterns
  */
 export default class Comment {
+    /** @param {Sheet} sheet */
     constructor(sheet) {
         /** @type {Sheet} */
         this.sheet = sheet;
@@ -20,8 +37,8 @@ export default class Comment {
     }
 
     /**
-     * 从 xmlObj 解析批注数据（从 Excel 文件导入）
-     * @param {Object} xmlObj - Sheet 的 XML 对象
+     * Parsing comment data from xmlObj (imported from an Excel file)
+     * @param {Object} xmlObj - XML Object for Sheet
      */
     parse(xmlObj) {
         // 先查找批注文件，而不是依赖legacyDrawing
@@ -89,7 +106,7 @@ export default class Comment {
     }
 
     /**
-     * 解析VML属性（批注的显示位置和大小）
+     * Resolve VML properties (display position and size of comment)
      * @private
      */
     _parseVmlProps(vmlObj, index) {
@@ -108,7 +125,7 @@ export default class Comment {
     }
 
     /**
-     * 查找批注文件的RId
+     * Find the RId of the comment file
      * @private
      */
     _findCommentsRId() {
@@ -124,7 +141,7 @@ export default class Comment {
     }
 
     /**
-     * 添加批注
+     * Add Comment
      * @param {Object} config - {cellRef, author, text, visible, ...}
      * @returns {CommentItem}
      */
@@ -163,8 +180,8 @@ export default class Comment {
     }
 
     /**
-     * 获取批注
-     * @param {string} cellRef - 单元格引用 "A1"
+     * Get comments
+     * @param {string} cellRef - Cell reference "A1"
      * @returns {CommentItem|null}
      */
     get(cellRef) {
@@ -172,8 +189,8 @@ export default class Comment {
     }
 
     /**
-     * 删除批注
-     * @param {string} cellRef - 单元格引用 "A1"
+     * Delete Comment
+     * @param {string} cellRef - Cell reference "A1"
      * @returns {boolean}
      */
     remove(cellRef) {
@@ -189,7 +206,7 @@ export default class Comment {
     }
 
     /**
-     * 获取所有批注列表
+     * Get a list of all comments
      * @returns {CommentItem[]}
      */
     getAll() {
@@ -197,15 +214,58 @@ export default class Comment {
     }
 
     /**
-     * 清除所有批注的位置缓存（视图变化时调用）
+     * Clear the location cache for all comment (called when the view changes)
      */
     clearCache() {
         this.map.forEach(comment => comment._clearCache());
     }
 
+    _captureState() {
+        return this.getAll().map(comment => _createCommentState(comment));
+    }
+
+    _applyState(state) {
+        this.map = new Map();
+        (state || []).forEach(commentState => {
+            const comment = new CommentItem({
+                id: commentState.id,
+                cellRef: commentState.cellRef,
+                author: commentState.author,
+                text: commentState.text,
+                visible: commentState.visible,
+                width: commentState.width,
+                height: commentState.height,
+                marginLeft: commentState.marginLeft,
+                marginTop: commentState.marginTop
+            }, this.sheet);
+
+            if (commentState.uid) {
+                comment.uid = commentState.uid;
+            }
+
+            this.map.set(comment.cellRef, comment);
+        });
+    }
+
+    _onRowsInserted(r, n) {
+        return this._applyStructureChange('row', r, n, 'insert');
+    }
+
+    _onRowsDeleted(r, n) {
+        return this._applyStructureChange('row', r, n, 'delete');
+    }
+
+    _onColsInserted(c, n) {
+        return this._applyStructureChange('col', c, n, 'insert');
+    }
+
+    _onColsDeleted(c, n) {
+        return this._applyStructureChange('col', c, n, 'delete');
+    }
+
     /**
-     * 导出为XML对象（用于Excel导出）
-     * 将线程批注转换为普通批注格式
+     * Export as XML object (for Excel export)
+     * Convert thread comment to normal comment format
      * @returns {Object|null}
      */
     toXmlObject() {
@@ -263,7 +323,7 @@ export default class Comment {
     }
 
     /**
-     * 规范化作者名（将线程批注的tc=格式转为普通作者）
+     * Normalize author name (convert thread comment's tc = format to normal author)
      * @private
      */
     _normalizeAuthor(author) {
@@ -275,7 +335,7 @@ export default class Comment {
     }
 
     /**
-     * 规范化批注文本（提取线程批注中的实际内容）
+     * Normalize comment text (extract actual content from thread comment)
      * @private
      */
     _normalizeCommentText(text) {
@@ -301,7 +361,7 @@ export default class Comment {
     }
 
     /**
-     * 生成UUID
+     * Generate UUID
      * @private
      */
     _generateUUID() {
@@ -310,5 +370,34 @@ export default class Comment {
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16).toUpperCase();
         });
+    }
+
+    _applyStructureChange(axis, index, count, mode) {
+        const utils = this.sheet.SN.Utils;
+        const nextMap = new Map();
+        let changed = false;
+
+        this.getAll().forEach(comment => {
+            const nextCell = shiftCell(comment.cellPos, axis, index, count, mode);
+            if (!nextCell) {
+                changed = true;
+                return;
+            }
+
+            const nextCellRef = shiftAreaRef(comment.cellRef, utils, axis, index, count, mode) || utils.cellNumToStr(nextCell);
+            if (nextCellRef !== comment.cellRef) {
+                comment.cellRef = nextCellRef;
+                comment._clearCache();
+                changed = true;
+            }
+
+            nextMap.set(comment.cellRef, comment);
+        });
+
+        if (changed) {
+            this.map = nextMap;
+        }
+
+        return changed;
     }
 }

@@ -2,6 +2,7 @@
 export default class CommentItem {
     /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
+        /** @type {Sheet} */
         this.sheet = sheet;
         /** @type {string} */
         this.id = config.id ?? `comment_${Date.now()}_${Math.random()}`;
@@ -58,6 +59,7 @@ export default class CommentItem {
 
     _clearCache() {
         this._position = null;
+        this._cellPos = null;
     }
 
     /** @returns {Object} */

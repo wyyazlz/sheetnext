@@ -1,20 +1,47 @@
 /**
- * @title 🎯 条件格式
+ * @title Conditional Formatting
  */
 import { createRule } from './ruleFactory.js';
+import { getColorByIndex as _getColorByIndex, getThemeColor as _getThemeColor } from '../Xml/helpers.js';
+import { shiftFormulaRefs, shiftSqref } from '../Sheet/structureRef.js';
+
+function _cloneStateValue(value) {
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) return value.map(_cloneStateValue);
+    if (value instanceof Date) return new Date(value.getTime());
+    if (typeof value === 'object') {
+        const next = {};
+        Object.keys(value).forEach(key => {
+            next[key] = _cloneStateValue(value[key]);
+        });
+        return next;
+    }
+    return value;
+}
+
+function _serializeRuleState(rule) {
+    const state = {};
+    Object.keys(rule).forEach(key => {
+        if (key === 'sheet' || key === '_SN' || key === '_evalCache' || key === '_rangeDataCache' || key === '_config') {
+            return;
+        }
+        state[key] = _cloneStateValue(rule[key]);
+    });
+    return state;
+}
 
 /**
- * CF 条件格式管理器
- * 负责解析、存储和管理 Excel 条件格式规则
+ * CF conditional formatting Manager
+ * Responsible for parsing, storing and managing Excel conditional formatting rules
  */
 export default class CF {
     /**
-     * @param {Sheet} sheet - 所属工作表
+     * @param {Sheet} sheet - Sheet it belongs to
      */
     constructor(sheet) {
         /** @type {Sheet} */
         this.sheet = sheet;
-        /** @type {Array<CFRule>} 规则列表 */
+        /** @type {Array<CFrule} Rule list */
         this.rules = [];
         // 缓存
         this._formatCache = new Map();
@@ -27,11 +54,11 @@ export default class CF {
     // ==================== 增删改查 ====================
 
     /**
-     * 添加条件格式规则
-     * @param {Object} config - 规则配置
-     * @param {string} config.rangeRef - 应用范围 "A1:D10"
-     * @param {string} config.type - 规则类型 (colorScale/dataBar/iconSet/cellIs/expression/top10/aboveAverage/duplicateValues/containsText/timePeriod/containsBlanks/containsErrors)
-     * @returns {CFRule} 创建的规则
+     * Add conditional formatting rule
+     * @param {Object} config - Rule Configuration
+     * @param {string} config.rangeRef - Scope of application "A1: D10"
+     * @param {string} config.type - Rule type (colorScale/dataBar/iconSet/cellIs/expression/top10/aboveAverage/duplicateValues/containsText/timePeriod/containsBlanks/containsErrors)
+     * @ returns {CFRule} created rule
      */
     add(config = {}) {
         const { rangeRef } = config;
@@ -50,8 +77,8 @@ export default class CF {
     }
 
     /**
-     * 删除条件格式规则
-     * @param {number} index - 规则索引
+     * Delete conditional formatting rule
+     * @param {number} index - Rule index
      * @returns {boolean}
      */
     remove(index) {
@@ -63,8 +90,8 @@ export default class CF {
     }
 
     /**
-     * 获取规则
-     * @param {number} index - 规则索引
+     * Fetch the rule
+     * @param {number} index - Rule index
      * @returns {CFRule|null}
      */
     get(index) {
@@ -72,7 +99,7 @@ export default class CF {
     }
 
     /**
-     * 获取所有规则
+     * Get all rules
      * @returns {Array<CFRule>}
      */
     getAll() {
@@ -80,7 +107,7 @@ export default class CF {
     }
 
     /**
-     * 获取下一个优先级
+     * Get Next Priority
      * @private
      */
     _getNextPriority() {
@@ -91,8 +118,8 @@ export default class CF {
     // ==================== 解析 ====================
 
     /**
-     * 从 xmlObj 解析条件格式数据
-     * @param {Object} xmlObj - Sheet 的 XML 对象
+     * Parsing conditional formatting data from xmlObj
+     * @param {Object} xmlObj - XML Object for Sheet
      * @returns {void}
      */
     parse(xmlObj) {
@@ -120,7 +147,7 @@ export default class CF {
     }
 
     /**
-     * 解析单个规则XML
+     * Parse Single Rule XML
      * @private
      */
     _parseRuleXml(ruleXml, sqref, dxfArr) {
@@ -219,7 +246,7 @@ export default class CF {
     }
 
     /**
-     * 解析dxf样式
+     * Parsing dxf styles
      * @private
      */
     _parseDxf(dxfXml) {
@@ -268,7 +295,7 @@ export default class CF {
     }
 
     /**
-     * 解析颜色
+     * Parse Colors
      * @private
      */
     _parseColor(colorXml) {
@@ -278,16 +305,16 @@ export default class CF {
             return '#' + (rgb.length === 8 ? rgb.slice(2) : rgb);
         }
         if (colorXml['_$theme'] !== undefined) {
-            return this.sheet.SN.Xml.getThemeColor(parseInt(colorXml['_$theme']), parseFloat(colorXml['_$tint'] || 0));
+            return _getThemeColor(parseInt(colorXml['_$theme']), parseFloat(colorXml['_$tint'] || 0), this.sheet.SN);
         }
         if (colorXml['_$indexed'] !== undefined) {
-            return this.sheet.SN.Xml.getIndexedColor(parseInt(colorXml['_$indexed']));
+            return _getColorByIndex(parseInt(colorXml['_$indexed']));
         }
         return null;
     }
 
     /**
-     * 解析colorScale
+     * Resolve colorScale
      * @private
      */
     _parseColorScale(csXml) {
@@ -308,7 +335,7 @@ export default class CF {
     }
 
     /**
-     * 解析dataBar
+     * Parse dataBar
      * @private
      */
     _parseDataBar(dbXml) {
@@ -330,7 +357,7 @@ export default class CF {
     }
 
     /**
-     * 解析iconSet
+     * Resolve iconSet
      * @private
      */
     _parseIconSet(isXml) {
@@ -354,10 +381,10 @@ export default class CF {
     // ==================== 公共方法 ====================
 
     /**
-     * 获取单元格的条件格式
-     * @param {number} r - 行索引
-     * @param {number} c - 列索引
-     * @returns {Object|null} 格式对象
+     * Get a cell's conditional formatting
+     * @param {number} r - Row index
+     * @param {number} c - Column Index
+     * @ returns {Object | null} formatted object
      */
     getFormat(r, c) {
         const key = `${r}:${c}`;
@@ -387,7 +414,7 @@ export default class CF {
     }
 
     /**
-     * 清除所有缓存
+     * Clear all caches
      * @returns {void}
      */
     clearAllCache() {
@@ -399,8 +426,8 @@ export default class CF {
     }
 
     /**
-     * 清除指定范围的缓存
-     * @param {string} sqref - 范围
+     * Clears the cache for the specified range
+     * @param {string} sqref - Scope
      * @returns {void}
      */
     clearRangeCache(sqref) {
@@ -419,10 +446,36 @@ export default class CF {
         }
     }
 
+    _captureState() {
+        return this.rules.map(rule => _serializeRuleState(rule));
+    }
+
+    _applyState(state) {
+        this.rules = (state || []).map(config => createRule(_cloneStateValue(config), this.sheet));
+        this._sortRules();
+        this.clearAllCache();
+    }
+
+    _onRowsInserted(r, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('row', r, n, 'insert', sourceSheetName);
+    }
+
+    _onRowsDeleted(r, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('row', r, n, 'delete', sourceSheetName);
+    }
+
+    _onColsInserted(c, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('col', c, n, 'insert', sourceSheetName);
+    }
+
+    _onColsDeleted(c, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('col', c, n, 'delete', sourceSheetName);
+    }
+
     // ==================== 导出 ====================
 
     /**
-     * 导出为worksheet XML节点数组
+     * Export as an array of sheet XML nodes
      * @returns {Array}
      */
     toXmlObject() {
@@ -450,8 +503,8 @@ export default class CF {
     }
 
     /**
-     * 获取dxf样式索引（用于导出）
-     * @param {Object} dxf - 差异化样式对象
+     * Get dxf style index (for export)
+     * @param {Object} dxf - Differentiated Style Objects
      * @returns {number} dxfId
      */
     getDxfId(dxf) {
@@ -466,7 +519,7 @@ export default class CF {
     }
 
     /**
-     * 获取dxf样式列表（用于导出styles.xml）
+     * Get dxf style list (for exporting styles.xml)
      * @returns {Array}
      */
     getDxfList() {
@@ -502,6 +555,60 @@ export default class CF {
 
     _sortRules() {
         this.rules.sort((a, b) => a.priority - b.priority);
+    }
+
+    _applyStructureChange(axis, index, count, mode, sourceSheetName) {
+        const utils = this.sheet.SN.Utils;
+        const affectsLocalSqref = sourceSheetName === this.sheet.name;
+        let changed = false;
+        const nextRules = [];
+
+        this.rules.forEach(rule => {
+            if (affectsLocalSqref) {
+                const nextSqref = shiftSqref(rule.sqref, utils, axis, index, count, mode);
+                if (!nextSqref) {
+                    changed = true;
+                    return;
+                }
+                if (nextSqref !== rule.sqref) {
+                    rule.sqref = nextSqref;
+                    changed = true;
+                }
+            }
+
+            if (typeof rule.formula === 'string') {
+                const nextFormula = shiftFormulaRefs(rule.formula, this.sheet.name, sourceSheetName, utils, axis, index, count, mode);
+                if (nextFormula !== rule.formula) {
+                    rule.formula = nextFormula;
+                    changed = true;
+                }
+            }
+
+            if (typeof rule.formula1 === 'string') {
+                const nextFormula1 = shiftFormulaRefs(rule.formula1, this.sheet.name, sourceSheetName, utils, axis, index, count, mode);
+                if (nextFormula1 !== rule.formula1) {
+                    rule.formula1 = nextFormula1;
+                    changed = true;
+                }
+            }
+
+            if (typeof rule.formula2 === 'string') {
+                const nextFormula2 = shiftFormulaRefs(rule.formula2, this.sheet.name, sourceSheetName, utils, axis, index, count, mode);
+                if (nextFormula2 !== rule.formula2) {
+                    rule.formula2 = nextFormula2;
+                    changed = true;
+                }
+            }
+
+            nextRules.push(rule);
+        });
+
+        if (changed) {
+            this.rules = nextRules;
+            this.clearAllCache();
+        }
+
+        return changed;
     }
 
     _mergeFormat(base, overlay) {

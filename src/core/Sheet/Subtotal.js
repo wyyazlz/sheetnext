@@ -167,6 +167,7 @@ function _applySubtotalStyle(sheet, rowIndex, colIndex) {
     cell.font = { ...(cell.font || {}), bold: true };
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function subtotal(range, options = {}) {
     const area = _resolveArea(this, range);
     const config = _normalizeOptions(this, area, options);

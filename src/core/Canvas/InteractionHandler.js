@@ -1,6 +1,6 @@
 
 /**
- * 通过单元格索引获取透视表（基于 location.ref 判断）
+ * Get a pivot table by cell index (based on location.ref)
  */
 function getPivotTableByCellIndex(sheet, row, col) {
     if (!sheet.PivotTable || sheet.PivotTable.size === 0) return null;
@@ -23,7 +23,7 @@ function getPivotTableByCellIndex(sheet, row, col) {
 }
 
 /**
- * 解析单元格引用 (如 "A1" -> {r: 0, c: 0})
+ * Resolve cell references (e.g. "A1" - > {r: 0, c: 0})
  */
 function parseCellRef(cellRef) {
     const match = cellRef.replace(/\$/g, '').match(/^([A-Z]+)(\d+)$/i);
@@ -572,6 +572,7 @@ export function rightDown(event) {
         downBeforeFuns.push(() => d.active = false)
         this.r('s')
         const drawingRC = this.lazyDOM.drawingContextMenu;
+        this.lazyDOM.syncDrawingContextMenu();
         drawingRC.style.display = "block";
         drawingRC.style.left = x + 5 + 'px'
         drawingRC.style.top = y + 5 + 'px'

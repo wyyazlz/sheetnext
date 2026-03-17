@@ -1,13 +1,18 @@
 /**
- * 插入表模块
- * 负责处理从指定位置插入表格数据的功能
+ * Insert Table Module
+ * Capable of processing the insertion of table data from a given location
  */
 
 /**
- * 从指定位置开始，插入一个表
- * @param {Array} arr - 表格数据数组
- * @param {Object|String} pos - 插入位置
- * @param {Object} options - 配置选项 {align, border, width, height, background, color}
+ * Insert Table Module
+ * Capable of processing the insertion of table data from a given location
+ */
+
+/**
+ * Insert a table from the given position
+ * @param {Array} arr - Table data array
+ * @param {Object|String} pos - Insert Location
+ * @param {Object} options - Configure Options
  */
 export function insertTable(arr, pos, options = {}) {
     if (!Array.isArray(arr) || !pos) return;

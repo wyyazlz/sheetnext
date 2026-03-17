@@ -10,13 +10,48 @@ import { PivotTable } from '../PivotTable/index.js'
 import { _formatDate, _formatTime } from './helpers.js'
 import { parseSheetProtectionNode } from './SheetProtection.js'
 
+function _getActiveSelection(sheetView) {
+    const selection = sheetView?.selection;
+    const list = Array.isArray(selection) ? selection : (selection ? [selection] : []);
+    const activePane = sheetView?.pane?.['_$activePane'];
+    return list.find(item => item?._$pane === activePane) || list.find(item => !item?._$pane) || list[0] || {};
+}
+
+function _resolveSheetViewState(sheetView, Utils) {
+    const pane = sheetView?.pane || {};
+    const paneState = pane['_$state'] || '';
+    const isFrozen = paneState === 'frozen' || paneState === 'frozenSplit';
+    const splitCols = Math.max(0, Number(pane['_$xSplit']) || 0);
+    const splitRows = Math.max(0, Number(pane['_$ySplit']) || 0);
+    const sheetTopLeft = Utils.cellStrToNum(sheetView?.['_$topLeftCell'] ?? 'A1');
+    const paneFallback = {
+        r: splitRows > 0 ? sheetTopLeft.r + splitRows : sheetTopLeft.r,
+        c: splitCols > 0 ? sheetTopLeft.c + splitCols : sheetTopLeft.c
+    };
+    const paneTopLeft = Utils.cellStrToNum(pane['_$topLeftCell'] ?? Utils.cellNumToStr(paneFallback));
+    const freezeStartRow = isFrozen && splitRows > 0 ? sheetTopLeft.r : 0;
+    const freezeStartCol = isFrozen && splitCols > 0 ? sheetTopLeft.c : 0;
+    return {
+        viewStart: isFrozen ? paneTopLeft : sheetTopLeft,
+        freezeStartRow,
+        freezeStartCol,
+        frozenRows: isFrozen ? freezeStartRow + splitRows : 0,
+        frozenCols: isFrozen ? freezeStartCol + splitCols : 0
+    };
+}
+
 /**
- * 初始化模块
- * 负责工作表的初始化工作
+ * Initialization module
+ * Responsible for the initialization of sheets
  */
 
 /**
- * 初始化基础配置
+ * Initialization module
+ * Responsible for the initialization of sheets
+ */
+
+/**
+ * Initialise Basic Configuration
  */
 function initBasicConfig() {
     // 获取sheetXmlObj
@@ -34,11 +69,11 @@ function initBasicConfig() {
     this.defaultRowHeight = Math.round((Number(this._xmlObj?.sheetFormatPr['_$defaultRowHeight']) || 15) * 1.333);
     // 视图配置
     this.views = this._xmlObj?.sheetViews?.sheetView ?? [{ pane: {} }];
-    // 冻结信息
-    if (this.views[0]?.pane?.['_$state'] == 'frozen') {
-        this._frozenCols = Number(this.views[0].pane['_$xSplit']) || 0;
-        this._frozenRows = Number(this.views[0].pane['_$ySplit']) || 0;
-    }
+    const viewState = _resolveSheetViewState(this.views[0], this.SN.Utils);
+    this._frozenCols = viewState.frozenCols;
+    this._frozenRows = viewState.frozenRows;
+    this._freezeStartRow = viewState.freezeStartRow;
+    this._freezeStartCol = viewState.freezeStartCol;
     const outlinePrNode = this._xmlObj?.sheetPr?.outlinePr;
     this.outlinePr = {
         applyStyles: outlinePrNode?._$applyStyles === '1',
@@ -53,7 +88,7 @@ function initBasicConfig() {
 }
 
 /**
- * 初始化工作表保护
+ * Initialise Sheet Protection
  */
 function initSheetProtection() {
     const protection = parseSheetProtectionNode(this._xmlObj?.sheetProtection);
@@ -63,7 +98,7 @@ function initSheetProtection() {
 }
 
 /**
- * 初始化行列数据
+ * Initialised Column Data
  */
 function initRowsCols() {
     // 获取行列数
@@ -90,9 +125,11 @@ function initRowsCols() {
         this.rows[rIndex] = new Row(row, this, rIndex);
     });
 
-    this.activeCell = this.SN.Utils.cellStrToNum(this.views[0]?.selection?.['_$activeCell'] ?? 'A1'); // 活动的单元格
-    const topLeftCell = this.SN.Utils.cellStrToNum(this.views[0]?.['_$topLeftCell'] ?? 'A1'); // 视图位置
-    this.vi = { colArr: [topLeftCell.c], rowArr: [topLeftCell.r] } // 起始行列
+    const sheetView = this.views[0] || {};
+    const selection = _getActiveSelection(sheetView);
+    const viewState = _resolveSheetViewState(sheetView, this.SN.Utils);
+    this.activeCell = this.SN.Utils.cellStrToNum(selection?.['_$activeCell'] ?? 'A1'); // 活动的单元格
+    this.vi = { colArr: [viewState.viewStart.c], rowArr: [viewState.viewStart.r] } // 起始行列
 
     if (this.activeCell.r > rc - 1) rc = this.activeCell.r + 1;
     if (this.activeCell.c > cc - 1) cc = this.activeCell.c + 1;
@@ -101,7 +138,7 @@ function initRowsCols() {
 }
 
 /**
- * 初始化超链接
+ * Initialize Hyperlink
  */
 function initHyperlinks() {
     const hyperlinks = this._xmlObj?.hyperlinks?.hyperlink ?? []
@@ -119,7 +156,7 @@ function initHyperlinks() {
 }
 
 /**
- * 初始化数据验证
+ * Initializing data validation
  */
 function initDataValidation() {
     const dataValidation = this._xmlObj?.dataValidations?.dataValidation ?? []
@@ -159,7 +196,7 @@ function initDataValidation() {
 }
 
 /**
- * 初始化合并单元格
+ * Initialise Merge Cells
  */
 function initMergeCells() {
     (this._xmlObj?.mergeCells?.mergeCell ?? []).forEach(item => {
@@ -174,7 +211,7 @@ function initMergeCells() {
 }
 
 /**
- * 初始化图表和图形
+ * Initializing Charts and Graphics
  */
 function initDrawings() {
     // 创建图纸管理器（复刻 Sparkline 架构）
@@ -183,7 +220,7 @@ function initDrawings() {
 }
 
 /**
- * 初始化切片器
+ * Initialise Slicer
  */
 function initSlicers() {
     this.Slicer = new Slicer(this);
@@ -191,7 +228,7 @@ function initSlicers() {
 }
 
 /**
- * 初始化透视表管理器
+ * Initializing Periscope Manager
  */
 function initPivotTables() {
     if (!this.PivotTable) {
@@ -214,7 +251,7 @@ function initPivotTables() {
 }
 
 /**
- * 初始化迷你图
+ * Initializing mini-maps
  */
 function initSparklines() {
     this.Sparkline = new Sparkline(this);
@@ -222,14 +259,14 @@ function initSparklines() {
 }
 
 /**
- * 初始化批注
+ * Initialise Notes
  */
 function initComments() {
     this.Comment.parse(this._xmlObj);
 }
 
 /**
- * 初始化条件格式
+ * Initialise Conditional Formatting
  */
 function initCF() {
     this.CF = new CF(this);
@@ -237,14 +274,14 @@ function initCF() {
 }
 
 /**
- * 初始化自动筛选
+ * Initialize AutoFilter
  */
 function initAutoFilter() {
     this.AutoFilter.parse(this._xmlObj);
 }
 
 /**
- * 初始化超级表
+ * Initializing Super Table
  */
 function initTables() {
     // 获取工作表文件名
@@ -256,7 +293,7 @@ function initTables() {
 }
 
 /**
- * 初始化依赖链
+ * Initialization of the dependency chain
  */
 function initDependencyGraph() {
     // 【依赖链集成】初始化完成后，建立所有公式的依赖关系
@@ -266,7 +303,7 @@ function initDependencyGraph() {
 }
 
 /**
- * 主初始化方法
+ * Main Initialization Method
  */
 export function _init() {
     if (this.initialized) return this

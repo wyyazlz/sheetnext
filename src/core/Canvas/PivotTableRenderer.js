@@ -1,7 +1,7 @@
 /**
- * 透视表渲染模块
- * 负责渲染空透视表的占位提示区域
- * 仅渲染视图内的透视表占位
+ * PivotTable Rendering Module
+ * Placeholder hint area responsible for rendering empty PivotTable
+ * PivotTable placeholder only in rendered view
  */
 
 // 占位区域配置
@@ -26,8 +26,8 @@ PIVOT_ICON_PATH.moveTo(0, 16);
 PIVOT_ICON_PATH.lineTo(24, 16);
 
 /**
- * 渲染透视表占位区域
- * @param {Sheet} sheet - 工作表实例
+ * Render PivotTable Placeholder
+ * @param {Sheet} sheet - Sheet Instance
  */
 export function rPivotTablePlaceholders(sheet) {
     if (!sheet.PivotTable || sheet.PivotTable.size === 0) return;
@@ -76,7 +76,7 @@ export function rPivotTablePlaceholders(sheet) {
 }
 
 /**
- * 判断透视表是否为空
+ * Determine if the pivot table is empty
  */
 function isPivotTableEmpty(pt) {
     return pt.rowFields.length === 0 &&
@@ -86,7 +86,7 @@ function isPivotTableEmpty(pt) {
 }
 
 /**
- * 获取占位区域在视图中的信息（完整区域，不裁剪）
+ * Get the information of the placeholder area in the view (full area, not cropped)
  */
 function getPlaceholderAreaInfo(sheet, startRow, startCol) {
     const endRow = startRow + PLACEHOLDER_ROWS - 1;
@@ -137,7 +137,7 @@ function getPlaceholderAreaInfo(sheet, startRow, startCol) {
 }
 
 /**
- * 渲染单个透视表占位区域
+ * Render a single pivot table placeholder
  */
 function renderPlaceholder(ctx, pt, area, sheet, pixelRatio, SN) {
     const { x, y, w, h } = area;
@@ -224,11 +224,11 @@ function renderPlaceholder(ctx, pt, area, sheet, pixelRatio, SN) {
 }
 
 /**
- * 检测鼠标是否在透视表占位区域内
- * @param {Sheet} sheet - 工作表实例
- * @param {number} x - 鼠标X坐标
- * @param {number} y - 鼠标Y坐标
- * @returns {PivotTable|null} 如果在区域内返回透视表实例，否则返回null
+ * Detect if the mouse is in the pivot table placeholder area
+ * @param {Sheet} sheet - Sheet Instance
+ * @param {number} x - Mouse X coordinates
+ * @param {number} y - Mouse Y coordinates
+ * @ returns {PivotTable | null} Returns null if a PivotTable instance is returned within an area
  */
 export function getPivotTableAtPosition(sheet, x, y) {
     if (!sheet.PivotTable || sheet.PivotTable.size === 0) return null;

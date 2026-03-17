@@ -1,10 +1,15 @@
 /**
- * 尺寸调整处理模块
- * 负责处理容器尺寸变化和响应式布局
+ * Sizing Processing Module
+ * Responsible for handling container size changes and responsive layout
  */
 
 /**
- * 初始化ResizeObserver
+ * Sizing Processing Module
+ * Responsible for handling container size changes and responsive layout
+ */
+
+/**
+ * Initialize ResizeObserver
  */
 export function initResizeObserver() {
     if (typeof ResizeObserver !== 'undefined') {
@@ -16,7 +21,7 @@ export function initResizeObserver() {
 }
 
 /**
- * 节流处理resize事件
+ * Throttling resize event
  */
 export function throttleResize() {
     if (this._resizeTimer) {
@@ -30,7 +35,7 @@ export function throttleResize() {
 }
 
 /**
- * 处理所有resize相关的逻辑
+ * Handle all resize related logic
  */
 export function handleAllResize() {
     const currentContainerWidth = this.SN.containerDom.offsetWidth;
@@ -52,6 +57,10 @@ export function handleAllResize() {
         }
     }
 
+    if (!this.SN.containerDom.isConnected || currentContainerWidth <= 0 || currentContainerHeight <= 0) {
+        return;
+    }
+
     this._syncToolbarModeByWidth?.(currentContainerWidth);
     this._scheduleToolbarAdaptiveLayout?.();
 
@@ -59,10 +68,11 @@ export function handleAllResize() {
 }
 
 /**
- * 更新Canvas尺寸
+ * Update Canvas Dimensions
  */
 export function updateCanvasSize() {
     // 统一处理Canvas视图更新
-    this.SN.Canvas?.viewResize();
+    const hasViewport = this.SN.Canvas?.viewResize();
+    if (hasViewport === false) return;
     this.SN.Canvas?.r();
 }

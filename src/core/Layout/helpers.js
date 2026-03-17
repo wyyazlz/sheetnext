@@ -1,14 +1,14 @@
 /**
- * Layout 辅助方法
- * 包含菜单验证、生成、颜色组件初始化等辅助功能
+ * Layout Assist Method
+ * Includes accessibility features like menu validation, generation, color component initialization, and more
  */
 
 // ============================= 菜单验证 =============================
 
 /**
- * 递归验证菜单项（包含子菜单）
- * @param {Array} items - 菜单项数组
- * @returns {boolean} 是否有效
+ * Recursive validation menu item (with submenu)
+ * @param {Array} items - Array of menu items
+ * @ returns {boolean} is valid
  */
 function validateMenuItems(items) {
     if (!Array.isArray(items)) return false;
@@ -38,9 +38,9 @@ function validateMenuItems(items) {
 }
 
 /**
- * 验证菜单列表结构是否正确（支持多级菜单）
- * @param {Array} menuList - 菜单列表
- * @returns {boolean} 是否有效
+ * Verify that the menu list structure is correct (supports multi-level menus)
+ * @param {Array} menuList - Menu List
+ * @ returns {boolean} is valid
  */
 export function validateMenuList(menuList) {
     if (!Array.isArray(menuList)) return false;
@@ -59,8 +59,8 @@ export function validateMenuList(menuList) {
 // ============================= 菜单生成 =============================
 
 /**
- * 生成唯一的 handler ID
- * @param {Object} context - 包含计数器的上下文对象
+ * Generate a unique handler ID
+ * @param {Object} context - Context object containing counters
  * @returns {string} handler ID
  */
 export function generateHandlerId(context) {
@@ -69,11 +69,11 @@ export function generateHandlerId(context) {
 }
 
 /**
- * 挂载 handler 到 SN.Action 上并返回方法名
- * @param {Function} handler - 处理函数
- * @param {Object} SN - SheetNext 实例
- * @param {Object} context - 包含计数器的上下文对象
- * @returns {string} handler 方法名
+ * Mount the handler on SN.Action and return the method name
+ * @param {Function} handler - Handling function
+ * @param {Object} SN - SheetNext Instance
+ * @param {Object} context - Context object containing counters
+ * @ returns {string} handler method name
  */
 export function mountHandler(handler, SN, context) {
     if (typeof handler !== 'function') return '';
@@ -84,10 +84,10 @@ export function mountHandler(handler, SN, context) {
 }
 
 /**
- * 翻译文本
- * @param {Object} SN - SheetNext 实例
- * @param {string} text - 原始文本
- * @returns {string} 翻译后文本
+ * Translate text
+ * @param {Object} SN - SheetNext Instance
+ * @param {string} text - Original text
+ * @ returns {string} translated text
  */
 function _tr(SN, text) {
     if (typeof text !== 'string') return '';
@@ -101,12 +101,12 @@ function _resolveText(SN, item) {
 }
 
 /**
- * 递归生成菜单项 HTML（支持多级子菜单和自定义HTML）
- * @param {Array} items - 菜单项数组
- * @param {string} namespace - 命名空间
- * @param {Object} SN - SheetNext 实例
- * @param {Object} context - 包含计数器的上下文对象
- * @returns {string} HTML 字符串
+ * Recursively generate menu item HTML (supports multi-level submenus and custom HTML)
+ * @param {Array} items - Array of menu items
+ * @param {string} namespace - Namespace
+ * @param {Object} SN - SheetNext Instance
+ * @param {Object} context - Context object containing counters
+ * @ returns {string} HTML string
  */
 function generateMenuItemsHTML(items, namespace, SN, context) {
     let html = '';
@@ -153,12 +153,12 @@ function generateMenuItemsHTML(items, namespace, SN, context) {
 }
 
 /**
- * 生成菜单列表 HTML（支持多级菜单）
- * @param {Array} menuList - 菜单列表配置
- * @param {string} namespace - 命名空间
- * @param {Object} SN - SheetNext 实例
- * @param {Object} context - 包含计数器的上下文对象
- * @returns {string} HTML 字符串
+ * Generate menu list HTML (supports multi-level menus)
+ * @param {Array} menuList - Menu List Configuration
+ * @param {string} namespace - Namespace
+ * @param {Object} SN - SheetNext Instance
+ * @param {Object} context - Context object containing counters
+ * @ returns {string} HTML string
  */
 export function generateMenuListHTML(menuList, namespace, SN, context) {
     let html = '';
@@ -194,8 +194,8 @@ const COLORS = {
 };
 
 /**
- * 生成颜色选择器 HTML
- * @returns {string} 颜色选择器 HTML
+ * Generate Color Picker HTML
+ * @ returns {string} color picker HTML
  */
 export function getColorSelectHTML(SN) {
     const noColorText = SN.t('color.noColor');
@@ -238,11 +238,11 @@ export function getColorSelectHTML(SN) {
 // ============================= 拖拽辅助 =============================
 
 /**
- * 计算拖拽边界
- * @param {DOMRect} mainRect - 主容器的边界矩形
- * @param {DOMRect} opRect - 操作容器的边界矩形
- * @param {DOMRect} chatRect - 聊天窗口的边界矩形
- * @returns {Object} 边界对象 {minX, minY, maxX, maxY}
+ * Calculate Drag Boundaries
+ * @param {DOMRect} mainRect - Border rectangle of the main container
+ * @param {DOMRect} opRect - Operation Container Bounding Rectangle
+ * @param {DOMRect} chatRect - Chat window border rectangle
+ * @ returns {Object} boundary object {minX, minY, maxX, maxY}
  */
 export function calculateDragBounds(mainRect, opRect, chatRect) {
     // 计算 snOp 相对于 snMain 的偏移
@@ -261,11 +261,11 @@ export function calculateDragBounds(mainRect, opRect, chatRect) {
 }
 
 /**
- * 限制坐标在边界内
- * @param {number} x - X 坐标
- * @param {number} y - Y 坐标
- * @param {Object} bounds - 边界对象
- * @returns {Object} 限制后的坐标 {x, y}
+ * Limit coordinates within bounds
+ * @param {number} x - X coordinates
+ * @param {number} y - Y coordinates
+ * @param {Object} bounds - Boundary object
+ * @ returns {Object} constrained coordinates {x, y}
  */
 export function constrainToBounds(x, y, bounds) {
     let constrainedX = x;
@@ -282,7 +282,7 @@ export function constrainToBounds(x, y, bounds) {
 // ============================= Viewport 设置 =============================
 
 /**
- * 设置 viewport meta 标签
+ * Set viewport meta tag
  */
 export function setupViewport() {
     let viewport = document.querySelector('meta[name="viewport"]');

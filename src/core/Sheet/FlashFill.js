@@ -227,6 +227,7 @@ function _resolveStrategy(examples) {
     return best;
 }
 
+/** @param {string|Object} range @param {Object} [options={}] */
 export function flashFill(range, options = {}) {
     const targetRange = _normalizeRange(this, range);
     const sourceCol = _normalizeSourceColumn(this, targetRange, options);

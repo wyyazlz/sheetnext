@@ -1,4 +1,5 @@
 import SparklineItem from './SparklineItem.js';
+import { shiftAreaRef, shiftCell, shiftFormulaRefs } from '../Sheet/structureRef.js';
 
 const DEFAULT_SPARKLINE_COLORS = {
     series: '#376092',
@@ -11,29 +12,47 @@ const DEFAULT_SPARKLINE_COLORS = {
     low: '#D00000'
 };
 
+function _normalizeSparklineCell(SN, cellRef) {
+    if (typeof cellRef === 'string') {
+        return SN.Utils.cellStrToNum(cellRef);
+    }
+    if (cellRef && Number.isFinite(cellRef.r) && Number.isFinite(cellRef.c)) {
+        return { r: cellRef.r, c: cellRef.c };
+    }
+    return null;
+}
+
+function _cloneSparklineGroup(group) {
+    if (!group) return null;
+    return {
+        ...group,
+        colors: { ...(group.colors || {}) }
+    };
+}
+
 /**
- * 迷你图管理器
- * @title 📈 迷你图
- * 负责解析、存储和管理 Excel 迷你图数据
+ * Mini Chart Manager
+ * @title ♪ The mini ♪
+ * Parsing, storing and managing Excel mini-graph data
  * @class
  */
 export default class Sparkline {
     /**
-     * @param {Sheet} sheet - 所属工作表
+     * @param {Sheet} sheet - Sheet it belongs to
      */
     constructor(sheet) {
         /**
-         * 所属工作表
+         * Sheet it belongs to
          * @type {Sheet}
          */
         this.sheet = sheet;
         /**
-         * 按位置索引的迷你图 Map： "R:C" -> SparklineItem
+         * Minimap indexed by location Map: "R:C" - > SparklineItem
          * @type {Map<string, SparklineItem>}
          */
         this.map = new Map();
         /**
-         * 迷你图组列表
+         * Minimap List
          * @type {Array<Object>}
          */
         this.groups = [];
@@ -42,20 +61,20 @@ export default class Sparkline {
     // ==================== 增删改查 ====================
 
     /**
-     * 添加迷你图
-     * @param {Object} config - 配置对象
-     * @param {string|Object} config.cellRef - 单元格引用 "A1" 或 {r, c}
-     * @param {string} config.formula - 数据范围公式
-     * @param {string} [config.type='line'] - 迷你图类型
-     * @param {Object} [config.colors={}] - 颜色配置
+     * Add Minimap
+     * @param {Object} config - Configure Object
+     * @param {string|Object} config.cellRef - Cell references "A1" or {r, c}
+     * @param {string} config.formula - Data Range Formula
+     * @param {string} [config.type='line'] - Miniature Type
+     * @param {Object} [config.colors={}] - Colour Configuration
      * @returns {SparklineItem|null}
      */
     add(config) {
         const SN = this.sheet.SN;
-        // 解析 cellRef
-        const cell = typeof config.cellRef === 'string'
-            ? SN.Utils.cellStrToNum(config.cellRef)
-            : config.cellRef;
+        const cell = _normalizeSparklineCell(SN, config?.cellRef);
+        if (!cell) {
+            throw new TypeError('Sparkline.add requires config.cellRef in CellRef format.');
+        }
         const r = cell.r;
         const c = cell.c;
         const { formula, type = 'line', colors = {} } = config;
@@ -89,14 +108,13 @@ export default class Sparkline {
     }
 
     /**
-     * 删除迷你图
-     * @param {string|Object} cellRef - 单元格引用 "A1" 或 {r, c}
+     * Delete Minimap
+     * @param {string|Object} cellRef - Cell references "A1" or {r, c}
      * @returns {boolean}
      */
     remove(cellRef) {
-        const cell = typeof cellRef === 'string'
-            ? this.sheet.SN.Utils.cellStrToNum(cellRef)
-            : cellRef;
+        const cell = _normalizeSparklineCell(this.sheet.SN, cellRef);
+        if (!cell) return false;
         const r = cell.r;
         const c = cell.c;
         const key = `${r}:${c}`;
@@ -128,19 +146,18 @@ export default class Sparkline {
     }
 
     /**
-     * 根据单元格位置获取迷你图
-     * @param {string|Object} cellRef - 单元格引用 "A1" 或 {r, c}
+     * Fetch Minimap Based on Cell Location
+     * @param {string|Object} cellRef - Cell references "A1" or {r, c}
      * @returns {SparklineItem|null}
      */
     get(cellRef) {
-        const cell = typeof cellRef === 'string'
-            ? this.sheet.SN.Utils.cellStrToNum(cellRef)
-            : cellRef;
+        const cell = _normalizeSparklineCell(this.sheet.SN, cellRef);
+        if (!cell) return null;
         return this.map.get(`${cell.r}:${cell.c}`) ?? null;
     }
 
     /**
-     * 获取所有迷你图实例
+     * Fetch All Miniature Examples
      * @returns {Array<SparklineItem>}
      */
     getAll() {
@@ -150,9 +167,9 @@ export default class Sparkline {
     // ==================== 缓存管理 ====================
 
     /**
-     * 清除指定迷你图的缓存
-     * @param {string|Object|number} cellRefOrRow - 单元格引用 "A1"/{r,c} 或行索引
-     * @param {number} [c] - 列索引（仅在第一个参数为行索引时使用）
+     * Clear the cache of specified minimaps
+     * @param {string|Object|number} cellRefOrRow - Cell references "A1"/{r, c} or line index
+     * @param {number} [c] - Column Index (only when the first parameter is a line index)
      */
     clearCache(cellRefOrRow, c) {
         const cellRef = typeof cellRefOrRow === 'number'
@@ -163,17 +180,67 @@ export default class Sparkline {
     }
 
     /**
-     * 清除所有缓存
+     * Clear all caches
      */
     clearAllCache() {
         this.map.forEach(item => item._clearCache());
     }
 
+    _captureState() {
+        return {
+            groups: this.groups.map(group => _cloneSparklineGroup(group)),
+            items: this.getAll().map(item => ({
+                r: item.r,
+                c: item.c,
+                sqref: item.sqref,
+                formula: item.formula,
+                groupId: item.group?.id
+            }))
+        };
+    }
+
+    _applyState(state) {
+        const groups = (state?.groups || []).map(group => _cloneSparklineGroup(group));
+        this.groups = groups;
+        this.map = new Map();
+
+        (state?.items || []).forEach(itemState => {
+            const group = groups.find(candidate => candidate.id === itemState.groupId) || groups[0] || null;
+            if (!group) return;
+
+            const item = new SparklineItem({
+                r: itemState.r,
+                c: itemState.c,
+                sqref: itemState.sqref,
+                formula: itemState.formula,
+                group
+            }, this.sheet);
+
+            this.map.set(item.key, item);
+        });
+    }
+
+    _onRowsInserted(r, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('row', r, n, 'insert', sourceSheetName);
+    }
+
+    _onRowsDeleted(r, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('row', r, n, 'delete', sourceSheetName);
+    }
+
+    _onColsInserted(c, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('col', c, n, 'insert', sourceSheetName);
+    }
+
+    _onColsDeleted(c, n, sourceSheetName = this.sheet.name) {
+        return this._applyStructureChange('col', c, n, 'delete', sourceSheetName);
+    }
+
     // ==================== 解析 ====================
 
     /**
-     * 从 xmlObj 解析迷你图数据
-     * @param {Object} xmlObj - Sheet 的 XML 对象
+     * Parsing MinimlObj Data
+     * @param {Object} xmlObj - XML Object for Sheet
      */
     parse(xmlObj) {
         const extLst = xmlObj?.extLst;
@@ -299,10 +366,57 @@ export default class Sparkline {
         };
     }
 
+    _rebuildMap(items) {
+        this.map = new Map();
+        items.forEach(item => {
+            item._clearCache();
+            this.map.set(item.key, item);
+        });
+    }
+
+    _applyStructureChange(axis, index, count, mode, sourceSheetName) {
+        const utils = this.sheet.SN.Utils;
+        const affectsAnchor = sourceSheetName === this.sheet.name;
+        const nextItems = [];
+        let changed = false;
+
+        this.getAll().forEach(item => {
+            if (affectsAnchor) {
+                const nextCell = shiftCell({ r: item.r, c: item.c }, axis, index, count, mode);
+                if (!nextCell) {
+                    changed = true;
+                    return;
+                }
+                if (nextCell.r !== item.r || nextCell.c !== item.c) {
+                    item.r = nextCell.r;
+                    item.c = nextCell.c;
+                    item.sqref = shiftAreaRef(item.sqref, utils, axis, index, count, mode) || utils.cellNumToStr(nextCell);
+                    changed = true;
+                }
+            }
+
+            if (typeof item.formula === 'string') {
+                const nextFormula = shiftFormulaRefs(item.formula, this.sheet.name, sourceSheetName, utils, axis, index, count, mode);
+                if (nextFormula !== item.formula) {
+                    item.formula = nextFormula;
+                    changed = true;
+                }
+            }
+
+            nextItems.push(item);
+        });
+
+        if (changed) {
+            this._rebuildMap(nextItems);
+        }
+
+        return changed;
+    }
+
     // ==================== 导出 ====================
 
     /**
-     * 导出为 XML 对象结构
+     * Export to XML Object Structure
      * @returns {Object|null}
      */
     toXmlObj() {

@@ -15,8 +15,8 @@ import PivotDataField from '../PivotTable/PivotDataField.js';
 import StateSync from './StateSync.js';
 
 /**
- * 布局与工具栏管理
- * @title 🎨 UI布局
+ * Layout & Toolbar Management
+ * @title 🎨 UI Layout
  * @class
  */
 export default class Layout {
@@ -30,7 +30,7 @@ export default class Layout {
     constructor(SN, options = {}) {
         this._options = options;
         /**
-         * SheetNext 主实例
+         * SheetNext Main Instance
          * @type {Object}
          */
         this.SN = SN;
@@ -38,7 +38,7 @@ export default class Layout {
 
         // 状态同步器（工具栏 checkbox 与 API 状态双向绑定）
         /**
-         * 状态同步器
+         * State Synchronizer
          * @type {StateSync}
          */
         this.StateSync = new StateSync(SN);
@@ -65,24 +65,24 @@ export default class Layout {
 
         // UI组件
         /**
-         * 通用弹窗实例
+         * Generic Popup Instance
          * @type {Object|null}
          */
         this.myModal = null;
         /**
-         * Toast 实例
+         * Toast Instance
          * @type {Object|null}
          */
         this.toast = null;
 
         // 拖拽相关
         /**
-         * 聊天窗口拖拽偏移 X
+         * Chat Window Drag Offset X
          * @type {number}
          */
         this.chatWindowOffsetX = 0;
         /**
-         * 聊天窗口拖拽偏移 Y
+         * Chat Window Drag Offset Y
          * @type {number}
          */
         this.chatWindowOffsetY = 0;
@@ -94,7 +94,7 @@ export default class Layout {
 
         // 菜单配置
         /**
-         * 菜单配置
+         * Menu Configuration
          * @type {Object}
          */
         this.menuConfig = MenuConfig.initDefaultMenuConfig(SN, options);
@@ -106,26 +106,33 @@ export default class Layout {
     // ============================= Getters & Setters =============================
 
     /**
-     * 是否为小窗口
+     * Whether it is a small window
      * @type {boolean}     */
+    /**
+     * Whether it is a small window
+     * @type {boolean}     */
+
     get isSmallWindow() {
         return this.SN.containerDom.offsetWidth < 900;
     }
 
+    /** @type {'full'|'minimal'} */
     get toolbarMode() {
         return this._toolbarMode;
     }
 
+    /** @type {boolean} */
     get isToolbarModeLocked() {
         return this._toolbarModeLocked;
     }
 
+    /** @type {boolean} */
     get minimalToolbarTextEnabled() {
         return this._minimalToolbarTextEnabled;
     }
 
     /**
-     * 是否显示菜单栏
+     * Whether to show the menu bar
      * @type {boolean}
      */
     get showMenuBar() {
@@ -143,7 +150,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示工具栏
+     * Whether to show the toolbar
      * @type {boolean}
      */
     get showToolbar() {
@@ -161,7 +168,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示 AI 聊天入口
+     * Whether to show the AI chat portal
      * @type {boolean}
      */
     get showAIChat() {
@@ -185,7 +192,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示公式栏
+     * Whether to show the formula bar
      * @type {boolean}
      */
     get showFormulaBar() {
@@ -205,7 +212,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示工作表标签栏
+     * Whether to show the sheet tab bar
      * @type {boolean}
      */
     get showSheetTabBar() {
@@ -222,7 +229,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示统计栏
+     * Whether to show the statistics bar
      * @type {boolean}
      */
     get showStats() {
@@ -240,7 +247,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示 AI 聊天窗口
+     * Whether to show the AI chat window
      * @type {boolean}
      */
     get showAIChatWindow() {
@@ -266,7 +273,7 @@ export default class Layout {
     }
 
     /**
-     * 是否显示透视表字段面板
+     * Whether to show the PivotTable field panel
      * @type {boolean}
      */
     get showPivotPanel() {
@@ -290,8 +297,8 @@ export default class Layout {
     }
 
     /**
-     * 打开透视表字段面板（用户手动调用，如工具栏按钮）
-     * @param {PivotTable} pt - 透视表实例
+     * Opens the PivotTable Fields panel (manually invoked by the user, such as a toolbar button)
+     * @param {PivotTable} pt - PivotTable Instance
      * @returns {void}
      */
     openPivotPanel(pt) {
@@ -302,9 +309,9 @@ export default class Layout {
     }
 
     /**
-     * 切换透视表字段面板显示
-     * @param {PivotTable} pt - 透视表实例
-     * @returns {boolean} 是否显示
+     * Toggle PivotTable field panel display
+     * @param {PivotTable} pt - PivotTable Instance
+     * @ returns {boolean} shown or not
      */
     togglePivotPanel(pt) {
         if (this._showPivotPanel && this._activePivotTable === pt) {
@@ -317,9 +324,9 @@ export default class Layout {
     }
 
     /**
-     * 自动打开透视表字段面板（点击透视表区域时调用）
-     * 如果用户手动关闭过，则不自动打开
-     * @param {PivotTable} pt - 透视表实例
+     * Automatically opens the PivotTable Fields panel (called when the PivotTable area is clicked)
+     * Do not open automatically if the user manually closed it
+     * @param {PivotTable} pt - PivotTable Instance
      * @returns {void}
      */
     autoOpenPivotPanel(pt) {
@@ -331,8 +338,8 @@ export default class Layout {
     }
 
     /**
-     * 关闭透视表字段面板（点击透视表区域外时调用）
-     * 不会设置手动关闭标记
+     * Close the PivotTable field panel (called when you click outside the PivotTable area)
+     * The manual close flag will not be set
      * @returns {void}
      */
     closePivotPanel() {
@@ -341,8 +348,8 @@ export default class Layout {
     }
 
     /**
-     * 刷新工具栏中带有 active getter 的按钮状态
-     * 用于格式刷等切换按钮的双向绑定
+     * Refresh button state with active getter in toolbar
+     * Bidirectional binding for toggle buttons such as format brush
      * @returns {void}
      */
     refreshActiveButtons() {
@@ -352,8 +359,8 @@ export default class Layout {
     }
 
     /**
-     * 统一刷新工具栏状态（面板切换、API修改后调用）
-     * 整合：样式状态 + checkbox + active按钮
+     * Unified refresh toolbar status (panel toggle, invoked after API modification)
+     * Integration: Style status + checkbox + active button
      * @returns {void}
      */
     refreshToolbar() {
@@ -418,6 +425,7 @@ export default class Layout {
         return null;
     }
 
+    /** @param {boolean} enabled */
     toggleMinimalToolbar(enabled) {
         const nextEnabled = !!enabled;
         if (!nextEnabled && this._toolbarModeLocked) {
@@ -430,6 +438,7 @@ export default class Layout {
         this._syncMinimalToolbarCheckboxUI();
     }
 
+    /** @param {boolean} enabled */
     toggleMinimalToolbarText(enabled) {
         this._setMinimalToolbarTextEnabled(enabled);
         this._syncMinimalToolbarCheckboxUI();
@@ -1520,8 +1529,8 @@ export default class Layout {
     _sheetScrollPos = 0;
 
     /**
-     * 滚动工作表标签
-     * @param {number} dir - 滚动方向（1 或 -1）
+     * Scroll Sheet Tab
+     * @param {number} dir - Scroll Direction (1 or -1)
      * @returns {void}
      */
     scrollSheetTabs(dir) {
@@ -1542,9 +1551,9 @@ export default class Layout {
     _currentContextType = null;
 
     /**
-     * 更新上下文工具栏（根据选择内容显示/隐藏上下文选项卡）
-     * @param {Object} context - 上下文信息 { type: 'table'|'pivotTable'|'chart'|null, data: any, autoSwitch: boolean }
-     *   - autoSwitch: 是否自动切换到上下文选项卡（默认false，只显示不切换）
+     * Update Context Toolbar (Show/Hide Context Tab Based on Selection)
+     * @param {Object} context - Context Information {type: 'table' | 'pivotTable' | 'chart' | null, data: any, autoSwitch: boolean}
+     * - autoSwitch: Whether to automatically switch to the context tab (default false, only show no switch)
      * @returns {void}
      */
     updateContextualToolbar(context) {

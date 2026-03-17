@@ -2,6 +2,7 @@
 export class CFRule {
     /** @param {Object} config @param {Sheet} sheet */
     constructor(config, sheet) {
+        /** @type {Sheet} */
         this.sheet = sheet;
         /** @type {string} */
         this.type = config.type;
@@ -127,10 +128,14 @@ export class CFRule {
 
     /** @param {Object} cf @returns {Object} */
     _toXmlObject(cf) {
+        const type = this.type ?? this._config.type;
         const node = {
-            '_$type': this.type,
             '_$priority': String(this.priority)
         };
+
+        if (type) {
+            node['_$type'] = type;
+        }
 
         if (this.stopIfTrue) {
             node['_$stopIfTrue'] = '1';

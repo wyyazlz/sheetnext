@@ -1,6 +1,6 @@
 /**
- * 剪贴板工具类 - 高性能样式转换与缓存
- * 用于Excel风格的复制粘贴（HTML+文本双格式）
+ * Clipboard Tools - High Performance Style Conversion & Caching
+ * Use for Excel-style copy-pasting (HTML + text dual formatting)
  */
 
 // 样式缓存，避免重复计算
@@ -20,7 +20,7 @@ function checkCacheSize(cache) {
 }
 
 /**
- * 将十六进制颜色转换为RGB或保持原格式
+ * Convert hex color to RGB or keep original format
  */
 function normalizeColor(color) {
     if (!color) return '';
@@ -42,7 +42,7 @@ function normalizeColor(color) {
 }
 
 /**
- * 将Cell样式转换为CSS类样式（Excel兼容格式）
+ * Convert Cell styles to CSS class styles (Excel compatible format)
  */
 export function cellStyleToCSS(cell) {
     try {
@@ -133,7 +133,7 @@ export function cellStyleToCSS(cell) {
 }
 
 /**
- * 生成HTML表格（使用CSS类样式，Excel兼容格式）
+ * Generate HTML tables (using CSS class styles, Excel-compatible formats)
  */
 export function generateClipboardHTML(sheet, area) {
     try {
@@ -231,7 +231,7 @@ ${cssRules.join('\n')}
 }
 
 /**
- * 生成纯文本（Tab分隔）
+ * Generate plain text (Tab delimited)
  */
 export function generateClipboardText(sheet, area) {
     try {
@@ -253,7 +253,7 @@ export function generateClipboardText(sheet, area) {
 }
 
 /**
- * 从HTML解析样式（支持CSS类样式）
+ * Parsing styles from HTML (CSS class styles supported)
  */
 const parseCache = new Map();
 
@@ -363,7 +363,7 @@ export function parseHTMLStyle(htmlString) {
 }
 
 /**
- * 从TD元素解析样式为Cell格式（使用计算后的样式）
+ * Parse style from TD element to Cell format (use calculated style)
  */
 function parseCellStyle(td) {
     try {
@@ -476,7 +476,7 @@ function parseCellStyle(td) {
 }
 
 /**
- * RGB转十六进制（优化版，使用位运算）
+ * RGB to hexadecimal (optimized, using bitwise operations)
  */
 function rgbToHex(rgb) {
     if (!rgb || rgb === 'transparent') return null;
@@ -493,7 +493,7 @@ function rgbToHex(rgb) {
 }
 
 /**
- * HTML转义（防止XSS）
+ * HTML escaping (prevents XSS)
  */
 function escapeHtml(text) {
     if (typeof text !== 'string') return text;
@@ -507,7 +507,7 @@ function escapeHtml(text) {
 }
 
 /**
- * 清除缓存（在数据量大时调用，避免内存泄漏）
+ * Clear cache (invoked when there is a large amount of data to avoid memory leaks)
  */
 export function clearClipboardCache() {
     styleCache.clear();

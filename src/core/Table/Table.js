@@ -1,6 +1,6 @@
 /**
- * Table 表格管理器
- * 管理工作表中的所有表格
+ * Table Table Manager
+ * All tables in management form
  */
 import TableItem from './TableItem.js';
 import { generateTableName, toRef } from './TableUtils.js';
@@ -15,7 +15,7 @@ export default class Table {
         this._tables = new Map();
     }
 
-    /** 表格数量 */
+    /** @type {number} */
     get size() {
         return this._tables.size;
     }
@@ -26,7 +26,7 @@ export default class Table {
     }
 
     /**
-     * 根据ID获取表格
+     * Get table from ID
      * @param {string} id
      * @returns {TableItem|null}
      */
@@ -35,7 +35,7 @@ export default class Table {
     }
 
     /**
-     * 根据名称获取表格
+     * Get table by name
      * @param {string} name
      * @returns {TableItem|null}
      */
@@ -49,7 +49,7 @@ export default class Table {
     }
 
     /**
-     * 获取包含指定单元格的表格
+     * Get tables containing specified cells
      * @param {number} row
      * @param {number} col
      * @returns {TableItem|null}
@@ -64,7 +64,7 @@ export default class Table {
     }
 
     /**
-     * 添加/创建新表格
+     * Add/create new table
      * @param {Object} options
      * @returns {TableItem}
      */
@@ -116,7 +116,7 @@ export default class Table {
     }
 
     /**
-     * 从选区创建表格
+     * Create Table from Selection
      * @param {Object} area - { s: {r, c}, e: {r, c} }
      * @param {Object} options
      * @returns {TableItem}
@@ -175,8 +175,8 @@ export default class Table {
     }
 
     /**
-     * 删除表格
-     * @param {string} id - 表格ID
+     * Remove Table
+     * @param {string} id - Form ID
      * @returns {boolean}
      */
     remove(id) {
@@ -200,7 +200,7 @@ export default class Table {
     }
 
     /**
-     * 根据名称删除表格
+     * Remove table by name
      * @param {string} name
      * @returns {boolean}
      */
@@ -213,7 +213,7 @@ export default class Table {
     }
 
     /**
-     * 更新名称索引（内部方法，由 TableItem.rename 调用）
+     * Update name index (internal method, called by TableItem.rename)
      * @param {string} oldName
      * @param {string} newName
      * @param {TableItem} table
@@ -225,7 +225,7 @@ export default class Table {
     }
 
     /**
-     * 检查两个范围是否重叠
+     * Check if the two ranges overlap.
      * @private
      */
     _isOverlapping(range1, range2) {
@@ -235,7 +235,7 @@ export default class Table {
     }
 
     /**
-     * 遍历所有表格
+     * Walk through all tables
      * @param {Function} callback
      */
     forEach(callback) {
@@ -243,14 +243,14 @@ export default class Table {
     }
 
     /**
-     * 转为 JSON 数组
+     * Convert to JSON array
      */
     toJSON() {
         return this.getAll().map(table => table.toJSON());
     }
 
     /**
-     * 从 JSON 恢复
+     * Restore from JSON
      * @param {Array} jsonArray
      */
     fromJSON(jsonArray) {

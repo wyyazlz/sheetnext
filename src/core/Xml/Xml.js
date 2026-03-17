@@ -1,20 +1,20 @@
 // ==================== 导入模块 ====================
 
 import snXml from './template.js';
-import { getColor, getColorByIndex, getThemeColor, applyTintToColor } from './helpers.js';
+import { getColor, getColorByIndex as _getColorByIndex, getThemeColor as _getThemeColor } from './helpers.js';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import { BUILTIN_NUMFMTS } from '../Cell/constants.js';
 
 // ==================== Xml 类 ====================
 
 /**
- * Xml 解析与构建器
- * @title 📄 XML解析
+ * Xml Parsing and Builder
+ * @title XML Parsing
  * @class
  */
 export default class Xml {
     /**
-     * 静态 XML 解析器（所有实例共享）
+     * Static XML parser (all examples shared)
      * @type {XMLParser}
      */
     static parser = new XMLParser({
@@ -67,7 +67,7 @@ export default class Xml {
     });
 
     /**
-     * 静态 XML 构建器（所有实例共享）
+     * Static XML Builder (all examples shared)
      * @type {XMLBuilder}
      */
     static builder = new XMLBuilder({
@@ -77,32 +77,32 @@ export default class Xml {
     });
 
     /**
-     * @param {Object} SN - SheetNext 主实例
-     * @param {Object} [obj] - XML 对象
+     * @param {Object} SN - SheetNext Main Instance
+     * @param {Object} [obj] - XML Object
      */
     constructor(SN, obj) {
         /**
-         * SheetNext 主实例
+         * SheetNext Main Instance
          * @type {Object}
          */
         this.SN = SN
         /**
-         * 工具方法集合
+         * Tool Method Collection
          * @type {Utils}
          */
         this.Utils = SN.Utils
         /**
-         * XML 对象
+         * XML Object
          * @type {Object}
          */
         this.obj = obj ?? JSON.parse(JSON.stringify(snXml));
         /**
-         * 共享字符串去重对象
+         * Share String to Heavy Object
          * @type {Object}
          */
         this.sharedStringsObj = {} // 共享字符串去重对象清空
         /**
-         * XML 模板
+         * XML Template
          * @type {Object}
          */
         this.objTp = snXml
@@ -110,9 +110,9 @@ export default class Xml {
     }
 
     /**
-     * 根据关系 target 路径获取 .rels 中的关系数组
-     * @param {string} targetPath - 目标路径
-     * @param {boolean} [create=false] - 是否在不存在时创建
+     * Retrieving .rels relationships by relational taget path
+     * @param {string} targetPath - Target Path
+     * @param {boolean} [create=false] - Whether to create when it does not exist
      * @returns {Object}
      */
     getRelsByTarget(targetPath, create = false) {
@@ -143,9 +143,9 @@ export default class Xml {
     }
 
     /**
-     * 根据工作表依赖文件中的 RId 获取目标路径
-     * @param {string} sheetRId - 工作表 RId
-     * @param {string} fileRId - 依赖文件 RId
+     * Reliance RId from a sheet to get the target path
+     * @param {string} sheetRId - Sheet
+     * @param {string} fileRId - Reliance file RId
      * @returns {string|null}
      */
     getWsRelsFileTarget(sheetRId, fileRId) {
@@ -165,8 +165,31 @@ export default class Xml {
     }
 
     /**
-     * 共享字符串表
+     * Get theme color by theme index
+     * @param {number} themeIndex - Theme index
+     * @param {number} [tint=0] - Tint value
+     * @returns {string}
+     */
+    getThemeColor(themeIndex, tint = 0) {
+        return _getThemeColor(themeIndex, tint, this.SN);
+    }
+
+    /**
+     * Get indexed color by index
+     * @param {number} index - Indexed color index
+     * @returns {string}
+     */
+    getIndexedColor(index) {
+        return _getColorByIndex(index);
+    }
+
+    /**
+     * Shared String Table
      * @type {Object}     */
+    /**
+     * Shared String Table
+     * @type {Object}     */
+
     get sst() {
         const sst = this.obj['xl/sharedStrings.xml']
         if (!sst) { // 不存在则创建
@@ -197,14 +220,18 @@ export default class Xml {
     }
 
     /**
-     * 样式表
+     * Stylesheet
      * @type {Object}     */
+    /**
+     * Stylesheet
+     * @type {Object}     */
+
     get styleSheet() {
         return this.obj['xl/styles.xml'].styleSheet
     }
 
     /**
-     * 重置样式表
+     * Reset Stylesheet
      * @returns {void}
      */
     resetStyle() {
@@ -212,41 +239,61 @@ export default class Xml {
     }
 
     /**
-     * 覆盖关系
+     * Overwrite Relationship
      * @type {Array}     */
+    /**
+     * Overwrite Relationship
+     * @type {Array}     */
+
     get override() {
         return this.obj["[Content_Types].xml"].Types.Override
     }
 
     /**
-     * 关系集合
+     * Relationship collection
      * @type {Array}     */
+    /**
+     * Relationship collection
+     * @type {Array}     */
+
     get relationship() {
         return this.obj["xl/_rels/workbook.xml.rels"].Relationships.Relationship
     }
 
     /**
-     * 当前文件主题配色
+     * Current File Theme Colour
      * @type {Object}     */
+    /**
+     * Current File Theme Colour
+     * @type {Object}     */
+
     get clrScheme() { // 当前文件主题
         return this.obj?.["xl/theme/theme1.xml"]?.["a:theme"]?.["a:themeElements"]?.["a:clrScheme"]
     }
     /**
-     * 所有工作表信息
+     * All Sheet Information
      * @type {Array}     */
+    /**
+     * All Sheet Information
+     * @type {Array}     */
+
     get sheets() { // 获取所有xml表格信息
         return this.obj["xl/workbook.xml"].workbook.sheets.sheet
     }
     /**
-     * 主题模板配色
+     * Theme Template Colouring
      * @type {Object}     */
+    /**
+     * Theme Template Colouring
+     * @type {Object}     */
+
     get clrSchemeTp() { // 主题模板
         return this.objTp["xl/theme/theme1.xml"]["a:theme"]["a:themeElements"]["a:clrScheme"]
     }
     /**
-     * 添加工作表
-     * @param {string} sheetName - 工作表名称
-     * @param {Object} ops - 初始化参数
+     * Add Sheet
+     * @param {string} sheetName - Sheet Name
+     * @param {Object} ops - Initializing parameters
      * @returns {void}
      */
     addSheet(sheetName, ops) {
@@ -712,8 +759,8 @@ export default class Xml {
     }
     // 获取超链接target信息
     /**
-     * 根据 RId 解析超链接
-     * @param {string} rId - 关系 Id
+     * Parsing Hyperlinks Based on RId
+     * @param {string} rId - Relationship Id
      * @returns {Object|null}
      */
     resolveHyperlinkById(rId) {
