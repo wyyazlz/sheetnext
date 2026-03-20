@@ -81,11 +81,12 @@ export function insertTable(arr, pos, options = {}) {
         if (item?.[0]?.h || options.height) this.getRow(pos.r + rIndex).height = item?.[0]?.h ?? options.height;
     }
 
-    // 应用全局列宽设置
+    // Ensure target columns exist, then apply width if provided.
     for (let index = 0; index < maxCol; index++) {
+        const col = this.getCol(pos.c + index);
         const item = arr[0][index] ?? {};
         const w = item.w ?? options.width; // 如果单元格未定义宽度，使用默认宽度
-        if (w) this.getCol(pos.c + index).width = w;
+        if (w) col.width = w;
     }
 
     readyMerge.forEach(m => this.mergeCells(m));

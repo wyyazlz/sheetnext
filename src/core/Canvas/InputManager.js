@@ -5,6 +5,7 @@
 
 import { getFormulaBarValue } from './helpers.js';
 import { richTextToHTML, htmlToRichText, hasRichContent } from './RichTextEditor.js';
+import { getFontName, getFontSizePx } from '../Cell/fontDefaults.js';
 
 function _trValidationError(SN, text) {
     const raw = text || SN.t('dataValidation.errors.inputRuleMismatch');
@@ -137,7 +138,7 @@ export function showCellInput(clearValue = false, focusEditor = false) {
     const cell = sheet.getCell(r, c);
     const cInfo = this.activeSheet.getCellInViewInfo(r, c);
     const zoom = this.activeSheet.zoom ?? 1;
-    const baseFontSize = (cell.font.size ?? 11) * 1.333;
+    const baseFontSize = getFontSizePx(cell.font, cell);
     const cellW = cInfo.w * zoom;
     const cellH = cInfo.h * zoom;
 
@@ -146,7 +147,7 @@ export function showCellInput(clearValue = false, focusEditor = false) {
     this.input.style.minWidth = `${Math.max(1, cellW - 1)}px`;
     this.input.style.minHeight = `${Math.max(1, cellH - 1)}px`;
     this.input.style.fontSize = `${baseFontSize * zoom}px`;
-    this.input.style.fontFamily = cell.font.name ?? 'Calibri';
+    this.input.style.fontFamily = getFontName(cell.font, cell);
 
     // 水平对齐
     const hAlign = cell.horizontalAlign;
@@ -213,7 +214,7 @@ export function updateInputPosition() {
     const cInfo = this.activeSheet.getCellInViewInfo(r, c);
     if (!cInfo) return;
     const zoom = this.activeSheet.zoom ?? 1;
-    const baseFontSize = (cell.font.size ?? 11) * 1.333;
+    const baseFontSize = getFontSizePx(cell.font, cell);
     const cellW = cInfo.w * zoom;
     const cellH = cInfo.h * zoom;
     this.input.style.left = `${cInfo.x * zoom}px`;

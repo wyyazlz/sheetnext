@@ -612,6 +612,12 @@ const enUS = {
                     "label": "Row height:"
                 }
             },
+            "menu": {
+                "hideAndUnhide": "Hide and Unhide",
+                "insert": "Insert Rows and Columns",
+                "unhideAllCols": "Unhide All Columns",
+                "unhideAllRows": "Unhide All Rows"
+            },
             "modal": {
                 "m001": {
                     "cancel": "Cancel",
@@ -1716,7 +1722,7 @@ const enUS = {
             "exportPdf": "Export PDF",
             "exportXlsx": "Export XLSX",
             "import": "Import File",
-            "importFromUrl": "Import from URL",
+            "importFromUrl": "Import URL",
             "newWorkbook": "New",
             "printPreview": "Print",
             "properties": "Document Properties",
@@ -1821,7 +1827,7 @@ const enUS = {
             },
             "hint": "Supports xlsx/csv/json. Target server must enable CORS.",
             "placeholder": "https://example.com/file.xlsx",
-            "title": "Import from URL"
+            "title": "Import URL"
         },
         "modal": {
             "newWorkbook": {

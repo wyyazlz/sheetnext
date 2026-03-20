@@ -2,6 +2,7 @@
 
 import { getPosSvg } from '../assets/borderSvgs.js';
 import { applyFormatToSelection, getSelectionFont } from '../core/Canvas/RichTextEditor.js';
+import { getDefaultCellFontSize } from '../core/Cell/fontDefaults.js';
 
 // 主题单元格样式生成器
 function _generateThemedStyles() {
@@ -482,7 +483,7 @@ export function changeFontSize(increase = true) {
     if (this.SN.Canvas?.inputEditing && !cell.isFormula) {
         const cv = this.SN.Canvas;
         const selFont = getSelectionFont(cv.input, cell.font);
-        const current = selFont.size || 11;
+        const current = selFont.size || getDefaultCellFontSize(cell);
         let idx = FONT_SIZES.findIndex(s => s >= current);
         if (idx === -1) idx = increase ? FONT_SIZES.length - 1 : FONT_SIZES.length - 2;
         else idx = increase ? Math.min(idx + 1, FONT_SIZES.length - 1) : Math.max(idx - 1, 0);
@@ -491,7 +492,7 @@ export function changeFontSize(increase = true) {
         return;
     }
 
-    const current = cell.style?.font?.size || 11;
+    const current = cell.font?.size || getDefaultCellFontSize(cell);
     let idx = FONT_SIZES.findIndex(s => s >= current);
     if (idx === -1) idx = increase ? FONT_SIZES.length - 1 : FONT_SIZES.length - 2;
     else idx = increase ? Math.min(idx + 1, FONT_SIZES.length - 1) : Math.max(idx - 1, 0);

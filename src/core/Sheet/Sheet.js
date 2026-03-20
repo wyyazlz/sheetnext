@@ -14,6 +14,7 @@ import * as Subtotal from './Subtotal.js';
 import * as Consolidate from './Consolidate.js';
 import * as DataValidation from './DataValidation.js';
 import * as InsertTable from './InsertTable.js';
+import * as AutoFit from './AutoFit.js';
 import * as Merge from './Merge.js';
 import * as RowColHandler from './RowColHandler.js';
 import * as ViewCalculator from './ViewCalculator.js';
@@ -873,6 +874,12 @@ Object.assign(Sheet.prototype, {
     clearDataValidation: DataValidation.clearDataValidation,
     /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops] @returns {RangeNum} */
     insertTable: InsertTable.insertTable,
+
+    /** @param {number} startRow @param {number} endRow @returns {number} */
+    autoFitRows: AutoFit.autoFitRows,
+
+    /** @param {number} startCol @param {number} endCol @returns {number} */
+    autoFitCols: AutoFit.autoFitCols,
 
     _getExpandMaxArea: Merge._getExpandMaxArea,
 

@@ -113,7 +113,7 @@ function _normalizeColor(cssColor) {
 /**
  * Removes the same attributes as cellFont and keeps run.font thin
  */
-function _stripCellFont(font, cellFont) {
+function _stripCellFont(font, cellFont, fallbackFont = {}) {
     const result = {};
     let has = false;
     if (font.bold && !cellFont.bold) { result.bold = true; has = true; }
@@ -124,8 +124,8 @@ function _stripCellFont(font, cellFont) {
     else if (font.strike === false && cellFont.strike) { result.strike = false; has = true; }
     if (font.underline && font.underline !== cellFont.underline) { result.underline = font.underline; has = true; }
     else if (font.underline === '' && cellFont.underline) { result.underline = ''; has = true; }
-    if (font.size && font.size != (cellFont.size || 11)) { result.size = font.size; has = true; }
-    if (font.name && font.name !== (cellFont.name || '宋体')) { result.name = font.name; has = true; }
+    if (font.size && font.size != (cellFont.size || fallbackFont.size || 11)) { result.size = font.size; has = true; }
+    if (font.name && font.name !== (cellFont.name || fallbackFont.name || '宋体')) { result.name = font.name; has = true; }
     if (font.color && font.color !== cellFont.color) { result.color = font.color; has = true; }
     return has ? result : {};
 }
@@ -134,12 +134,13 @@ function _stripCellFont(font, cellFont) {
  * Recursively traverse Dom collection runs
  */
 function _walkNodes(node, root, cellFont, runs, prevIsBlock) {
+    const rootFont = _getFontFromNode(root, root);
     for (let child = node.firstChild; child; child = child.nextSibling) {
         if (child.nodeType === 3) {
             // 文本节点
             const text = child.textContent;
             if (text) {
-                const font = _stripCellFont(_getFontFromNode(child, root), cellFont);
+                const font = _stripCellFont(_getFontFromNode(child, root), cellFont, rootFont);
                 runs.push({ text, font });
             }
         } else if (child.nodeType === 1) {

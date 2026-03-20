@@ -4,7 +4,6 @@
 // ============================================================
 // Core Operations - 纯业务逻辑，无UI耦合
 // 简单操作使用公开属性（自动触发事件和UndoRedo）
-// 批量操作（如autoFit）内部处理UndoRedo
 // ============================================================
 
 const Core = {
@@ -84,150 +83,6 @@ const Core = {
         }
     },
 
-    // 自适应行高（稀疏遍历）
-    autoFitRowsHeight(sheet, startRow, endRow) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const results = [];
-        const fontCache = new Map();
-        const measureCache = new Map();
-        const colWidthCache = new Map();
-
-        const getFontInfo = (font) => {
-            const size = font.size || 11;
-            const name = font.name || '微软雅黑';
-            const bold = font.bold ? 'bold' : '';
-            const italic = font.italic ? 'italic' : '';
-            const key = `${name}|${size}|${bold}|${italic}`;
-            let str = fontCache.get(key);
-            if (!str) {
-                str = `${bold ? 'bold ' : ''}${italic ? 'italic ' : ''}${size}pt ${name}`;
-                fontCache.set(key, str);
-            }
-            return { key, str, size };
-        };
-
-        const measureTextWidth = (fontKey, fontStr, text) => {
-            const cacheKey = `${fontKey}|${text}`;
-            if (measureCache.has(cacheKey)) return measureCache.get(cacheKey);
-            ctx.font = fontStr;
-            const width = ctx.measureText(text).width;
-            measureCache.set(cacheKey, width);
-            return width;
-        };
-
-        for (let r = startRow; r <= endRow; r++) {
-            const row = sheet.rows[r];
-            if (!row || !row.cells?.length) continue;
-            let maxHeight = sheet.defaultRowHeight;
-            let hasContent = false;
-
-            row.cells.forEach((cell, c) => {
-                if (!cell) return;
-                const value = cell.showVal;
-                if (!value) return;
-                hasContent = true;
-
-                const font = cell.style?.font || {};
-                const { key, str, size } = getFontInfo(font);
-                const colWidth = colWidthCache.has(c)
-                    ? colWidthCache.get(c)
-                    : (sheet.cols[c]?._width ?? sheet.defaultColWidth);
-                colWidthCache.set(c, colWidth);
-
-                const lines = String(value).split('\n');
-                let totalHeight = 0;
-                for (const line of lines) {
-                    const width = measureTextWidth(key, str, line);
-                    const wrapLines = Math.max(1, Math.ceil(width / Math.max(1, colWidth - 8)));
-                    totalHeight += wrapLines * (size * 1.5);
-                }
-                maxHeight = Math.max(maxHeight, totalHeight + 6);
-            });
-
-            if (!hasContent) continue;
-            const newHeight = Math.round(maxHeight);
-            if (newHeight === row._height) continue;
-            results.push({ row, newHeight, oldHeight: row._height });
-            row._height = newHeight;
-        }
-
-        // 批量 UndoRedo
-        if (results.length > 0) {
-            sheet.SN.UndoRedo.add({
-                undo: () => results.forEach(({ row, oldHeight }) => row._height = oldHeight),
-                redo: () => results.forEach(({ row, newHeight }) => row._height = newHeight)
-            });
-        }
-    },
-
-    // 自适应列宽（稀疏遍历）
-    autoFitColsWidth(sheet, startCol, endCol) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const results = [];
-        const fontCache = new Map();
-        const measureCache = new Map();
-        const maxWidthByCol = new Map();
-
-        const getFontInfo = (font) => {
-            const size = font.size || 11;
-            const name = font.name || '微软雅黑';
-            const bold = font.bold ? 'bold' : '';
-            const italic = font.italic ? 'italic' : '';
-            const key = `${name}|${size}|${bold}|${italic}`;
-            let str = fontCache.get(key);
-            if (!str) {
-                str = `${bold ? 'bold ' : ''}${italic ? 'italic ' : ''}${size}pt ${name}`;
-                fontCache.set(key, str);
-            }
-            return { key, str };
-        };
-
-        const measureTextWidth = (fontKey, fontStr, text) => {
-            const cacheKey = `${fontKey}|${text}`;
-            if (measureCache.has(cacheKey)) return measureCache.get(cacheKey);
-            ctx.font = fontStr;
-            const width = ctx.measureText(text).width;
-            measureCache.set(cacheKey, width);
-            return width;
-        };
-
-        sheet.rows.forEach(row => {
-            if (!row || !row.cells?.length) return;
-            row.cells.forEach((cell, c) => {
-                if (!cell || c < startCol || c > endCol) return;
-                const value = cell.showVal;
-                if (!value) return;
-
-                const font = cell.style?.font || {};
-                const { key, str } = getFontInfo(font);
-                const lines = String(value).split('\n');
-                let maxWidth = maxWidthByCol.get(c) || 0;
-                for (const line of lines) {
-                    const width = measureTextWidth(key, str, line) + 16;
-                    if (width > maxWidth) maxWidth = width;
-                }
-                if (maxWidth > 0) maxWidthByCol.set(c, maxWidth);
-            });
-        });
-
-        maxWidthByCol.forEach((maxWidth, c) => {
-            const col = sheet.getCol(c);
-            const newWidth = Math.min(Math.round(maxWidth), 500);
-            if (newWidth === col._width) return;
-            results.push({ col, newWidth, oldWidth: col._width });
-            col._width = newWidth;
-        });
-
-        // 批量 UndoRedo
-        if (results.length > 0) {
-            sheet.SN.UndoRedo.add({
-                undo: () => results.forEach(({ col, oldWidth }) => col._width = oldWidth),
-                redo: () => results.forEach(({ col, newWidth }) => col._width = newWidth)
-            });
-        }
-    }
 };
 
 function getActiveArea(SN) {
@@ -680,7 +535,7 @@ export async function setDefaultColWidthDialog() {
 export function autoFitRowHeight() {
     const sheet = this.SN.activeSheet;
     const area = getActiveArea(this.SN);
-    Core.autoFitRowsHeight(sheet, area.s.r, area.e.r);
+    sheet.autoFitRows(area.s.r, area.e.r);
     this.SN._r();
 }
 
@@ -688,6 +543,6 @@ export function autoFitRowHeight() {
 export function autoFitColWidth() {
     const sheet = this.SN.activeSheet;
     const area = getActiveArea(this.SN);
-    Core.autoFitColsWidth(sheet, area.s.c, area.e.c);
+    sheet.autoFitCols(area.s.c, area.e.c);
     this.SN._r();
 }

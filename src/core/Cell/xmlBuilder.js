@@ -1,5 +1,6 @@
 // ==================== Cell XML构建 ====================
 import { BUILTIN_NUMFMTS } from './constants.js';
+import { getDefaultCellFont, getFontName, getFontSize } from './fontDefaults.js';
 import { expandHex } from './helpers.js';
 import { _getCellEffectiveStyle } from './styleUtils.js';
 
@@ -428,15 +429,16 @@ export function buildCellXml(cell) {
                         const rPr = {};
                         // rFont 和 sz 是必需的，缺失时 fallback 到单元格字体
                         const cellFont = cell.font;
-                        rPr.rFont = { _$val: rf.name ?? cellFont.name ?? '宋体' };
-                        if (rf.charset ?? cellFont.charset) rPr.charset = { _$val: rf.charset ?? cellFont.charset };
+                        const defaultFont = getDefaultCellFont(cell);
+                        rPr.rFont = { _$val: getFontName({ ...cellFont, ...rf }, cell) };
+                        if (rf.charset ?? cellFont.charset ?? defaultFont.charset) rPr.charset = { _$val: rf.charset ?? cellFont.charset ?? defaultFont.charset };
                         if (rf.bold ?? cellFont.bold) rPr.b = "";
                         if (rf.italic ?? cellFont.italic) rPr.i = "";
                         if (rf.strike ?? cellFont.strike) rPr.strike = "";
                         if (rf.color) {
                             rPr.color = { _$rgb: 'FF' + rf.color.replace('#', '') };
                         }
-                        rPr.sz = { _$val: rf.size ?? cellFont.size ?? '11' };
+                        rPr.sz = { _$val: getFontSize({ ...cellFont, ...rf }, cell) };
                         const ul = rf.underline ?? cellFont.underline;
                         if (ul) {
                             rPr.u = ul === 'single' ? "" : { _$val: ul };

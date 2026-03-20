@@ -1,6 +1,7 @@
 import { interpolateColor } from './helpers.js';
 import { shouldHideFormula } from './helpers.js'
 import { getFilterIconLayout } from './FilterRenderer.js';
+import { getCanvasFont, getFontSizePx } from '../Cell/fontDefaults.js';
 
 /**
  * Cell Rendering Module
@@ -575,8 +576,8 @@ export function rCellTextWithOverflow(r, c, x, y, w, h, cell, sheet, nonEmptyCel
 
     // 设置字体以测量文本宽度
     const f = cell.font;
-    const fsize = (f.size ?? 11) * 1.333;
-    this.bc.font = `${f.bold ? 'bold' : ''} ${f.italic ? 'italic' : ''} ${fsize}px ${f.name ?? '宋体'}`;
+    const fsize = getFontSizePx(f, cell);
+    this.bc.font = getCanvasFont(f, cell, fsize);
 
     // 计算第一行文本宽度（通常溢出只考虑第一行）
     let textWidth;
@@ -817,9 +818,9 @@ function wrapRichText(runs, maxWidth, cell) {
         const rf = run.font || {};
         const bold = rf.bold ?? f.bold;
         const italic = rf.italic ?? f.italic;
-        const size = ((rf.size ?? f.size ?? 11) * 1.333);
-        const name = rf.name ?? f.name ?? '宋体';
-        this.bc.font = `${bold ? 'bold' : ''} ${italic ? 'italic' : ''} ${size}px ${name}`;
+        const mergedFont = { ...f, ...rf, bold, italic };
+        const size = getFontSizePx(mergedFont, cell);
+        this.bc.font = getCanvasFont(mergedFont, cell, size);
 
         const chars = run.text.split('');
         let buf = '';
@@ -854,9 +855,9 @@ function measureRichLineWidth(richLine, cell) {
         const rf = run.font || {};
         const bold = rf.bold ?? f.bold;
         const italic = rf.italic ?? f.italic;
-        const size = ((rf.size ?? f.size ?? 11) * 1.333);
-        const name = rf.name ?? f.name ?? '宋体';
-        this.bc.font = `${bold ? 'bold' : ''} ${italic ? 'italic' : ''} ${size}px ${name}`;
+        const mergedFont = { ...f, ...rf, bold, italic };
+        const size = getFontSizePx(mergedFont, cell);
+        this.bc.font = getCanvasFont(mergedFont, cell, size);
         total += this.bc.measureText(run.text).width;
     }
     return total;
@@ -875,7 +876,7 @@ function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsi
     const lineMaxSizes = richLines.map(runs => {
         let max = defaultFsize;
         for (const run of runs) {
-            const s = ((run.font?.size ?? f.size ?? 11) * 1.333);
+            const s = getFontSizePx({ ...f, ...(run.font || {}) }, cell);
             if (s > max) max = s;
         }
         return max;
@@ -930,11 +931,11 @@ function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsi
             const rf = run.font || {};
             const bold = rf.bold ?? f.bold;
             const italic = rf.italic ?? f.italic;
-            const size = ((rf.size ?? f.size ?? 11) * 1.333);
-            const name = rf.name ?? f.name ?? '宋体';
+            const mergedFont = { ...f, ...rf, bold, italic };
+            const size = getFontSizePx(mergedFont, cell);
             const color = rf.color ?? defaultColor;
 
-            this.bc.font = `${bold ? 'bold' : ''} ${italic ? 'italic' : ''} ${size}px ${name}`;
+            this.bc.font = getCanvasFont(mergedFont, cell, size);
             this.bc.fillStyle = color;
             this.bc.fillText(run.text, curX, bottomY);
 
@@ -1049,7 +1050,7 @@ export function rText(info) {
     const baseH = alignH !== undefined ? alignH : h;
 
     const f = cell.font;
-    let fsize = (f.size ?? 11) * 1.333;
+    let fsize = getFontSizePx(f, cell);
 
     // 超级表表头加粗处理
     const tableBold = tableStyle?.isBold || false;
@@ -1081,7 +1082,7 @@ export function rText(info) {
     const textRotation = cell.alignment?.textRotation;
 
     // 设置字体样式
-    this.bc.font = `${isBold ? 'bold' : ''} ${f.italic ? 'italic' : ''} ${fsize}px ${f.name ?? '宋体'}`;
+    this.bc.font = getCanvasFont({ ...f, bold: isBold }, cell, fsize);
 
     // 富文本在竖排/旋转时 fallback 为纯文本
     if (richText && (textRotation === 255 || (textRotation && textRotation !== 0))) {
@@ -1107,7 +1108,7 @@ export function rText(info) {
             const finalScale = Math.max(scale, minScale);
             fsize = fsize * finalScale;
             // 重新设置字体
-            this.bc.font = `${isBold ? 'bold' : ''} ${f.italic ? 'italic' : ''} ${fsize}px ${f.name ?? '宋体'}`;
+            this.bc.font = getCanvasFont({ ...f, bold: isBold }, cell, fsize);
         }
     }
 

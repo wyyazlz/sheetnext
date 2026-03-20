@@ -612,6 +612,12 @@ const zhCN = {
                     "label": "行高："
                 }
             },
+            "menu": {
+                "hideAndUnhide": "隐藏和取消隐藏",
+                "insert": "插入行列",
+                "unhideAllCols": "取消隐藏所有列",
+                "unhideAllRows": "取消隐藏所有行"
+            },
             "modal": {
                 "m001": {
                     "cancel": "取消",

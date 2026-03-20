@@ -9,6 +9,7 @@ import ShapeSvgs from '../../assets/shapes.js';
 import { CHART_SHORTCUT_MENUS, getLocalizedChartCategories } from '../../components/ChartConfig.js';
 import { getChartSvg } from '../../assets/chartSvgs.js';
 import { getSelectionFont } from '../Canvas/RichTextEditor.js';
+import { getDefaultCellFontName, getDefaultCellFontSize } from '../Cell/fontDefaults.js';
 import { TABLE_STYLE_GROUPS, getStylePreviewColors } from '../Table/TableStyle.js';
 import { CELL_STYLE_GROUP_META, CELL_STYLE_PRESETS } from '../../action/Style.js';
 import getSvg from '../../assets/mainSvgs.js';
@@ -540,65 +541,89 @@ export class ToolbarBuilder {
         return this._trHtml(html);
     }
 
-    /** Rows and Columns Menu (with secondary drops and custom input) */
+    /** Rows and Columns Menu */
     buildRowColMenuHTML() {
         const ns = this.ns;
+        const t = (key, fallback = '', params = {}) => this._t(key, fallback, params);
+        const rowUnit = t('action.rowCol.unit.row', 'row(s)');
+        const colUnit = t('action.rowCol.unit.col', 'column(s)');
+        const setRowHeight = t('layout.auto.labelE9cb6cfc', 'Set Row Height');
+        const autoFitRowHeight = t('layout.auto.label591efe60', 'Auto Fit Row Height');
+        const defaultRowHeight = t('layout.auto.labelDda0aee0', 'Default Row Height');
+        const setColWidth = t('layout.auto.labelDbcee390', 'Set Column Width');
+        const autoFitColWidth = t('layout.auto.labelC14245a4', 'Auto Fit Column Width');
+        const defaultColWidth = t('layout.auto.labelA0c3dddc', 'Default Column Width');
+        const insertRowCol = t('action.rowCol.menu.insert', 'Insert Rows and Columns');
+        const insertAbove = t('action.rowCol.content.insertRow.positionAbove', 'Insert above');
+        const insertBelow = t('action.rowCol.content.insertRow.positionBelow', 'Insert below');
+        const insertLeft = t('action.rowCol.content.insertCol.positionLeft', 'Insert left');
+        const insertRight = t('action.rowCol.content.insertCol.positionRight', 'Insert right');
+        const deleteRows = t('contextMenu.row.delete', 'Delete Rows');
+        const deleteCols = t('contextMenu.column.delete', 'Delete Columns');
+        const hideAndUnhide = t('action.rowCol.menu.hideAndUnhide', 'Hide and Unhide');
+        const hideRows = t('contextMenu.row.hide', 'Hide Rows');
+        const hideCols = t('contextMenu.column.hide', 'Hide Columns');
+        const unhideRows = t('contextMenu.row.unhide', 'Unhide Rows');
+        const unhideCols = t('contextMenu.column.unhide', 'Unhide Columns');
+        const unhideAllRows = t('action.rowCol.menu.unhideAllRows', 'Unhide All Rows');
+        const unhideAllCols = t('action.rowCol.menu.unhideAllCols', 'Unhide All Columns');
+
         const insertMenu = `
             <ul class="sn-dropdown-submenu sn-rowcol-submenu">
                 <li class="sn-rowcol-insert-item" onclick="${ns}.Action.applyRowColInsertByPos(event, 'above')">
-                    <span>在上方插入</span>
+                    <span>${insertAbove}</span>
                     <input type="number" data-field="rowcol-insert-count" min="1" max="10000" value="1"
                         onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
-                    <span>行</span>
+                    <span>${rowUnit}</span>
                 </li>
                 <li class="sn-rowcol-insert-item" onclick="${ns}.Action.applyRowColInsertByPos(event, 'below')">
-                    <span>在下方插入</span>
+                    <span>${insertBelow}</span>
                     <input type="number" data-field="rowcol-insert-count" min="1" max="10000" value="1"
                         onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
-                    <span>行</span>
+                    <span>${rowUnit}</span>
                 </li>
                 <li class="sn-rowcol-insert-item" onclick="${ns}.Action.applyRowColInsertByPos(event, 'left')">
-                    <span>在左侧插入</span>
+                    <span>${insertLeft}</span>
                     <input type="number" data-field="rowcol-insert-count" min="1" max="10000" value="1"
                         onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
-                    <span>列</span>
+                    <span>${colUnit}</span>
                 </li>
                 <li class="sn-rowcol-insert-item" onclick="${ns}.Action.applyRowColInsertByPos(event, 'right')">
-                    <span>在右侧插入</span>
+                    <span>${insertRight}</span>
                     <input type="number" data-field="rowcol-insert-count" min="1" max="10000" value="1"
                         onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
-                    <span>列</span>
+                    <span>${colUnit}</span>
                 </li>
             </ul>
         `;
 
         return this._trHtml(`
-            <li onclick="${ns}.Action.setRowHeightDialog()" data-value="设置行高"><span>设置行高</span></li>
-            <li onclick="${ns}.Action.autoFitRowHeight()" data-value="最合适的行高"><span>最合适的行高</span></li>
-            <li onclick="${ns}.Action.setDefaultRowHeightDialog()" data-value="默认行高"><span>默认行高</span></li>
+            <li onclick="${ns}.Action.setRowHeightDialog()" data-value="${setRowHeight}"><span>${setRowHeight}</span></li>
+            <li onclick="${ns}.Action.autoFitRowHeight()" data-value="${autoFitRowHeight}"><span>${autoFitRowHeight}</span></li>
+            <li onclick="${ns}.Action.setDefaultRowHeightDialog()" data-value="${defaultRowHeight}"><span>${defaultRowHeight}</span></li>
             <li class="sn-dropdown-divider"></li>
-            <li onclick="${ns}.Action.setColWidthDialog()" data-value="设置列宽"><span>设置列宽</span></li>
-            <li onclick="${ns}.Action.autoFitColWidth()" data-value="最合适的列宽"><span>最合适的列宽</span></li>
-            <li onclick="${ns}.Action.setDefaultColWidthDialog()" data-value="默认列宽"><span>默认列宽</span></li>
+            <li onclick="${ns}.Action.setColWidthDialog()" data-value="${setColWidth}"><span>${setColWidth}</span></li>
+            <li onclick="${ns}.Action.autoFitColWidth()" data-value="${autoFitColWidth}"><span>${autoFitColWidth}</span></li>
+            <li onclick="${ns}.Action.setDefaultColWidthDialog()" data-value="${defaultColWidth}"><span>${defaultColWidth}</span></li>
             <li class="sn-dropdown-divider"></li>
             <li class="sn-has-submenu">
-                <span>插入行列</span>
+                <span>${insertRowCol}</span>
                 ${insertMenu}
             </li>
             <li class="sn-dropdown-divider"></li>
-            <li onclick="${ns}.Action.deleteRowAction()" data-value="删除行"><span>删除行</span></li>
-            <li onclick="${ns}.Action.deleteColAction()" data-value="删除列"><span>删除列</span></li>
+            <li onclick="${ns}.Action.deleteRowAction()" data-value="${deleteRows}"><span>${deleteRows}</span></li>
+            <li onclick="${ns}.Action.deleteColAction()" data-value="${deleteCols}"><span>${deleteCols}</span></li>
             <li class="sn-dropdown-divider"></li>
             <li class="sn-has-submenu">
-                <span>隐藏和取消隐藏</span>
+                <span>${hideAndUnhide}</span>
                 <ul class="sn-dropdown-submenu">
-                    <li onclick="${ns}.Action.hideRowAction()" data-value="隐藏行"><span>隐藏行</span></li>
-                    <li onclick="${ns}.Action.hideColAction()" data-value="隐藏列"><span>隐藏列</span></li>
-                    <li onclick="${ns}.Action.unhideRowAction()" data-value="取消隐藏行"><span>取消隐藏行</span></li>
-                    <li onclick="${ns}.Action.unhideColAction()" data-value="取消隐藏列"><span>取消隐藏列</span></li>
+                    <li onclick="${ns}.Action.hideRowAction()" data-value="${hideRows}"><span>${hideRows}</span></li>
+                    <li onclick="${ns}.Action.hideColAction()" data-value="${hideCols}"><span>${hideCols}</span></li>
+                    <li onclick="${ns}.Action.unhideRowAction()" data-value="${unhideRows}"><span>${unhideRows}</span></li>
+                    <li onclick="${ns}.Action.unhideColAction()" data-value="${unhideCols}"><span>${unhideCols}</span></li>
                     <li class="sn-dropdown-divider"></li>
-                    <li onclick="${ns}.Action.unhideAllRowsAction()" data-value="取消隐藏所有行"><span>取消隐藏所有行</span></li>
-                    <li onclick="${ns}.Action.unhideAllColsAction()" data-value="取消隐藏所有列"><span>取消隐藏所有列</span></li>
+                    <li onclick="${ns}.Action.unhideAllRowsAction()" data-value="${unhideAllRows}"><span>${unhideAllRows}</span></li>
+                    <li onclick="${ns}.Action.unhideAllColsAction()" data-value="${unhideAllCols}"><span>${unhideAllCols}</span></li>
                 </ul>
             </li>
         `);
@@ -1347,8 +1372,11 @@ const DISPLAY_DEFAULTS = {
 };
 
 function getDefaultFontName(cell) {
-    const locale = cell?._SN?.locale || '';
-    return /^zh\b/i.test(locale) ? '宋体' : 'Calibri';
+    return getDefaultCellFontName(cell);
+}
+
+function getDefaultFontSize(cell) {
+    return getDefaultCellFontSize(cell);
 }
 
 // 缓存菜单格式映射（从菜单配置动态生成）
@@ -1428,8 +1456,8 @@ export function syncToolbarState(container, cell, menuConfig) {
     // 构建当前状态
     const currentState = {
         // 显示值（有默认值）
-        fontName: font.name || getDefaultFontName(cell),
-        fontSize: font.size || DISPLAY_DEFAULTS.fontSize,
+        fontName: displayFont.name || getDefaultFontName(cell),
+        fontSize: displayFont.size || getDefaultFontSize(cell) || DISPLAY_DEFAULTS.fontSize,
         numFmt: getNumFmtLabel(numFmt, menuConfig, t),
         fontColor: displayFont.color || defaultFontColor || '#FF0000',
         fillColor: fill.fgColor || defaultFillColor || '#FFFF00',
