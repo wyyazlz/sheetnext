@@ -21,6 +21,8 @@ const COLORS = {
 };
 
 const CONDITION_OPS = { '=': (a, b) => a === b, '<>': (a, b) => a !== b, '>': (a, b) => a > b, '<': (a, b) => a < b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b };
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 31);
 
 // ==================== 缓存 ====================
 
@@ -394,8 +396,7 @@ function formatDateTime(serial, tokens, cellType) {
     if (!date) return String(serial);
 
     // Excel 基准日期用于累计时间
-    const baseDate = new Date(1899, 11, 30, 0, 0, 0, 0);
-    const totalMs = serial * 24 * 60 * 60 * 1000;
+    const totalMs = serial * MS_PER_DAY;
 
     let result = '';
     let hasAMPM = tokens.some(t => t.type === TokenType.AMPM);
@@ -493,28 +494,36 @@ function serialToDate(serial) {
     if (serial > 60) days -= 1; // 跳过虚假的 1900/2/29
     else if (serial === 60) days = 59; // 1900/2/28
 
-    const baseDate = new Date(1899, 11, 30);
     const wholeDays = Math.floor(days);
     const timeFraction = days - wholeDays;
+    const utcMs = EXCEL_EPOCH_UTC + wholeDays * MS_PER_DAY + Math.round(timeFraction * MS_PER_DAY);
+    const utcDate = new Date(utcMs);
 
-    const result = new Date(baseDate);
-    result.setDate(result.getDate() + wholeDays);
-
-    if (timeFraction > 0) {
-        const ms = Math.round(timeFraction * 24 * 60 * 60 * 1000);
-        result.setTime(result.getTime() + ms);
-    }
-
-    return result;
+    return new Date(
+        utcDate.getUTCFullYear(),
+        utcDate.getUTCMonth(),
+        utcDate.getUTCDate(),
+        utcDate.getUTCHours(),
+        utcDate.getUTCMinutes(),
+        utcDate.getUTCSeconds(),
+        utcDate.getUTCMilliseconds()
+    );
 }
 
 // JS Date 转 Excel 序列号
 export function dateToSerial(date) {
-    if (!(date instanceof Date)) return date;
+    if (!(date instanceof Date) || isNaN(date.getTime())) return date;
 
-    const baseDate = new Date(1899, 11, 30);
-    const diffMs = date.getTime() - baseDate.getTime();
-    let days = diffMs / (24 * 60 * 60 * 1000);
+    const utcMs = Date.UTC(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(),
+        date.getSeconds(),
+        date.getMilliseconds()
+    );
+    let days = (utcMs - EXCEL_EPOCH_UTC) / MS_PER_DAY;
 
     // 1900 年 bug 修正
     if (days >= 60) days += 1;

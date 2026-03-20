@@ -23,6 +23,7 @@
 }
 
 .sn-dropdown-menu {
+    --sn-drop-y: -10px;
     position: absolute;
     top: 100%;
     left: 0;
@@ -38,9 +39,22 @@
     display: none;
     z-index: 1000;
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(var(--sn-drop-y));
     transition: opacity 0.2s ease, transform 0.2s ease;
     max-height: 420px;
+}
+
+.sn-dropdown[data-drop-v="up"] > .sn-dropdown-menu {
+    --sn-drop-y: 10px;
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+.sn-dropdown[data-drop-h="left"] > .sn-dropdown-menu {
+    left: auto;
+    right: 0;
 }
 
 /* 只对没有子菜单的菜单加滚动 */
@@ -79,7 +93,7 @@
 @keyframes dropdownFadeIn {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(var(--sn-drop-y));
     }
 
     to {
@@ -101,7 +115,7 @@
 
     to {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(var(--sn-drop-y));
     }
 }
 

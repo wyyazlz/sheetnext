@@ -2,6 +2,21 @@ import { CELL_TYPES } from './constants.js';
 import { compareValue, dateTrans, numFmtFun, dateStrToDate, formatValue } from './helpers.js';
 import { buildCellXml } from './xmlBuilder.js';
 
+function _inferDateValueType(value, numFmt) {
+    const format = (numFmt ?? "").replaceAll('[Red]', '').toLowerCase();
+    if (!/[dmyhs]/.test(format)) return null;
+
+    const hasTimeFormat = format.includes('h') || format.includes('s');
+    const hasDateFormat = format.includes('y') || format.includes('d');
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    const hasTimeValue = Number.isFinite(numericValue) && Math.abs(numericValue - Math.trunc(numericValue)) > 1e-10;
+
+    if (hasTimeFormat && hasDateFormat) return 'dateTime';
+    if (hasTimeFormat) return 'time';
+    if (hasDateFormat) return hasTimeValue ? 'dateTime' : 'date';
+    return hasTimeValue ? 'dateTime' : 'date';
+}
+
 /**
  * Cell classes
  * @title Cell Actions
@@ -71,11 +86,7 @@ export default class Cell {
         // 初始化类型
         this._type = CELL_TYPES[_$t];
         if (!this._type) {
-            if (/[dmyhs]/i.test((this.numFmt ?? "").replaceAll('[Red]', ''))) {
-                this._type = undefined;
-            } else {
-                this._type = 'number';
-            }
+            this._type = _inferDateValueType(v, this.numFmt) || 'number';
         }
         const type = this.type;
 
@@ -756,15 +767,11 @@ export default class Cell {
         if (this._type) return this._type;
         const calcVal = this.calcVal;
         if (typeof calcVal === 'boolean') return this._type = 'boolean';
-        else if (/[dmyhs]/i.test(this.numFmt ?? "")) {
-            const n = this.numFmt;
-            const t = n.includes('h') || n.includes('s');
-            const d = n.includes('y') || n.includes('d');
-            if (t && d) return this._type = 'dateTime';
-            else if (t) return this._type = 'time';
-            else if (d) return this._type = 'date';
-            return this._type = 'dateTime';
-        } else if (calcVal != null && !(typeof calcVal === 'string' && calcVal.trim() === '') && !isNaN(calcVal)) return this._type = 'number';
+        else {
+            const inferredDateType = _inferDateValueType(calcVal, this.numFmt);
+            if (inferredDateType) return this._type = inferredDateType;
+        }
+        if (calcVal != null && !(typeof calcVal === 'string' && calcVal.trim() === '') && !isNaN(calcVal)) return this._type = 'number';
         else if (this._editVal instanceof Error) return this._type = 'error';
         else return this._type = 'string';
     }

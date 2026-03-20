@@ -127,7 +127,7 @@ export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = 
                                     <span class="sn-sheets-btn" onclick="${ns}.Layout.scrollSheetTabs(-1)" title="Scroll Left">${getSvg('arrow-left')}</span>
                                     <span class="sn-sheets-btn" onclick="${ns}.Layout.scrollSheetTabs(1)" title="Scroll Right">${getSvg('arrow-right')}</span>
                                     <span class="sn-sheets-btn" onmousedown="${ns}.activeSheet = ${ns}.addSheet();" ontouchstart="${ns}.activeSheet = ${ns}.addSheet();" title="New Sheet">${getSvg('plus')}</span>
-                                    <div class="sn-dropdown sn-sheet-dropdown">
+                                    <div class="sn-dropdown sn-sheet-dropdown" data-drop-v="up">
                                         <span class="sn-sheets-btn sn-dropdown-toggle sn-no-icon" onmousedown="${ns}.Action.moreSheet(this)" ontouchstart="${ns}.Action.moreSheet(this)" title="All Sheets">${getSvg('gengduo')}</span>
                                         <ul class="sn-dropdown-menu sn-sheet-menu"></ul>
                                     </div>
@@ -141,7 +141,7 @@ export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = 
                                     <span class="sn-stat-item" data-stat="avg" title="${zoomAverageLabel}">${zoomAverageLabel}: -</span>
                                     <span class="sn-stat-item" data-stat="count" title="${zoomCountLabel}">${zoomCountLabel}: -</span>
                                     <span class="sn-stat-item" data-stat="sum" title="${zoomSumLabel}">${zoomSumLabel}: -</span>
-                                    <div class="sn-dropdown">
+                                    <div class="sn-dropdown" data-drop-v="up" data-drop-h="left">
                                         <span class="sn-sheets-btn sn-dropdown-toggle">${getSvg('dangqianhangliegaoliang')}</span>
                                         <ul class="sn-dropdown-menu sn-highlight-menu">${toolbarBuilder.buildHighlightMenuHTML()}</ul>
                                     </div>

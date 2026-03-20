@@ -19,8 +19,17 @@ export function shouldHideFormula(sheet, cell) {
     return !!(sheet?.protection?.enabled && cell?.protection?.hidden && cell?.isFormula);
 }
 
+function _hasDateTimeValue(date) {
+    return !!(date.getHours() || date.getMinutes() || date.getSeconds() || date.getMilliseconds());
+}
+
 export function getFormulaBarValue(sheet, cell) {
     if (!cell) return '';
     if (shouldHideFormula(sheet, cell)) return '';
+    if (cell._editVal instanceof Date) {
+        if (_hasDateTimeValue(cell._editVal)) return cell._editVal.toLocaleString();
+        if (cell.type === 'time') return cell._editVal.toLocaleTimeString();
+        return cell._editVal.toLocaleDateString();
+    }
     return cell.editVal?.toString() ?? '';
 }
