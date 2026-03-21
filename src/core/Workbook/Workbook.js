@@ -17,6 +17,7 @@ import { parsePivotTables, parseSlicerCaches } from "../OpenEdition/PivotSlicerS
 import I18n from "../I18n/I18n.js"
 import { registerLocale, getLocalePack, getAllLocalePacks } from "../../locales/registry.js"
 import Enum from "../../enum/index.js"
+import { applyLocaleDefaultCellFont } from "../Cell/fontDefaults.js"
 import "../../style/base.css"
 import "../../style/editor.css"
 import "../../style/tools.css"
@@ -88,6 +89,7 @@ class SheetNext {
         this.Layout = new Layout(this, options)
         this.AI = new AI(this, options, this.#license)
         this.Xml = new Xml(this)
+        applyLocaleDefaultCellFont(this)
         this.IO = new IO(this, this.#license)
         this.Formula = new Formula(this)
         this.DependencyGraph = new DependencyGraph(this)

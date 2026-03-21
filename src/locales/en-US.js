@@ -1588,7 +1588,7 @@ const enUS = {
             "label97beaff2": "+/- Buttons",
             "label9975a578": "Row Headers",
             "label9c5bc988": "Format",
-            "label9d40cd00": "SimSun",
+            "label9d40cd00": "Calibri",
             "label9d54bf30": "Calc Sheet",
             "label9f1d3d34": "Tools",
             "labelA05734b8": "Pivot",

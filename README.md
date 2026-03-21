@@ -20,7 +20,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/image_en.png" alt="SheetNext Screenshot" width="100%" />
+  <video src="docs/ys2.mp4" controls muted playsinline preload="metadata" poster="docs/image_en.png" width="100%"></video>
+</p>
+
+<p align="center">
+  <a href="docs/ys2.mp4">Watch demo video</a>
 </p>
 
 - SheetNext is a pure front-end, high-performance spreadsheet engine that provides enterprises with a ready-to-use intelligent spreadsheet foundation.

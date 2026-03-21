@@ -1,3 +1,5 @@
+import { applyLocaleDefaultCellFont } from '../core/Cell/fontDefaults.js';
+
 // Workbook actions
 
 export function fullScreen() {
@@ -36,6 +38,7 @@ export function newWorkbook() {
         styleTable: { fonts: [], fills: [], borders: [], aligns: [] },
         sheets: [{ name: 'Sheet1', rows: [] }]
     });
+    applyLocaleDefaultCellFont(this.SN);
 }
 
 export function confirmNewWorkbook() {
