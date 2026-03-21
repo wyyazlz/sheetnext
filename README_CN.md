@@ -20,11 +20,7 @@
 </p>
 
 <p align="center">
-  <video src="docs/ys2.mp4" controls muted playsinline preload="metadata" poster="docs/image_en.png" width="100%"></video>
-</p>
-
-<p align="center">
-  <a href="docs/ys2.mp4">观看演示视频</a>
+  <img src="docs/image_en.png" alt="SheetNext demo" width="100%" />
 </p>
 
 - SheetNext 是一款纯前端、高性能的电子表格引擎，为企业提供开箱即用的智能表格能力底座。
