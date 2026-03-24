@@ -458,6 +458,13 @@ export function _updateContextualToolbar(sheet, r, c) {
         return;
     }
 
+    // 检查当前单元格是否在透视表中
+    const pivotTable = getPivotTableAt(sheet, r, c);
+    if (pivotTable) {
+        this.SN.Layout.updateContextualToolbar({ type: 'pivotTable', data: pivotTable });
+        return;
+    }
+
     // 离开特殊区域，隐藏上下文菜单
     // 注意：透视表面板的关闭在 InteractionHandler.baseMousedown 中处理
     this.SN.Layout.updateContextualToolbar(null);

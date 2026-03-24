@@ -68,6 +68,93 @@ function buildBorderNode(border) {
     return { key: JSON.stringify(borderObj), node: ob };
 }
 
+function _pickDefined(...values) {
+    for (const value of values) {
+        if (value !== undefined) return value;
+    }
+    return undefined;
+}
+
+function _getStripeColor(index, stripe1Color, stripe2Color, stripe1Size = 1, stripe2Size = 1) {
+    const s1 = Math.max(1, stripe1Size || 1);
+    const s2 = Math.max(1, stripe2Size || 1);
+    const cycle = s1 + s2;
+    const offset = index % cycle;
+    return offset < s1 ? stripe1Color : stripe2Color;
+}
+
+function _normalizeColorForCompare(color) {
+    if (!color || typeof color !== 'string') return color ?? null;
+    const normalized = expandHex(color);
+    return typeof normalized === 'string' ? normalized.toUpperCase() : normalized;
+}
+
+function _getTableFillColorForExport(cell) {
+    const row = cell.row?.rIndex;
+    const col = cell.cIndex;
+    const table = cell.row?.sheet?.Table?.getTableAt?.(row, col);
+    if (!table?.isDataCell(row, col)) return null;
+
+    const style = table.style;
+    if (!style) return null;
+
+    const dataRowIndex = table.getDataRowIndex(row);
+    const colIndex = table.getColumnIndex(col);
+    let bgColor = style.dataBg ?? null;
+
+    if (table.showRowStripes && dataRowIndex >= 0) {
+        bgColor = _getStripeColor(
+            dataRowIndex,
+            style.rowStripe1,
+            style.rowStripe2,
+            style.rowStripe1Size,
+            style.rowStripe2Size
+        );
+    }
+
+    if (table.showColumnStripes && colIndex >= 0) {
+        const stripe1Color = _pickDefined(style.columnStripe1, style.rowStripe2, style.rowStripe1, bgColor);
+        const stripe2Color = _pickDefined(style.columnStripe2, style.rowStripe1, style.rowStripe2, bgColor);
+        bgColor = _getStripeColor(
+            colIndex,
+            stripe1Color,
+            stripe2Color,
+            style.columnStripe1Size,
+            style.columnStripe2Size
+        );
+    }
+
+    if (table.showFirstColumn && colIndex === 0) {
+        bgColor = _pickDefined(style.firstColumnBg, bgColor);
+    }
+
+    const lastColIndex = table.range.e.c - table.range.s.c;
+    if (table.showLastColumn && colIndex === lastColIndex) {
+        bgColor = _pickDefined(style.lastColumnBg, bgColor);
+    }
+
+    if (style._fromTokens !== true) {
+        const dxfStyle = table._getDataDxfStyle?.(colIndex);
+        if (dxfStyle?.fill?.fgColor) {
+            bgColor = dxfStyle.fill.fgColor;
+        }
+    }
+
+    return bgColor;
+}
+
+function _shouldSkipTableFillExport(cell, fill) {
+    if (!hasEffectiveFill(fill) || fill?.type !== 'pattern') return false;
+
+    const pattern = fill.pattern || 'solid';
+    if (pattern !== 'solid' && pattern !== 'none') return false;
+
+    const tableFillColor = _getTableFillColorForExport(cell);
+    if (!tableFillColor) return false;
+
+    return _normalizeColorForCompare(fill.fgColor) === _normalizeColorForCompare(tableFillColor);
+}
+
 /**
  * Check if the cell is in the data range of the supertable (not the header)
  * @param {Cell} cell
@@ -302,7 +389,7 @@ export function buildStyleXf(cell) {
     }
 
     // Fill构建（超级表数据区域内的单元格跳过 fill，让超级表样式接管）
-    const skipFillForTable = isInTableDataArea(cell);
+    const skipFillForTable = _shouldSkipTableFillExport(cell, cell.fill);
     if (!skipFillForTable && hasEffectiveFill(cell._style?.fill)) {
         const fill = cell.fill;
         const key = JSON.stringify(fill);
@@ -494,7 +581,7 @@ function _buildCellEffectiveStyleXf(cell) {
     const xfObj = buildStyleXfFromObject(
         style,
         cell._SN,
-        { skipFillForTable: isInTableDataArea(cell) }
+        { skipFillForTable: _shouldSkipTableFillExport(cell, style.fill) }
     ) || {
         _$numFmtId: 0,
         _$fontId: 0,

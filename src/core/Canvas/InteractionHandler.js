@@ -531,7 +531,18 @@ export function baseMousedown(event) {
     // #endregion
 
     // 检查是否点击了透视表区域（使用单元格索引判断，更可靠）
-    this.SN.Layout?.closePivotPanel?.();
+    const clickedPivotTable = getPivotTableByCellIndex(sheet, start.r, start.c);
+    if (clickedPivotTable) {
+        this.SN.Layout?.updateContextualToolbar({
+            type: 'pivotTable',
+            data: clickedPivotTable,
+            autoSwitch: true
+        });
+        this.SN.Layout?.autoOpenPivotPanel(clickedPivotTable);
+    } else {
+        // 点击了透视表区域外，关闭面板
+        this.SN.Layout?.closePivotPanel?.();
+    }
 
     areaSel.call(this, start, left, top, width, height) // 区域选择
 }
