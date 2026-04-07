@@ -68,23 +68,91 @@ function buildBorderNode(border) {
     return { key: JSON.stringify(borderObj), node: ob };
 }
 
-/**
- * Check if the cell is in the data range of the supertable (not the header)
- * @param {Cell} cell
- * @returns {boolean}
- */
-function isInTableDataArea(cell) {
-    const sheet = cell.row?.sheet;
-    if (!sheet?.Table || sheet.Table.size === 0) return false;
+function _pickDefined(...values) {
+    for (const value of values) {
+        if (value !== undefined) return value;
+    }
+    return undefined;
+}
 
-    let inDataArea = false;
-    sheet.Table.forEach(table => {
-        // 只检查数据区域，不包括表头（表头可以有自己的样式）
-        if (table.isDataCell(cell.row.rIndex, cell.cIndex)) {
-            inDataArea = true;
+function _getStripeColor(index, stripe1Color, stripe2Color, stripe1Size = 1, stripe2Size = 1) {
+    const s1 = Math.max(1, stripe1Size || 1);
+    const s2 = Math.max(1, stripe2Size || 1);
+    const cycle = s1 + s2;
+    const offset = index % cycle;
+    return offset < s1 ? stripe1Color : stripe2Color;
+}
+
+function _normalizeColorForCompare(color) {
+    if (!color || typeof color !== 'string') return color ?? null;
+    const normalized = expandHex(color);
+    return typeof normalized === 'string' ? normalized.toUpperCase() : normalized;
+}
+
+function _getTableFillColorForExport(cell, rowIndex, colIndex) {
+    const row = rowIndex;
+    const col = colIndex;
+    const table = cell.row?.sheet?.Table?.getTableAt?.(row, col);
+    if (!table?.isDataCell(row, col)) return null;
+
+    const style = table.style;
+    if (!style) return null;
+
+    const dataRowIndex = table.getDataRowIndex(row);
+    const tableColIndex = table.getColumnIndex(col);
+    let bgColor = style.dataBg ?? null;
+
+    if (table.showRowStripes && dataRowIndex >= 0) {
+        bgColor = _getStripeColor(
+            dataRowIndex,
+            style.rowStripe1,
+            style.rowStripe2,
+            style.rowStripe1Size,
+            style.rowStripe2Size
+        );
+    }
+
+    if (table.showColumnStripes && tableColIndex >= 0) {
+        const stripe1Color = _pickDefined(style.columnStripe1, style.rowStripe2, style.rowStripe1, bgColor);
+        const stripe2Color = _pickDefined(style.columnStripe2, style.rowStripe1, style.rowStripe2, bgColor);
+        bgColor = _getStripeColor(
+            tableColIndex,
+            stripe1Color,
+            stripe2Color,
+            style.columnStripe1Size,
+            style.columnStripe2Size
+        );
+    }
+
+    if (table.showFirstColumn && tableColIndex === 0) {
+        bgColor = _pickDefined(style.firstColumnBg, bgColor);
+    }
+
+    const lastColIndex = table.range.e.c - table.range.s.c;
+    if (table.showLastColumn && tableColIndex === lastColIndex) {
+        bgColor = _pickDefined(style.lastColumnBg, bgColor);
+    }
+
+    if (style._fromTokens !== true) {
+        const dxfStyle = table._getDataDxfStyle?.(tableColIndex);
+        if (dxfStyle?.fill?.fgColor) {
+            bgColor = dxfStyle.fill.fgColor;
         }
-    });
-    return inDataArea;
+    }
+
+    return bgColor;
+}
+
+function _shouldSkipTableFillExport(cell, fill, rowIndex, colIndex) {
+    if (!hasEffectiveFill(fill) || fill?.type !== 'pattern') return false;
+
+    const pattern = fill.pattern || 'solid';
+    if (pattern !== 'solid' && pattern !== 'none') return false;
+
+    const tableFillColor = _getTableFillColorForExport(cell, rowIndex, colIndex);
+    if (!tableFillColor) return false;
+
+    return _normalizeColorForCompare(fill.fgColor) === _normalizeColorForCompare(tableFillColor);
 }
 
 /**
@@ -251,152 +319,11 @@ export function getStyleIndex(style, SN) {
     }
 }
 
-// 构建样式对象
-export function buildStyleXf(cell) {
-    const { style, xfObj: effectiveXfObj } = _buildCellEffectiveStyleXf(cell);
-    if (Object.keys(style).length > 0) return effectiveXfObj;
-
-    const xfObj = {
-        _$numFmtId: 0,
-        _$fontId: 0,
-        _$fillId: 0,
-        _$borderId: 0,
-        _$xfId: 0
-    };
-    const SN = cell._SN;
-
-    // 对齐方式构建
-    if (cell._style.alignment) {
-        xfObj.alignment = {};
-        if (cell.alignment.horizontal) xfObj.alignment._$horizontal = cell.alignment.horizontal;
-        if (cell.alignment.vertical) xfObj.alignment._$vertical = cell.alignment.vertical;
-        if (cell.alignment.wrapText) xfObj.alignment._$wrapText = '1';
-        if (cell.alignment.shrinkToFit) xfObj.alignment._$shrinkToFit = '1';
-        if (cell.alignment.indent) xfObj.alignment._$indent = cell.alignment.indent;
-        if (cell.alignment.textRotation) xfObj.alignment._$textRotation = cell.alignment.textRotation;
-    }
-
-    // FONT构建
-    if (cell._style.font) {
-        const font = cell.font;
-        const key = JSON.stringify(font);
-        if (SN.buildStyle.fonts[key]) {
-            xfObj._$fontId = SN.buildStyle.fonts[key];
-        } else {
-            xfObj._$fontId = SN.buildStyle.fonts[key] = SN.buildStyle.fontC++;
-            const ob = {};
-            if (font.bold) ob.b = "";
-            if (font.italic) ob.i = "";
-            if (font.strike) ob.strike = "";
-            if (font.underline) ob.u = font.underline === 'single' ? "" : { _$val: font.underline };
-            if (font.size) ob.sz = { _$val: font.size };
-            const fontColorNode = buildFontColorNode(font);
-            if (fontColorNode) ob.color = fontColorNode;
-            if (font.name) ob.name = { _$val: font.name };
-            if (font.charset) ob.charset = { _$val: font.charset };
-            if (font.outline) ob.outline = "";
-            if (font.vertAlign) ob.vertAlign = { _$val: font.vertAlign };
-            SN._Xml.styleSheet.fonts.font.push(ob);
-        }
-        xfObj._$applyFont = "1";
-    }
-
-    // Fill构建（超级表数据区域内的单元格跳过 fill，让超级表样式接管）
-    const skipFillForTable = isInTableDataArea(cell);
-    if (!skipFillForTable && hasEffectiveFill(cell._style?.fill)) {
-        const fill = cell.fill;
-        const key = JSON.stringify(fill);
-        if (SN.buildStyle.fills[key]) {
-            xfObj._$fillId = SN.buildStyle.fills[key];
-        } else {
-            xfObj._$fillId = SN.buildStyle.fills[key] = SN.buildStyle.fillC++;
-            const ob = {};
-            if (fill.type === 'pattern') {
-                ob.patternFill = { _$patternType: fill.pattern || 'solid' };
-                if (fill.fgColor) ob.patternFill.fgColor = { _$rgb: expandHex(fill.fgColor) };
-                if (fill.bgColor) ob.patternFill.bgColor = { _$rgb: expandHex(fill.bgColor) };
-            } else if (fill.type === 'gradient') {
-                ob.gradientFill = {};
-                if (fill.gradientType === 'path') ob.gradientFill._$type = 'path';
-                if (fill.degree) ob.gradientFill._$degree = fill.degree;
-                if (fill.left) ob.gradientFill._$left = fill.left;
-                if (fill.right) ob.gradientFill._$right = fill.right;
-                if (fill.top) ob.gradientFill._$top = fill.top;
-                if (fill.bottom) ob.gradientFill._$bottom = fill.bottom;
-
-                if (fill.stops && Array.isArray(fill.stops)) {
-                    ob.gradientFill.stop = fill.stops.map(stop => {
-                        const stopObj = {};
-                        stopObj._$position = stop.position !== undefined ? stop.position : 0;
-                        if (stop.color) stopObj.color = { _$rgb: expandHex(stop.color) };
-                        return stopObj;
-                    });
-                } else {
-                    ob.gradientFill.stop = [
-                        { _$position: 0, color: { _$rgb: "FFFFFFFF" } },
-                        { _$position: 1, color: { _$rgb: "FF000000" } }
-                    ];
-                }
-            }
-            SN._Xml.styleSheet.fills.fill.push(ob);
-        }
-        xfObj._$applyFill = "1";
-    }
-
-    // BORDER构建
-    if (hasEffectiveBorder(cell._style?.border)) {
-        const borderNode = buildBorderNode(cell.border);
-        const key = borderNode.key;
-        if (SN.buildStyle.borders[key]) {
-            xfObj._$borderId = SN.buildStyle.borders[key];
-        } else {
-            xfObj._$borderId = SN.buildStyle.borders[key] = SN.buildStyle.borderC++;
-            SN._Xml.styleSheet.borders.border.push(borderNode.node);
-        }
-        xfObj._$applyBorder = "1";
-    }
-
-    // numFmtId构建
-    if (cell._style.numFmt) {
-        const numFmt = cell.numFmt;
-        const key = JSON.stringify(numFmt);
-        if (SN.buildStyle.numFmts[key]) {
-            xfObj._$numFmtId = SN.buildStyle.numFmts[key];
-        } else {
-            const builtInId = Object.entries(BUILTIN_NUMFMTS).find(([_, format]) => format === numFmt)?.[0];
-            if (builtInId) {
-                xfObj._$numFmtId = builtInId;
-            } else {
-                xfObj._$numFmtId = SN.buildStyle.numFmtC++;
-                SN._Xml.styleSheet.numFmts.numFmt.push({
-                    _$numFmtId: xfObj._$numFmtId,
-                    _$formatCode: numFmt
-                });
-            }
-            SN.buildStyle.numFmts[key] = xfObj._$numFmtId;
-        }
-        xfObj._$applyNumberFormat = "1";
-    }
-
-    // protection 构建
-    if (cell._style?.protection) {
-        const protection = {};
-        if (cell._style.protection.locked === false) protection._$locked = '0';
-        if (cell._style.protection.hidden === true) protection._$hidden = '1';
-        if (Object.keys(protection).length > 0) {
-            xfObj.protection = protection;
-            xfObj._$applyProtection = "1";
-        }
-    }
-
-    return xfObj;
-}
-
 // 构建单元格XML对象
-export function buildCellXml(cell) {
+export function buildCellXml(cell, rowIndex, colIndex) {
     let obj = {
         "v": "",
-        "_$r": `${cell._SN.Utils.numToChar(cell.cIndex)}${cell.row.rIndex + 1}`
+        "_$r": `${cell._SN.Utils.numToChar(colIndex)}${rowIndex + 1}`
     };
     const SN = cell._SN;
 
@@ -470,7 +397,7 @@ export function buildCellXml(cell) {
 
     // 样式构建
     const hasLineBreak = typeof cell.editVal === 'string' && cell.editVal.includes('\n');
-    const { style: effectiveStyle, xfObj } = _buildCellEffectiveStyleXf(cell);
+    const { style: effectiveStyle, xfObj } = _buildCellEffectiveStyleXf(cell, rowIndex, colIndex);
     if (Object.keys(effectiveStyle).length == 0 && !hasLineBreak) return obj;
     // 含换行符时强制设置 wrapText，Excel 需要此属性才能显示换行
     if (hasLineBreak) {
@@ -489,12 +416,15 @@ export function buildCellXml(cell) {
     return obj;
 }
 
-function _buildCellEffectiveStyleXf(cell) {
-    const style = _getCellEffectiveStyle(cell);
+function _buildCellEffectiveStyleXf(cell, rowIndex, colIndex) {
+    const style = _getCellEffectiveStyle(cell, {
+        rowStyle: cell.row?._rowStyle,
+        colStyle: cell.row?.sheet?.cols?.[colIndex]?._colStyle
+    });
     const xfObj = buildStyleXfFromObject(
         style,
         cell._SN,
-        { skipFillForTable: isInTableDataArea(cell) }
+        { skipFillForTable: _shouldSkipTableFillExport(cell, style.fill, rowIndex, colIndex) }
     ) || {
         _$numFmtId: 0,
         _$fontId: 0,

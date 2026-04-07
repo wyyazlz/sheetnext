@@ -5,6 +5,8 @@
  * @class
  */
 
+import { dateTrans } from '../Cell/helpers.js';
+
 const DEFAULT_SCOPE_ID = '__sheet__';
 const TABLE_SCOPE_PREFIX = 'table:';
 
@@ -788,6 +790,32 @@ export default class AutoFilter {
         return !!scope?.range && rowIndex === scope.range.s.r;
     }
 
+    _getFilterDateMeta(cell) {
+        if (!cell || !['date', 'dateTime'].includes(cell.type)) return null;
+
+        const sourceValue = typeof cell.calcVal === 'number'
+            ? cell.calcVal
+            : cell.editVal instanceof Date
+                ? cell.editVal
+                : null;
+        const dateValue = dateTrans(sourceValue);
+        if (!(dateValue instanceof Date) || isNaN(dateValue.getTime())) return null;
+
+        const year = dateValue.getFullYear();
+        const month = dateValue.getMonth() + 1;
+        const day = dateValue.getDate();
+        const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        return {
+            isDateValue: true,
+            dateKey,
+            dateLabel: dateKey,
+            dateYear: year,
+            dateMonth: month,
+            dateDay: day
+        };
+    }
+
     /**
      * Get all unique values for a column (for filter panel)
      * @param {number} colIndex
@@ -806,15 +834,24 @@ export default class AutoFilter {
             const val = cell.editVal;
             const displayVal = cell.showVal ?? val ?? '';
             const key = String(val ?? '');
+            const dateMeta = this._getFilterDateMeta(cell);
 
             if (values.has(key)) {
                 values.get(key).count++;
             } else {
                 values.set(key, {
+                    filterKey: key,
                     value: val,
                     text: displayVal === '' ? this._SN.t('core.autoFilter.autoFilter.blank') : String(displayVal),
                     count: 1,
-                    isEmpty: val === '' || val === null || val === undefined
+                    isEmpty: val === '' || val === null || val === undefined,
+                    isDateValue: false,
+                    dateKey: null,
+                    dateLabel: null,
+                    dateYear: null,
+                    dateMonth: null,
+                    dateDay: null,
+                    ...dateMeta
                 });
             }
         }

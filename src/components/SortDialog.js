@@ -3,7 +3,6 @@
  * 复刻 Excel 完整排序能力：多级排序、排序依据、自定义列表等
  */
 
-import { sortRange } from '../core/Utils/SortUtils.js';
 import getSvg from '../assets/mainSvgs.js';
 
 // 预设的自定义列表
@@ -610,7 +609,7 @@ export default class SortDialog {
             customOrder: level.customOrder
         }));
 
-        const success = sortRange(sheet, this.range, sortKeys, {
+        const success = sheet.rangeSort(sortKeys, this.range, {
             hasHeader: this.options.hasHeader,
             caseSensitive: this.options.caseSensitive
         });

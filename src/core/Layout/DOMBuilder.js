@@ -9,6 +9,19 @@ import getSvg from '../../assets/mainSvgs.js';
  * @returns {{html: string, toolbarBuilder: ToolbarBuilder}}
  */
 export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = null) {
+    const getTabStyleAttr = (isContextual) => {
+        const styles = [];
+        if (isContextual) styles.push('display:none');
+        return styles.length ? ` style="${styles.join(';')}"` : '';
+    };
+
+    const getPanelClassName = (panel) => {
+        if (Array.isArray(panel.class)) {
+            return panel.class.filter(item => typeof item === 'string' && item.trim()).join(' ').trim();
+        }
+        return typeof panel.class === 'string' ? panel.class.trim() : '';
+    };
+
     const t = (key, fallback = '') => {
         const translated = SN.t(key);
         if (translated === key && fallback) return fallback;
@@ -21,12 +34,16 @@ export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = 
     const zoomAverageLabel = t('layout.zoomAverage');
     const zoomCountLabel = t('layout.zoomCount');
     const zoomSumLabel = t('layout.zoomSum');
-    const menuTabsHTML = config.map((panel, idx) => {
+    const menuTabsHTML = config.map((panel) => {
         const isContextual = panel.contextual === true;
-        const hiddenStyle = isContextual ? ' style="display:none"' : '';
+        const isActive = panel.key === toolbarBuilder.activePanel;
+        const styleAttr = getTabStyleAttr(isContextual);
         const contextAttr = isContextual ? ` data-context-type="${panel.contextType || ''}"` : '';
+        const triggerAttr = panel.trigger ? ` data-tab-trigger="${panel.trigger}"` : '';
+        const customClassName = getPanelClassName(panel);
+        const tabClassName = `sn-menu-tab${isActive ? ' active' : ''}${isContextual ? ' sn-contextual-tab' : ''}${customClassName ? ` ${customClassName}` : ''}`;
         const tabLabel = panel.labelKey ? t(panel.labelKey) : SN.t(panel.text || panel.key);
-        return `<span class="sn-menu-tab${idx === 1 ? ' active' : ''}${isContextual ? ' sn-contextual-tab' : ''}" data-panel="${panel.key}"${contextAttr}${hiddenStyle}>${tabLabel}</span>`;
+        return `<span class="${tabClassName}" data-panel="${panel.key}"${triggerAttr}${contextAttr}${styleAttr}>${tabLabel}</span>`;
     }).join('');
 
     const html = `
@@ -43,6 +60,7 @@ export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = 
                 </header>
                 <div class="sn-tools">${panelsHTML}</div>
                 <div class="sn-op">
+                    <div class="sn-chat-mask"></div>
                     <div class="sn-chat">
                         <div class="sn-chat-input">
                             <div class="sn-chat-head d-flex justify-content-between align-items-center">
@@ -74,13 +92,34 @@ export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = 
                                     <span class="sn-chat-examples-title">&#x1F4A1; ${t('ai.panel.examplesTitle')}</span>
                                 </div>
                                 <ul>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item1')}</li>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item2')}</li>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item3')}</li>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item4')}</li>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item5')}</li>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item6')}</li>
-                                    <li onclick="${ns}.AI.chatInput(this.innerText);">${t('ai.panel.examples.item7')}</li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item1')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item2')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item3')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item4')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item5')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item6')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
+                                    <li onclick="${ns}.AI.chatInput(this.querySelector('.sn-chat-example-text').innerText)">
+                                        <span class="sn-chat-example-text">${t('ai.panel.examples.item7')}</span>
+                                        <span class="sn-chat-example-arrow">${getSvg('right')}</span>
+                                    </li>
                                 </ul>
                             </div>
                         </div>

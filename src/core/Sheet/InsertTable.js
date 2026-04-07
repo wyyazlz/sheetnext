@@ -32,7 +32,7 @@ export function insertTable(arr, pos, options = {}) {
             }
 
             const cell = row[i];
-            const mergeCols = cell?.mr ?? 0; // 获取水平合并的列数
+            const mergeCols = cell?.cs ? cell.cs - 1 : (cell?.mr ?? 0);
             colIndex += (mergeCols + 1); // 当前单元格占据的列数
 
             // 如果当前单元格有合并列，后面的单元格不参与数量计算
@@ -70,10 +70,12 @@ export function insertTable(arr, pos, options = {}) {
             if (tCell.b) cell.font = { bold: true };
             if (tCell.s) cell.font = { size: Number(tCell.s) }
 
-            if (tCell.mr || tCell.mb) {
+            const mergeR = tCell.cs ? tCell.cs - 1 : (tCell.mr ?? 0);
+            const mergeB = tCell.rs ? tCell.rs - 1 : (tCell.mb ?? 0);
+            if (mergeR || mergeB) {
                 readyMerge.push({
                     s: { r, c },
-                    e: { r: r + (tCell.mb ?? 0), c: c + (tCell.mr ?? 0) }
+                    e: { r: r + mergeB, c: c + mergeR }
                 });
             }
         }

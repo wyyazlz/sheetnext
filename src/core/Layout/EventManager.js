@@ -37,6 +37,14 @@ export function initEventListeners() {
         zoomInBtn?.addEventListener('click', () => SN.activeSheet?.zoomIn());
         zoomVal?.addEventListener('click', () => SN.Action.zoomCustom());
     }
+
+    const chatMask = this.SN.containerDom.querySelector('.sn-chat-mask');
+    if (chatMask) {
+        chatMask.addEventListener('click', () => {
+            if (!this.isSmallWindow || !this.showAIChatWindow) return;
+            this.showAIChatWindow = false;
+        });
+    }
 }
 
 /**

@@ -1,28 +1,44 @@
-/**
- * 筛选操作模块
- * 提供自动筛选相关的工具栏操作方法
- */
+/** Filter actions. */
 
 import SortDialog from '../components/SortDialog.js';
 
-// 排序对话框实例缓存
 let sortDialogInstance = null;
 
-function getActiveFilterScope(sheet) {
-    const table = sheet.Table?.getTableAt?.(sheet.activeCell.r, sheet.activeCell.c);
-    if (table?.autoFilterEnabled) {
-        const scopeId = sheet.AutoFilter.getTableScopeId(table.id);
-        if (sheet.AutoFilter.isScopeEnabled(scopeId)) {
-            return { scopeId, table };
-        }
-    }
-    return { scopeId: null, table: null };
+function isCellInRange(cell, range) {
+    return !!cell && !!range &&
+        cell.r >= range.s.r && cell.r <= range.e.r &&
+        cell.c >= range.s.c && cell.c <= range.e.c;
 }
 
-/**
- * 切换自动筛选
- * 如果没有启用筛选，则启用；如果已启用，则关闭
- */
+function getActiveFilterScope(sheet) {
+    const autoFilter = sheet.AutoFilter;
+    const table = sheet.Table?.getTableAt?.(sheet.activeCell.r, sheet.activeCell.c);
+    if (table?.autoFilterEnabled) {
+        const scopeId = autoFilter.getTableScopeId(table.id);
+        if (autoFilter.isScopeEnabled(scopeId)) {
+            return {
+                scopeId,
+                table,
+                range: autoFilter.getScopeRange(scopeId),
+                hasHeader: table.showHeaderRow === true
+            };
+        }
+    }
+
+    const range = autoFilter?.getScopeRange?.();
+    if (autoFilter?.enabled && isCellInRange(sheet.activeCell, range)) {
+        return {
+            scopeId: null,
+            table: null,
+            range,
+            hasHeader: true
+        };
+    }
+
+    return { scopeId: null, table: null, range: null, hasHeader: false };
+}
+
+/** Toggle autofilter. */
 export function toggleAutoFilter() {
     const sheet = this.SN.activeSheet;
     const autoFilter = sheet.AutoFilter;
@@ -34,17 +50,13 @@ export function toggleAutoFilter() {
     }
 
     if (autoFilter.enabled) {
-        // 已启用，关闭筛选
         autoFilter.clear();
     } else {
-        // 未启用，设置筛选范围
         autoFilter.setRange();
     }
 }
 
-/**
- * 清除所有筛选条件（保留筛选范围）
- */
+/** Clear filters. */
 export function clearFilter() {
     const sheet = this.SN.activeSheet;
     const autoFilter = sheet.AutoFilter;
@@ -59,9 +71,7 @@ export function clearFilter() {
     }
 }
 
-/**
- * 重新应用筛选
- */
+/** Reapply filters. */
 export function reapplyFilter() {
     const sheet = this.SN.activeSheet;
     const autoFilter = sheet.AutoFilter;
@@ -78,47 +88,49 @@ export function reapplyFilter() {
     }
 }
 
-/**
- * 升序排序
- */
+/** Sort ascending. */
 export function sortAsc() {
     const sheet = this.SN.activeSheet;
     const areas = sheet.activeAreas;
+    const { scopeId, range, hasHeader } = getActiveFilterScope(sheet);
+    const targetRange = range || (areas.length > 0 ? areas[areas.length - 1] : null);
 
-    if (areas.length === 0) {
+    if (!targetRange) {
         return this.SN.Utils.toast(this.SN.t('action.filter.toast.msg003'));
     }
 
-    const area = areas[areas.length - 1];
     const sortCol = sheet.activeCell.c;
-
-    if (sheet.rangeSort([{ col: sortCol, order: 'asc' }], area)) {
+    if (sheet.rangeSort([{ col: sortCol, order: 'asc' }], targetRange, { hasHeader })) {
+        if (range) {
+            sheet.AutoFilter.setSortState(sortCol, 'asc', scopeId);
+            sheet.AutoFilter._applyFilters(scopeId);
+        }
         this.SN._r();
     }
 }
 
-/**
- * 降序排序
- */
+/** Sort descending. */
 export function sortDesc() {
     const sheet = this.SN.activeSheet;
     const areas = sheet.activeAreas;
+    const { scopeId, range, hasHeader } = getActiveFilterScope(sheet);
+    const targetRange = range || (areas.length > 0 ? areas[areas.length - 1] : null);
 
-    if (areas.length === 0) {
+    if (!targetRange) {
         return this.SN.Utils.toast(this.SN.t('action.filter.toast.msg003'));
     }
 
-    const area = areas[areas.length - 1];
     const sortCol = sheet.activeCell.c;
-
-    if (sheet.rangeSort([{ col: sortCol, order: 'desc' }], area)) {
+    if (sheet.rangeSort([{ col: sortCol, order: 'desc' }], targetRange, { hasHeader })) {
+        if (range) {
+            sheet.AutoFilter.setSortState(sortCol, 'desc', scopeId);
+            sheet.AutoFilter._applyFilters(scopeId);
+        }
         this.SN._r();
     }
 }
 
-/**
- * 自定义排序对话框
- */
+/** Show custom sort dialog. */
 export function customSort() {
     if (!sortDialogInstance) {
         sortDialogInstance = new SortDialog(this.SN);

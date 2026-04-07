@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-03-17
+> Generated: 2026-03-27
 
 Public callable classes detected for the generated API surface.
 
@@ -18,7 +18,7 @@ Public callable classes detected for the generated API surface.
 | options.locale | string | No | 'en-US' | Initial locale (e.g. 'en-US', 'zh-CN'). |
 | options.locales | Object<string, Object> | No | - | Extra locale packs keyed by locale code. |
 | options.menuRight | function | No | - | Callback `(defaultHTML: string) => string`. Receives the default right-menu HTML, return modified HTML. |
-| options.menuList | function | No | - | Callback `(config: Array<{key: string, labelKey: string, groups: Array, contextual?: boolean}>) => Array`. Receives the default toolbar panel config array, return modified array. |
+| options.menuList | function | No | - | Callback `(config: Array<{key: string, labelKey?: string, text?: string, groups?: Array, contextual?: boolean, contextType?: string, trigger?: 'panel'\|'action', action?: string, color?: string}>) => Array`. Receives the default toolbar panel config array, return modified array. Use `trigger: 'action'` to make a top tab run code directly without switching the toolbar panel. `color` customizes the top-tab text and accent color. |
 | options.AI_URL | string | No | - | AI relay endpoint URL. |
 | options.AI_TOKEN | string | No | - | Optional bearer token for AI relay endpoint. |
 
@@ -29,6 +29,22 @@ import 'sheetnext.css';
 
 const container = document.querySelector('#SNContainer');
 const SN = new SheetNext(container);
+```
+```js
+const SN = new SheetNext(document.querySelector('#SNContainer'), {
+  menuList(config) {
+    return [
+      ...config,
+      {
+        key: 'githubLink',
+        text: 'GitHub',
+        trigger: 'action',
+        color: '#0969da',
+        action: "window.open('https://github.com/wyyazlz/sheetnext', '_blank', 'noopener,noreferrer')"
+      }
+    ];
+  }
+});
 ```
 
 ### Props
@@ -556,6 +572,32 @@ sheet.insertTable(meetingTemplate, 'A1', {
   width: 100
 });
 ```
+
+#### `autoFitRows(startRow, endRow): number`
+- Auto fit row heights in range.
+- Category: `AutoFit`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| startRow | number | Yes | - | - |
+| endRow | number | Yes | - | - |
+
+**Returns**
+- Type: `number`
+
+#### `autoFitCols(startCol, endCol): number`
+- Auto fit column widths in range.
+- Category: `AutoFit`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| startCol | number | Yes | - | - |
+| endCol | number | Yes | - | - |
+
+**Returns**
+- Type: `number`
 
 #### `areaHaveMerge(area): boolean`
 - Tests whether merged cells exist in the range
@@ -1417,6 +1459,8 @@ sheet.insertTable(meetingTemplate, 'A1', {
 ### Get/Set
 | Name | Type | Mode | Static | Description |
 | --- | --- | --- | --- | --- |
+| minimalToolbarEnabled | boolean | get/set | No | - |
+| minimalToolbarTextEnabled | boolean | get/set | No | - |
 | showMenuBar | boolean | get/set | No | Whether to show the menu bar |
 | showToolbar | boolean | get/set | No | Whether to show the toolbar |
 | showAIChat | boolean | get/set | No | Whether to show the AI chat portal |
@@ -1430,9 +1474,7 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | Name | Type | Static | Description |
 | --- | --- | --- | --- |
 | isSmallWindow | boolean | No | Whether it is a small window |
-| toolbarMode | 'full' \| 'minimal' | No | - |
-| isToolbarModeLocked | boolean | No | - |
-| minimalToolbarTextEnabled | boolean | No | - |
+| isMinimalToolbarLocked | boolean | No | - |
 
 ### Methods
 #### `openPivotPanel(pt): void`
@@ -1467,20 +1509,6 @@ sheet.insertTable(meetingTemplate, 'A1', {
 
 #### `refreshToolbar(): void`
 - Unified refresh toolbar status (panel toggle, invoked after API modification)<br>Integration: Style status + checkbox + active button
-
-#### `toggleMinimalToolbar(enabled)`
-
-**Parameters**
-| Name | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| enabled | boolean | Yes | - | - |
-
-#### `toggleMinimalToolbarText(enabled)`
-
-**Parameters**
-| Name | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| enabled | boolean | Yes | - | - |
 
 #### `scrollSheetTabs(dir): void`
 - Scroll Sheet Tab

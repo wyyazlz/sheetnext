@@ -927,7 +927,9 @@ const zhCN = {
     "autoFilter": {
         "panel": {
             "clear": "清除",
+            "dateSection": "日期",
             "field": "字段",
+            "otherValues": "其他值",
             "searchPlaceholder": "搜索...",
             "selectAll": "全选",
             "sortAsc": "升序排序",

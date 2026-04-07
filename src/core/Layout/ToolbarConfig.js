@@ -453,9 +453,9 @@ export function createToolbarConfig(ns) {
                                     type: 'checkbox',
                                     labelKey: 'layout.auto.labelCbc4bc74',
                                     id: 'minimalToolbar',
-                                    checked: ctx => ctx.Layout.toolbarMode === 'minimal',
-                                    disabled: ctx => ctx.Layout.isToolbarModeLocked,
-                                    action: `${ns}.Layout.toggleMinimalToolbar(this.checked)`
+                                    checked: ctx => ctx.Layout.minimalToolbarEnabled,
+                                    disabled: ctx => ctx.Layout.isMinimalToolbarLocked,
+                                    action: `${ns}.Layout.minimalToolbarEnabled=this.checked`
                                 }
                             ]
                         }
@@ -538,7 +538,7 @@ export function createToolbarConfig(ns) {
                 }
             ]
         },
-        // 表设计面板（上下文选项卡，选中表格时显示）
+        // Table Design panel (contextual tab)
         {
             key: 'tableDesign',
             labelKey: 'layout.auto.labelD4fa30c8',

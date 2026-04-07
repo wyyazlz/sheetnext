@@ -530,6 +530,7 @@
  */
 
 .sn-modal input[type="text"],
+.sn-modal input[type="email"],
 .sn-modal input[type="number"],
 .sn-modal input[type="password"],
 .sn-modal input[type="search"],
@@ -546,6 +547,7 @@
 }
 
 .sn-modal input[type="text"]:focus,
+.sn-modal input[type="email"]:focus,
 .sn-modal input[type="number"]:focus,
 .sn-modal input[type="password"]:focus,
 .sn-modal input[type="search"]:focus,
@@ -555,6 +557,7 @@
 }
 
 .sn-modal input[type="text"]:hover:not(:focus),
+.sn-modal input[type="email"]:hover:not(:focus),
 .sn-modal input[type="number"]:hover:not(:focus),
 .sn-modal input[type="password"]:hover:not(:focus),
 .sn-modal input[type="search"]:hover:not(:focus),
