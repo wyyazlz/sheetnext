@@ -1,10 +1,8 @@
 /**
- * Filter Panel Interaction Module
- * Responsible for displaying, hiding, and user interaction of the filter panel
- * Avoid issues like overflow: hidden by creating Dom on demand
+ * Filter panel interaction module.
+ * Creates the panel on demand and handles user interaction.
  */
 
-import { sortRange } from '../Utils/SortUtils.js';
 import getSvg from '../../assets/mainSvgs.js';
 
 export default class FilterPanel {
@@ -13,18 +11,22 @@ export default class FilterPanel {
         /** @type {import('../Canvas/Canvas.js').default} */
         this.canvas = canvas;
         this._SN = canvas.SN;
-        this._panel = null; // 按需创建
-        this._currentColIndex = null; // 当前正在筛选的列
-        this._currentScopeId = null; // 当前筛选作用域
-        this._allValues = []; // 所有可选值
-        this._selectedValues = new Set(); // 选中的值
+        this._panel = null;
+        this._currentColIndex = null;
+        this._currentScopeId = null;
+        this._allValues = [];
+        this._selectedValues = new Set();
         this._boundClickOutside = this._onClickOutside.bind(this);
         this._customContext = null;
         this._showCount = true;
+        this._filterMode = 'list';
+        this._dateTree = null;
+        this._collapsedDateNodes = new Set();
+        this._searchKeyword = '';
     }
 
     /**
-     * Get the filter of the active sheet.
+     * Get active AutoFilter instance.
      * @type {import('./AutoFilter.js').default|null}
      */
     get autoFilter() {
@@ -36,9 +38,6 @@ export default class FilterPanel {
         return this._SN.t(key, params);
     }
 
-    /**
-     * Create Filter Panel Dom
-     */
     _createPanel() {
         if (this._panel) return this._panel;
 
@@ -77,124 +76,94 @@ export default class FilterPanel {
             </div>
         `;
 
-        // 挂载到body确保不受父容器overflow影响
         document.body.appendChild(panel);
         this._panel = panel;
         this._bindEvents();
-
         return panel;
     }
 
-    /**
-     * Bind Panel Events
-     */
     _bindEvents() {
         const panel = this._panel;
         if (!panel) return;
 
-        // 关闭按钮
         panel.querySelector('.sn-filter-close')?.addEventListener('click', () => this.hide());
 
-        // 搜索框
         const searchInput = panel.querySelector('.sn-filter-search-input');
         searchInput?.addEventListener('input', (e) => this._onSearch(e.target.value));
 
-        // 全选/清除
         panel.querySelector('.sn-filter-select-all')?.addEventListener('click', () => this._selectAll());
         panel.querySelector('.sn-filter-clear-all')?.addEventListener('click', () => this._clearAll());
 
-        // 排序
         panel.querySelectorAll('.sn-filter-sort-item').forEach(item => {
             item.addEventListener('click', () => {
-                const sortType = item.dataset.sort;
-                this._doSort(sortType);
+                this._doSort(item.dataset.sort);
             });
         });
 
-        // 确定/取消
         panel.querySelector('.sn-filter-apply')?.addEventListener('click', () => this._apply());
         panel.querySelector('.sn-filter-cancel')?.addEventListener('click', () => this.hide());
-
-        // 阻止面板内的点击冒泡
         panel.addEventListener('mousedown', (e) => e.stopPropagation());
 
         const fieldSelect = panel.querySelector('.sn-filter-field-select');
         fieldSelect?.addEventListener('change', () => {
             if (this._customContext?.type === 'pivot') {
-                const fieldIndex = Number(fieldSelect.value);
-                this._setPivotField(fieldIndex);
+                this._setPivotField(Number(fieldSelect.value));
             }
         });
     }
 
-    /**
-     * Click External Close Processing
-     */
     _onClickOutside(e) {
         if (!this._panel) return;
-        // 检查是否点击了筛选图标
         const isFilterIcon = e.target.closest && e.target.closest('.sn-filter-icon');
         if (!isFilterIcon && !this._panel.contains(e.target)) {
             this.hide();
         }
     }
 
-    /**
-     * Show filter panel
-     * @param {number} colIndex - Column Index
-     * @param {number} x - Panel X Position (Relative to Viewport)
-     * @param {number} y - Panel Y Position (Relative to Viewport)
-     */
+    /** @param {number} colIndex @param {number} x @param {number} y @param {string|null} scopeId */
     show(colIndex, x, y, scopeId = null) {
         const autoFilter = this.autoFilter;
         if (!autoFilter?.isScopeEnabled(scopeId)) return;
 
-        // 先移除旧的点击外部监听器，避免事件冒泡时立即关闭新面板
         document.removeEventListener('mousedown', this._boundClickOutside);
-
-        // 确保面板已创建
         this._createPanel();
 
         this._currentColIndex = colIndex;
         this._currentScopeId = scopeId;
         this._customContext = null;
         this._showCount = true;
+        this._filterMode = 'list';
+        this._dateTree = null;
+        this._collapsedDateNodes = new Set();
+        this._searchKeyword = '';
         this._toggleFieldSelect(false);
 
-        // 获取列的所有值
         this._allValues = autoFilter.getColumnValues(colIndex, this._currentScopeId);
+        this._dateTree = this._buildDateTree(this._allValues);
+        this._initDateTreeCollapsedState();
+        this._filterMode = this._dateTree ? 'date' : 'list';
 
-        // 获取当前筛选条件
         const currentFilter = autoFilter.getColumnFilter(colIndex, this._currentScopeId);
         if (currentFilter?.type === 'values') {
             this._selectedValues = new Set(currentFilter.values.map(v => String(v ?? '')));
         } else {
-            // 默认全选
-            this._selectedValues = new Set(this._allValues.map(v => String(v.value ?? '')));
+            this._selectedValues = new Set(this._allValues.map(v => v.filterKey ?? String(v.value ?? '')));
         }
 
-        // 渲染列表
-        this._renderList(this._allValues);
+        this._renderCurrentView();
 
-        // 清空搜索框
         const searchInput = this._panel.querySelector('.sn-filter-search-input');
         if (searchInput) searchInput.value = '';
 
-        // 更新标题
         const title = this._panel.querySelector('.sn-filter-title');
         if (title) {
             const colName = this._SN.Utils.numToChar(colIndex);
             title.textContent = this._t('autoFilter.panel.titleColumn', { column: colName });
         }
 
-        // 更新排序按钮选中状态
         const currentSort = autoFilter.getSortOrder(colIndex, this._currentScopeId);
         this._panel.querySelectorAll('.sn-filter-sort-item').forEach(item => {
-            if (item.dataset.sort === currentSort) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
+            item.classList.toggle('active', item.dataset.sort === currentSort);
         });
 
         this._positionPanel(x, y);
@@ -227,14 +196,15 @@ export default class FilterPanel {
             pendingSelections
         };
         this._showCount = false;
+        this._filterMode = 'list';
+        this._dateTree = null;
+        this._collapsedDateNodes = new Set();
+        this._searchKeyword = '';
         this._toggleFieldSelect(fields.length > 1, fields);
         this._setPivotField(fields[0]);
         this._positionPanel(x, y);
     }
 
-    /**
-     * Hide filter panel
-     */
     hide() {
         if (this._panel) {
             this._panel.classList.remove('active');
@@ -242,12 +212,13 @@ export default class FilterPanel {
         this._currentColIndex = null;
         this._currentScopeId = null;
         this._customContext = null;
+        this._filterMode = 'list';
+        this._dateTree = null;
+        this._collapsedDateNodes = new Set();
+        this._searchKeyword = '';
         document.removeEventListener('mousedown', this._boundClickOutside);
     }
 
-    /**
-     * Destruction panel (release resources)
-     */
     destroy() {
         this.hide();
         if (this._panel && this._panel.parentNode) {
@@ -256,9 +227,6 @@ export default class FilterPanel {
         this._panel = null;
     }
 
-    /**
-     * Render Value List
-     */
     _renderList(values) {
         const list = this._panel.querySelector('.sn-filter-list');
         if (!list) return;
@@ -271,7 +239,7 @@ export default class FilterPanel {
         }
 
         list.innerHTML = values.map(item => {
-            const key = String(item.value ?? '');
+            const key = item.filterKey ?? String(item.value ?? '');
             const checked = this._selectedValues.has(key) ? 'checked' : '';
             const text = this._escapeHtml(item.text);
             const showCount = this._showCount && item.count !== undefined && item.count !== null;
@@ -284,7 +252,6 @@ export default class FilterPanel {
             `;
         }).join('');
 
-        // 绑定checkbox事件
         list.querySelectorAll('.sn-filter-item').forEach(item => {
             const checkbox = item.querySelector('input[type="checkbox"]');
             const value = item.dataset.value;
@@ -296,7 +263,7 @@ export default class FilterPanel {
                 if (!allowMultiple) {
                     this._selectedValues.clear();
                     this._selectedValues.add(value);
-                    this._renderList(this._allValues);
+                    this._renderCurrentView();
                     return;
                 }
                 if (checkbox.checked) {
@@ -308,20 +275,271 @@ export default class FilterPanel {
         });
     }
 
-    /**
-     * Search filters
-     */
-    _onSearch(keyword) {
-        keyword = keyword.toLowerCase().trim();
-        const filtered = keyword
-            ? this._allValues.filter(v => v.text.toLowerCase().includes(keyword))
+    _renderCurrentView() {
+        if (this._customContext?.type === 'pivot') {
+            this._renderList(this._allValues);
+            return;
+        }
+
+        if (this._filterMode === 'date' && !this._searchKeyword) {
+            this._renderDateTree();
+            return;
+        }
+
+        const values = this._searchKeyword
+            ? this._filterValuesByKeyword(this._searchKeyword)
             : this._allValues;
-        this._renderList(filtered);
+        this._renderList(values);
     }
 
-    /**
-     * Select all
-     */
+    _filterValuesByKeyword(keyword) {
+        const normalized = String(keyword ?? '').toLowerCase().trim();
+        if (!normalized) return this._allValues;
+        return this._allValues.filter(item => {
+            const displayText = String(item.text ?? '').toLowerCase();
+            const dateLabel = String(item.dateLabel ?? '').toLowerCase();
+            return displayText.includes(normalized) || dateLabel.includes(normalized);
+        });
+    }
+
+    _buildDateTree(values) {
+        if (!Array.isArray(values) || values.length === 0) return null;
+
+        const yearMap = new Map();
+        const otherValues = [];
+        let dateCount = 0;
+        let otherCount = 0;
+
+        const ensureNode = (map, key, createFn) => {
+            if (!map.has(key)) map.set(key, createFn());
+            return map.get(key);
+        };
+
+        values.forEach(item => {
+            if (!item || item.isEmpty) {
+                otherValues.push(item);
+                return;
+            }
+
+            if (!item.isDateValue || !item.dateKey) {
+                otherValues.push(item);
+                otherCount += item.count ?? 0;
+                return;
+            }
+
+            dateCount += item.count ?? 0;
+            const filterKey = item.filterKey ?? String(item.value ?? '');
+            const yearKey = String(item.dateYear);
+            const monthKey = `${yearKey}-${String(item.dateMonth).padStart(2, '0')}`;
+
+            const yearNode = ensureNode(yearMap, yearKey, () => ({
+                id: `year:${yearKey}`,
+                label: yearKey,
+                level: 0,
+                count: 0,
+                keys: [],
+                months: new Map()
+            }));
+            yearNode.count += item.count ?? 0;
+            yearNode.keys.push(filterKey);
+
+            const monthNode = ensureNode(yearNode.months, monthKey, () => ({
+                id: `month:${monthKey}`,
+                label: monthKey,
+                level: 1,
+                count: 0,
+                keys: [],
+                days: new Map()
+            }));
+            monthNode.count += item.count ?? 0;
+            monthNode.keys.push(filterKey);
+
+            const dayNode = ensureNode(monthNode.days, item.dateKey, () => ({
+                id: `day:${item.dateKey}`,
+                label: item.dateLabel || item.dateKey,
+                level: 2,
+                count: 0,
+                keys: []
+            }));
+            dayNode.count += item.count ?? 0;
+            dayNode.keys.push(filterKey);
+        });
+
+        if (dateCount === 0 || dateCount <= otherCount) {
+            return null;
+        }
+
+        const sortAsc = (a, b) => String(a).localeCompare(String(b));
+        const roots = Array.from(yearMap.keys()).sort(sortAsc).map(yearKey => {
+            const yearNode = yearMap.get(yearKey);
+            yearNode.children = Array.from(yearNode.months.keys()).sort(sortAsc).map(monthKey => {
+                const monthNode = yearNode.months.get(monthKey);
+                monthNode.children = Array.from(monthNode.days.keys()).sort(sortAsc).map(dayKey => monthNode.days.get(dayKey));
+                delete monthNode.days;
+                return monthNode;
+            });
+            delete yearNode.months;
+            return yearNode;
+        });
+
+        const nodeMap = new Map();
+        const walk = node => {
+            nodeMap.set(node.id, node);
+            node.children?.forEach(walk);
+        };
+        roots.forEach(walk);
+
+        return { roots, nodeMap, otherValues };
+    }
+
+    _renderDateTree() {
+        const list = this._panel.querySelector('.sn-filter-list');
+        if (!list || !this._dateTree) return;
+
+        const { roots, otherValues } = this._dateTree;
+        const parts = [];
+
+        if (roots.length > 0) {
+            parts.push(`<div class="sn-filter-tree-section-title">${this._t('autoFilter.panel.dateSection')}</div>`);
+            parts.push(roots.map(node => this._renderDateNode(node)).join(''));
+        }
+
+        if (otherValues.length > 0) {
+            parts.push(`<div class="sn-filter-tree-section-title">${this._t('autoFilter.panel.otherValues')}</div>`);
+            parts.push(otherValues.map(item => {
+                const key = item.filterKey ?? String(item.value ?? '');
+                const checked = this._selectedValues.has(key) ? 'checked' : '';
+                const text = this._escapeHtml(item.text);
+                const showCount = this._showCount && item.count !== undefined && item.count !== null;
+                return `
+                    <div class="sn-filter-item sn-filter-mixed-item" data-value="${this._escapeHtml(key)}">
+                        <input type="checkbox" ${checked}>
+                        <label>${text}</label>
+                        ${showCount ? `<span class="sn-filter-count">(${item.count})</span>` : ''}
+                    </div>
+                `;
+            }).join(''));
+        }
+
+        list.innerHTML = parts.join('');
+
+        list.querySelectorAll('.sn-filter-tree-item').forEach(itemEl => {
+            const node = this._dateTree.nodeMap.get(itemEl.dataset.nodeId);
+            const checkbox = itemEl.querySelector('input[type="checkbox"]');
+            const selectionState = this._getSelectionState(node?.keys || []);
+            checkbox.checked = selectionState.checked;
+            checkbox.indeterminate = selectionState.indeterminate;
+
+            itemEl.addEventListener('click', (e) => {
+                if (e.target.closest('.sn-filter-tree-toggle')) {
+                    return;
+                }
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.indeterminate = false;
+                }
+                this._setKeysSelected(node?.keys || [], checkbox.checked);
+                this._renderCurrentView();
+            });
+        });
+
+        list.querySelectorAll('.sn-filter-tree-toggle').forEach(toggleEl => {
+            toggleEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._toggleDateNode(toggleEl.dataset.nodeId);
+            });
+        });
+
+        list.querySelectorAll('.sn-filter-mixed-item').forEach(itemEl => {
+            const checkbox = itemEl.querySelector('input[type="checkbox"]');
+            const value = itemEl.dataset.value;
+
+            itemEl.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+                if (checkbox.checked) {
+                    this._selectedValues.add(value);
+                } else {
+                    this._selectedValues.delete(value);
+                }
+            });
+        });
+    }
+
+    _renderDateNode(node) {
+        const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+        const collapsed = hasChildren && this._collapsedDateNodes.has(node.id);
+        return `
+            <div class="sn-filter-tree-group">
+                <div class="sn-filter-item sn-filter-tree-item level-${node.level}" data-node-id="${node.id}">
+                    ${hasChildren
+                        ? `<button type="button" class="sn-filter-tree-toggle ${collapsed ? 'collapsed' : ''}" data-node-id="${node.id}" aria-label="toggle"></button>`
+                        : '<span class="sn-filter-tree-toggle-placeholder"></span>'}
+                    <input type="checkbox">
+                    <label>${this._escapeHtml(node.label)}</label>
+                    <span class="sn-filter-count">(${node.count})</span>
+                </div>
+                ${hasChildren && !collapsed ? `<div class="sn-filter-tree-children">${node.children.map(child => this._renderDateNode(child)).join('')}</div>` : ''}
+            </div>
+        `;
+    }
+
+    _initDateTreeCollapsedState() {
+        this._collapsedDateNodes = new Set();
+        if (!this._dateTree?.roots?.length) return;
+
+        const collapseRoots = this._dateTree.roots.length > 1;
+        this._dateTree.roots.forEach(root => {
+            if (collapseRoots) {
+                this._collapsedDateNodes.add(root.id);
+            }
+            root.children?.forEach(child => {
+                this._collapsedDateNodes.add(child.id);
+            });
+        });
+    }
+
+    _toggleDateNode(nodeId) {
+        if (!nodeId) return;
+        if (this._collapsedDateNodes.has(nodeId)) {
+            this._collapsedDateNodes.delete(nodeId);
+        } else {
+            this._collapsedDateNodes.add(nodeId);
+        }
+        this._renderCurrentView();
+    }
+
+    _getSelectionState(keys) {
+        if (!Array.isArray(keys) || keys.length === 0) {
+            return { checked: false, indeterminate: false };
+        }
+        let selectedCount = 0;
+        keys.forEach(key => {
+            if (this._selectedValues.has(key)) selectedCount++;
+        });
+        return {
+            checked: selectedCount === keys.length,
+            indeterminate: selectedCount > 0 && selectedCount < keys.length
+        };
+    }
+
+    _setKeysSelected(keys, checked) {
+        if (!Array.isArray(keys)) return;
+        keys.forEach(key => {
+            if (checked) {
+                this._selectedValues.add(key);
+            } else {
+                this._selectedValues.delete(key);
+            }
+        });
+    }
+
+    _onSearch(keyword) {
+        this._searchKeyword = String(keyword ?? '').toLowerCase().trim();
+        this._renderCurrentView();
+    }
+
     _selectAll() {
         if (this._customContext?.type === 'pivot') {
             const fieldIndex = this._customContext.activeField;
@@ -336,17 +554,14 @@ export default class FilterPanel {
                 selected.add(String(item.value ?? ''));
             });
             this._selectedValues = selected;
-            this._renderList(this._allValues);
+            this._renderCurrentView();
             return;
         }
 
-        this._selectedValues = new Set(this._allValues.map(v => String(v.value ?? '')));
-        this._renderList(this._allValues);
+        this._selectedValues = new Set(this._allValues.map(v => v.filterKey ?? String(v.value ?? '')));
+        this._renderCurrentView();
     }
 
-    /**
-     * Clear Selection
-     */
     _clearAll() {
         if (this._customContext?.type === 'pivot') {
             const fieldIndex = this._customContext.activeField;
@@ -358,17 +573,14 @@ export default class FilterPanel {
             }
             selected.clear();
             this._selectedValues = selected;
-            this._renderList(this._allValues);
+            this._renderCurrentView();
             return;
         }
 
         this._selectedValues.clear();
-        this._renderList(this._allValues);
+        this._renderCurrentView();
     }
 
-    /**
-     * Execute Sort
-     */
     _doSort(type) {
         if (this._customContext?.type === 'pivot') {
             const pivotTable = this._customContext.pivotTable;
@@ -388,8 +600,14 @@ export default class FilterPanel {
         const range = this.autoFilter.getScopeRange(this._currentScopeId);
         if (!range) return;
 
-        // 使用通用排序（hasHeader 跳过表头）
-        const success = sortRange(sheet, range, { col: this._currentColIndex, order: type }, { hasHeader: true });
+        const table = typeof this._currentScopeId === 'string' && this._currentScopeId.startsWith('table:')
+            ? sheet.Table.get(this._currentScopeId.slice(6))
+            : null;
+        const success = sheet.rangeSort(
+            [{ col: this._currentColIndex, order: type }],
+            range,
+            { hasHeader: table ? table.showHeaderRow === true : true }
+        );
 
         if (success) {
             this.autoFilter.setSortState(this._currentColIndex, type, this._currentScopeId);
@@ -400,9 +618,6 @@ export default class FilterPanel {
         this._SN._r();
     }
 
-    /**
-     * Apply filters
-     */
     _apply() {
         if (this._customContext?.type === 'pivot') {
             const pivotTable = this._customContext.pivotTable;
@@ -440,13 +655,11 @@ export default class FilterPanel {
 
         if (this._currentColIndex === null || !this.autoFilter) return;
 
-        // 如果全选，则清除筛选条件
         if (this._selectedValues.size === this._allValues.length) {
             this.autoFilter.clearColumnFilter(this._currentColIndex, this._currentScopeId);
         } else {
-            // 转换选中值为正确类型
             const values = Array.from(this._selectedValues).map(strVal => {
-                const item = this._allValues.find(v => String(v.value ?? '') === strVal);
+                const item = this._allValues.find(v => (v.filterKey ?? String(v.value ?? '')) === strVal);
                 return item ? item.value : strVal;
             });
             this.autoFilter.setColumnFilter(this._currentColIndex, {
@@ -483,14 +696,17 @@ export default class FilterPanel {
         if (!pivotTable) return;
         const field = pivotTable.pivotFields?.[fieldIndex];
         if (!field) return;
+
         const filterableItems = this._getPivotFilterableItems(field);
         const availableIndexes = new Set(filterableItems.map(({ itemIndex }) => String(itemIndex)));
 
         this._customContext.activeField = fieldIndex;
         this._allValues = filterableItems.map(({ item, itemIndex }) => ({
             value: String(itemIndex),
+            filterKey: String(itemIndex),
             text: pivotTable._getItemDisplayValue(fieldIndex, item.x) || ''
         }));
+
         const pendingSelections = this._customContext?.pendingSelections;
         let selected = pendingSelections?.get(fieldIndex);
         if (!selected) {
@@ -516,12 +732,12 @@ export default class FilterPanel {
 
         this._panel?.querySelectorAll('.sn-filter-sort-item').forEach(item => {
             const sortType = field.sortType;
-            const isActive = (item.dataset.sort === 'asc' && sortType === 'ascending') ||
-                (item.dataset.sort === 'desc' && sortType === 'descending');
+            const isActive = (item.dataset.sort === 'asc' && sortType === 'ascending')
+                || (item.dataset.sort === 'desc' && sortType === 'descending');
             item.classList.toggle('active', isActive);
         });
 
-        this._renderList(this._allValues);
+        this._renderCurrentView();
     }
 
     _getPivotFilterableItems(field) {
@@ -557,7 +773,6 @@ export default class FilterPanel {
         this._panel.style.left = `${left}px`;
         this._panel.style.top = `${top}px`;
         this._panel.style.zIndex = '10000';
-
         this._panel.classList.add('active');
 
         setTimeout(() => {
@@ -565,9 +780,6 @@ export default class FilterPanel {
         }, 0);
     }
 
-    /**
-     * HTML Escape
-     */
     _escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)

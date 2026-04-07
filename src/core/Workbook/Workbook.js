@@ -57,9 +57,24 @@ class SheetNext {
      * @param {string} [options.locale='en-US'] - Initial locale (e.g. 'en-US', 'zh-CN').
      * @param {Object<string, Object>} [options.locales] - Extra locale packs keyed by locale code.
      * @param {function} [options.menuRight] - Callback `(defaultHTML: string) => string`. Receives the default right-menu HTML, return modified HTML.
-     * @param {function} [options.menuList] - Callback `(config: Array<{key: string, labelKey: string, groups: Array, contextual?: boolean}>) => Array`. Receives the default toolbar panel config array, return modified array.
+     * @param {function} [options.menuList] - Callback `(config: Array<{key: string, labelKey?: string, text?: string, groups?: Array, contextual?: boolean, contextType?: string, trigger?: 'panel'|'action', action?: string, color?: string}>) => Array`. Receives the default toolbar panel config array, return modified array. Use `trigger: 'action'` to make a top tab run code directly without switching the toolbar panel. `color` customizes the top-tab text and accent color.
      * @param {string} [options.AI_URL] - AI relay endpoint URL.
      * @param {string} [options.AI_TOKEN] - Optional bearer token for AI relay endpoint.
+     * @example
+     * const SN = new SheetNext(document.querySelector('#SNContainer'), {
+     *   menuList(config) {
+     *     return [
+     *       ...config,
+     *       {
+     *         key: 'githubLink',
+     *         text: 'GitHub',
+     *         trigger: 'action',
+     *         color: '#0969da',
+     *         action: "window.open('https://github.com/wyyazlz/sheetnext', '_blank', 'noopener,noreferrer')"
+     *       }
+     *     ];
+     *   }
+     * });
      */
     constructor(dom, options = {}) {
         SheetNext._consumePendingLocales();

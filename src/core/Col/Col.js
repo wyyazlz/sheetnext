@@ -98,14 +98,16 @@ export default class Col {
     }
 
     /**
-     * Get all cells in a column
-     * @type {Array<Cell>}     */
-    /**
-     * Get all cells in a column
-     * @type {Array<Cell>}     */
-
+     * Sparse cells indexed by row
+     * @type {Array<Cell>}
+     */
     get cells() {
-        return this.sheet.rows.map(row => row.cells[this.cIndex]);
+        const cells = new Array(this.sheet.rows.length);
+        this.sheet.rows.forEach((row, rIndex) => {
+            const cell = row?.cells?.[this.cIndex];
+            if (cell) cells[rIndex] = cell;
+        });
+        return cells;
     }
 
     // ========== 内部属性（自动清缓存，不触发 UndoRedo）==========

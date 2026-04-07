@@ -927,7 +927,9 @@ const enUS = {
     "autoFilter": {
         "panel": {
             "clear": "Clear",
+            "dateSection": "Dates",
             "field": "Field",
+            "otherValues": "Other Values",
             "searchPlaceholder": "Search...",
             "selectAll": "Select All",
             "sortAsc": "Sort Ascending",

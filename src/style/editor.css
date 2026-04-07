@@ -58,7 +58,7 @@ a {
 
 /* 导入引导 */
 .dryd {
-    border: 2px dashed #ccc;
+    border: 2px dashed #d6dcea;
     cursor: pointer;
     margin-bottom: 10px;
     padding: 10px 15px;
@@ -66,12 +66,32 @@ a {
     align-items: center;
     gap: 10px;
     font-size: 13px;
-    background: var(--boxbg);
-    color: #666;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 249, 255, 0.96) 100%);
+    color: #596579;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .dryd:hover {
-    border-color: #1a73e8;
+    border-color: #5b8cff;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(238, 244, 255, 0.98) 100%);
+    color: #1f4ed8;
+    box-shadow:
+        0 8px 18px rgba(70, 118, 214, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.dryd > span:first-child {
+    color: #3b82f6;
+}
+
+.dryd:hover > span:first-child {
+    color: #1d4ed8;
+}
+
+.dryd > span:last-child {
+    line-height: 1.45;
+    font-weight: 500;
 }
 
 /* 层级关系 */
@@ -271,6 +291,16 @@ a {
     padding-right: 3.5px;
     width: 420px;
     display: none;
+}
+
+.sn-chat-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 9999998;
 }
 
 .sn-chat::-webkit-scrollbar {
@@ -961,6 +991,19 @@ a {
     display: block;
 }
 
+.tool-image-wrap {
+    padding-top: 4px;
+}
+
+.tool-image-preview {
+    display: block;
+    max-width: min(320px, 100%);
+    max-height: 220px;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
 .tool-code {
     margin: 0;
     padding: 10px;
@@ -1078,7 +1121,7 @@ a {
     font-family: Consolas, monospace; font-size: 13px;
 }
 .ai-response-content .md-ul, .ai-response-content .md-ol {
-    margin: 4px 0; padding-left: 20px;
+    margin: 4px 0; padding-left: 20px;list-style: auto;
 }
 .ai-response-content .md-ul { list-style: none; }
 .ai-response-content .md-li {
@@ -1423,7 +1466,7 @@ a {
     line-height: 28px;
     cursor: pointer;
     font-size: 14px;
-    color: #333;
+    color: var(--sn-menu-tab-color, #333);
     transition: color 0.2s;
     position: relative;
 }
@@ -1436,17 +1479,17 @@ a {
     transform: translateX(-50%) scaleX(0);
     width: 70%;
     height: 2px;
-    background: #36c;
+    background: var(--sn-menu-tab-accent, #36c);
     border-radius: 1px;
     transition: transform 0.25s ease;
 }
 
 .sn-menu-tab:hover {
-    color: #36c;
+    color: var(--sn-menu-tab-hover-color, var(--sn-menu-tab-accent, #36c));
 }
 
 .sn-menu-tab.active {
-    color: #36c;
+    color: var(--sn-menu-tab-active-color, var(--sn-menu-tab-accent, #36c));
 }
 
 .sn-menu-tab.active::after {
@@ -1455,19 +1498,18 @@ a {
 
 /* 上下文选项卡（如表设计）使用绿色区分 */
 .sn-menu-tab.sn-contextual-tab {
-    color: #217346;
+    --sn-menu-tab-color: #217346;
+    --sn-menu-tab-accent: #217346;
+    --sn-menu-tab-hover-color: #1a5c38;
+    --sn-menu-tab-active-color: #217346;
 }
 
 .sn-menu-tab.sn-contextual-tab:hover {
-    color: #1a5c38;
+    color: var(--sn-menu-tab-hover-color, #1a5c38);
 }
 
 .sn-menu-tab.sn-contextual-tab.active {
-    color: #217346;
-}
-
-.sn-menu-tab.sn-contextual-tab::after {
-    background: #217346;
+    color: var(--sn-menu-tab-active-color, #217346);
 }
 
 .head-btn {
@@ -1886,10 +1928,12 @@ font-size: 16px !important;
     margin: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    width: 100%;
+    gap: 8px;
 }
 
 .sn-chat-examples li {
+    width: 100%;
     font-size: 13px;
     color: #444;
     padding: 6px 10px;
@@ -1897,6 +1941,29 @@ font-size: 16px !important;
     border: 1px solid #e5e9ff;
     cursor: pointer;
     transition: .2s;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sn-chat-example-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.sn-chat-example-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 12px;
+    color: #ccc;
+}
+
+.sn-chat-example-arrow .sn-svg {
+    width: 13px;
+    height: 13px;
 }
 
 .sn-chat-examples li:hover {
@@ -1962,6 +2029,11 @@ font-size: 16px !important;
 
     .sn-chat-window .sn-chat-head {
         cursor: default !important;
+    }
+
+    .sn-chat-mask.active {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     /* 小屏幕下隐藏侧边栏时的样式 */

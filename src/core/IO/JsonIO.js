@@ -754,10 +754,10 @@ export async function getData() {
         const protection = sheet.protection?.getOptions?.();
         if (protection) sheetData.sheetProtection = _clone(protection);
 
-        sheet.cols.forEach(col => {
+        sheet.cols.forEach((col, cIndex) => {
             if (!col?._needBuild) return;
             const colData = {
-                cIndex: col.cIndex,
+                cIndex,
                 w: colWidthTable.add(col._width)
             };
             if (col._hidden) colData.hidden = true;
@@ -767,11 +767,11 @@ export async function getData() {
             sheetData.cols.push(colData);
         });
 
-        sheet.rows.forEach(row => {
+        sheet.rows.forEach((row, rIndex) => {
             if (!row?._needBuild) return;
 
             const rowData = {
-                rIndex: row.rIndex,
+                rIndex,
                 h: rowHeightTable.add(row._height),
                 cells: []
             };
@@ -781,9 +781,9 @@ export async function getData() {
             if (row._rowStyle) rowData.s = styleTable.add(row._rowStyle);
 
             const tempCells = [];
-            row.cells.forEach(cell => {
+            row.cells.forEach((cell, cIndex) => {
                 if (!cell?._needBuild) return;
-                const cellData = { c: cell.cIndex };
+                const cellData = { c: cIndex };
 
                 if (typeof cell._editVal === 'string' && cell._editVal.startsWith('=')) {
                     cellData.f = cell._editVal;

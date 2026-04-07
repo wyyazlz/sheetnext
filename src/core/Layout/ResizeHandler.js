@@ -61,7 +61,8 @@ export function handleAllResize() {
         return;
     }
 
-    this._syncToolbarModeByWidth?.(currentContainerWidth);
+    this._syncAIChatMask?.();
+    this._syncMinimalToolbarByWidth?.(currentContainerWidth);
     this._scheduleToolbarAdaptiveLayout?.();
 
     this.updateCanvasSize();

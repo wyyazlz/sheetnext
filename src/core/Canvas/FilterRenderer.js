@@ -1,42 +1,30 @@
 /**
- * Filter Icon Rendering Module
- * Responsible for drawing the filter drop-down icon in the table header cell
+ * Filter icon rendering module.
+ * Draws filter dropdown icons in header cells.
  */
 
-/**
- * Filter Icon Rendering Module
- * Responsible for drawing the filter drop-down icon in the table header cell
- */
-
-/**
- * Render Filter Icon
- * @param {Sheet} sheet - Sheet Objects
- */
+/** @param {Sheet} sheet */
 export function rFilterIcons(sheet) {
     const autoFilter = sheet.AutoFilter;
-    // 清除上一次的图标位置信息
     this._filterIconPositions = [];
 
     const scopes = autoFilter?.getEnabledScopes?.();
     if (Array.isArray(scopes) && scopes.length > 0) {
+        const colPositions = new Map();
+        let colX = sheet.indexWidth;
+        for (const c of sheet.vi.colsIndex) {
+            const colWidth = sheet.getCol(c).width;
+            colPositions.set(c, { x: colX, w: colWidth });
+            colX += colWidth;
+        }
 
-    // 预计算可视区列的 x 位置，避免每个 scope 重算
-    const colPositions = new Map();
-    let colX = sheet.indexWidth;
-    for (const c of sheet.vi.colsIndex) {
-        const colWidth = sheet.getCol(c).width;
-        colPositions.set(c, { x: colX, w: colWidth });
-        colX += colWidth;
-    }
-
-    // 预计算可视区行的 y 位置
-    const rowPositions = new Map();
-    let rowY = sheet.headHeight;
-    for (const r of sheet.vi.rowsIndex) {
-        const rowHeight = sheet.getRow(r).height;
-        rowPositions.set(r, { y: rowY, h: rowHeight });
-        rowY += rowHeight;
-    }
+        const rowPositions = new Map();
+        let rowY = sheet.headHeight;
+        for (const r of sheet.vi.rowsIndex) {
+            const rowHeight = sheet.getRow(r).height;
+            rowPositions.set(r, { y: rowY, h: rowHeight });
+            rowY += rowHeight;
+        }
 
         scopes.forEach(scope => {
             const range = scope.range;
@@ -88,26 +76,17 @@ export function rFilterIcons(sheet) {
     });
 }
 
-/**
- * Clear filter icon position information
- */
 export function clearFilterIconPositions() {
     this._filterIconPositions = [];
 }
 
-/**
- * Detect if the click location is on the filter icon
- * @param {number} x - Click on the X coordinates
- * @param {number} y - Click on the Y position
- * @returns {{colIndex:number, scopeId:string}|null}
- */
+/** @param {number} x @param {number} y @returns {{colIndex:number, scopeId:string}|null} */
 export function getFilterIconAtPosition(x, y) {
     if (!this._filterIconPositions || this._filterIconPositions.length === 0) {
         return null;
     }
 
     for (const icon of this._filterIconPositions) {
-        // 扩大检测区域以便于点击
         const padding = 5;
         if (x >= icon.x - padding && x <= icon.x + icon.w + padding &&
             y >= icon.y - padding && y <= icon.y + icon.h + padding) {
@@ -117,6 +96,7 @@ export function getFilterIconAtPosition(x, y) {
     return null;
 }
 
+/** @param {number} boxX @param {number} boxY @param {number} boxW @param {number} boxH */
 export function getFilterIconLayout(boxX, boxY, boxW, boxH) {
     const padding = 2;
     const iconSize = Math.max(8, Math.min(15, Math.floor(boxH - padding * 2)));
@@ -127,55 +107,98 @@ export function getFilterIconLayout(boxX, boxY, boxW, boxH) {
     };
 }
 
-/**
- * Draw a single filter icon (Excel style drop-down button)
- * @private
- */
-/** @param {CanvasRenderingContext2D} ctx @param {number} iconX @param {number} iconY @param {number} iconSize @param {boolean} hasFilter @param {string|null} sortOrder */
-/**
- * Draw a single filter icon (Excel style drop-down button)
- * @private
- */
-
-export function drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder) {
-    const isActive = hasFilter || sortOrder; // 有筛选或排序时高亮
-
-    // 绘制白色渐变背景
+function _drawButtonFrame(ctx, iconX, iconY, iconSize, isActive) {
     const gradient = ctx.createLinearGradient(iconX, iconY, iconX, iconY + iconSize);
     gradient.addColorStop(0, '#ffffff');
-    gradient.addColorStop(1, '#f0f0f0');
+    gradient.addColorStop(1, isActive ? '#edf3ff' : '#f3f3f3');
     ctx.fillStyle = gradient;
     ctx.fillRect(iconX, iconY, iconSize, iconSize);
-    // Border is aligned to 0.5px so it matches grid-line thickness.
-    ctx.strokeStyle = isActive ? '#4f7cf6' : '#ddd';
+
+    ctx.strokeStyle = isActive ? '#8eaadb' : '#c8c8c8';
     ctx.lineWidth = 1;
     ctx.strokeRect(iconX + 0.5, iconY + 0.5, Math.max(0, iconSize - 1), Math.max(0, iconSize - 1));
+}
 
-    // 绘制三角形
-    const cx = iconX + iconSize / 2;
-    const cy = iconY + iconSize / 2;
-    const triangleSize = 4;
-
-    ctx.fillStyle = isActive ? '#4f7cf6' : '#666';
+function _drawDropdownGlyph(ctx, centerX, centerY, color) {
+    const size = 4.1;
+    ctx.fillStyle = color;
     ctx.beginPath();
-
-    if (sortOrder === 'asc') {
-        // 升序：向上的三角形
-        ctx.moveTo(cx - triangleSize, cy + 1);
-        ctx.lineTo(cx + triangleSize, cy + 1);
-        ctx.lineTo(cx, cy - triangleSize + 1);
-    } else if (sortOrder === 'desc') {
-        // 降序：向下的三角形
-        ctx.moveTo(cx - triangleSize, cy - 1);
-        ctx.lineTo(cx + triangleSize, cy - 1);
-        ctx.lineTo(cx, cy + triangleSize - 1);
-    } else {
-        // 无排序：默认向下的三角形
-        ctx.moveTo(cx - triangleSize, cy - 1);
-        ctx.lineTo(cx + triangleSize, cy - 1);
-        ctx.lineTo(cx, cy + triangleSize - 1);
-    }
-
+    ctx.moveTo(centerX - size, centerY - 1);
+    ctx.lineTo(centerX + size, centerY - 1);
+    ctx.lineTo(centerX, centerY + size - 1);
     ctx.closePath();
     ctx.fill();
+}
+
+function _drawFilterGlyph(ctx, centerX, centerY, color, scale = 1) {
+    const topWidth = 7.8 * scale;
+    const neckWidth = 2.9 * scale;
+    const topY = centerY - 4.2 * scale;
+    const midY = centerY - 0.45 * scale;
+    const stemBottomY = centerY + 4.2 * scale;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(centerX - topWidth / 2, topY);
+    ctx.lineTo(centerX + topWidth / 2, topY);
+    ctx.lineTo(centerX + neckWidth / 2, midY);
+    ctx.lineTo(centerX + neckWidth / 2, stemBottomY);
+    ctx.lineTo(centerX - neckWidth / 2, stemBottomY);
+    ctx.lineTo(centerX - neckWidth / 2, midY);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function _drawSortGlyph(ctx, centerX, centerY, order, color, scale = 1) {
+    const shaftHalf = 1 * scale;
+    const top = centerY - 4.6 * scale;
+    const bottom = centerY + 4.6 * scale;
+    const headSize = 3.6 * scale;
+    const shaftTop = order === 'asc' ? top + headSize - 0.25 * scale : top;
+    const shaftBottom = order === 'asc' ? bottom : bottom - headSize + 0.25 * scale;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(centerX - shaftHalf, shaftTop, shaftHalf * 2, Math.max(0, shaftBottom - shaftTop));
+
+    ctx.beginPath();
+    if (order === 'asc') {
+        ctx.moveTo(centerX, top);
+        ctx.lineTo(centerX - headSize, top + headSize);
+        ctx.lineTo(centerX + headSize, top + headSize);
+    } else {
+        ctx.moveTo(centerX, bottom);
+        ctx.lineTo(centerX - headSize, bottom - headSize);
+        ctx.lineTo(centerX + headSize, bottom - headSize);
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
+/** @param {CanvasRenderingContext2D} ctx @param {number} iconX @param {number} iconY @param {number} iconSize @param {boolean} hasFilter @param {string|null} sortOrder */
+export function drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder) {
+    const isActive = !!(hasFilter || sortOrder);
+    const centerX = iconX + iconSize / 2;
+    const centerY = iconY + iconSize / 2;
+    const primaryColor = isActive ? '#355db3' : '#666666';
+    const secondaryColor = '#5b7fcb';
+
+    _drawButtonFrame(ctx, iconX, iconY, iconSize, isActive);
+
+    if (hasFilter && sortOrder) {
+        _drawFilterGlyph(ctx, centerX - iconSize * 0.16, centerY, primaryColor, 0.78);
+        _drawSortGlyph(ctx, centerX + iconSize * 0.18, centerY, sortOrder, secondaryColor, 0.68);
+        return;
+    }
+
+    if (hasFilter) {
+        _drawFilterGlyph(ctx, centerX, centerY, primaryColor, 0.92);
+        return;
+    }
+
+    if (sortOrder === 'asc' || sortOrder === 'desc') {
+        _drawSortGlyph(ctx, centerX, centerY, sortOrder, primaryColor, 0.92);
+        return;
+    }
+
+    _drawDropdownGlyph(ctx, centerX, centerY + 0.5, primaryColor);
 }

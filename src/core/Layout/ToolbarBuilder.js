@@ -16,6 +16,19 @@ import getSvg from '../../assets/mainSvgs.js';
 import { getIconCanvas } from '../CF/icons.js';
 import { ICON_SETS } from '../CF/rules/IconSetRule.js';
 
+function _getDefaultActivePanelKey(config) {
+    const startPanel = config.find(panel => panel.key === 'start' && panel.trigger !== 'action');
+    if (startPanel) return startPanel.key;
+
+    const normalPanel = config.find(panel => panel.trigger !== 'action' && panel.contextual !== true);
+    if (normalPanel) return normalPanel.key;
+
+    const fallbackPanel = config.find(panel => panel.trigger !== 'action');
+    if (fallbackPanel) return fallbackPanel.key;
+
+    return config[0]?.key || 'start';
+}
+
 export class ToolbarBuilder {
     /** @param {string} ns @param {import('../Workbook/Workbook.js').default|null} [SN=null] @param {Function|null} [menuListCallback=null] */
     constructor(ns, SN = null, menuListCallback = null) {
@@ -58,7 +71,7 @@ export class ToolbarBuilder {
         };
         // 默认选中第二个面板（第一个通常是"文件"）
         /** @type {string} */
-        this.activePanel = this.config[1]?.key || this.config[0]?.key || 'start';
+        this.activePanel = _getDefaultActivePanelKey(this.config);
     }
 
     /** @param {import('../Workbook/Workbook.js').default} SN */
@@ -158,7 +171,8 @@ export class ToolbarBuilder {
 
     /** @param {Object} panel @returns {string} */
     buildPanel(panel) {
-        const html = panel.groups.map((group, idx) => this.buildGroup(group, idx === panel.groups.length - 1)).join('');
+        const groups = Array.isArray(panel.groups) ? panel.groups : [];
+        const html = groups.map((group, idx) => this.buildGroup(group, idx === groups.length - 1)).join('');
         return this._trHtml(html);
     }
 
@@ -1263,6 +1277,9 @@ export function initToolsEvents(container, builder, colorInitFn) {
     menuList.addEventListener('click', (e) => {
         const tab = e.target.closest('.sn-menu-tab');
         if (!tab) return;
+
+        const handledByLayout = builder?.SN?.Layout?._handleMenuTabClick?.(tab, e);
+        if (handledByLayout !== false) return;
 
         const panelName = tab.dataset.panel;
 

@@ -25,7 +25,7 @@ export default class Layout {
      * @param {Object} SN - SheetNext instance.
      * @param {Object} [options={}] - Layout options.
      * @param {function} [options.menuRight] - Callback `(defaultHTML: string) => string` to customize the top-right menu HTML.
-     * @param {function} [options.menuList] - Callback `(config: Array) => Array` to customize menu tab config.
+     * @param {function} [options.menuList] - Callback `(config: Array<{key: string, groups?: Array, trigger?: 'panel'|'action', action?: string, class?: string}>) => Array` to customize menu tab config. `class` attaches custom classes to the top tab and overflow item.
      */
     constructor(SN, options = {}) {
         this._options = options;
@@ -56,9 +56,9 @@ export default class Layout {
         this._pivotPanelManualClosed = false;  // 用户是否手动关闭了面板        
         this._currentContextType = null;
         this._currentContextData = null;
-        this._toolbarMode = 'pro';
-        this._userToolbarMode = 'pro';
-        this._toolbarModeLocked = false;
+        this._minimalToolbarEnabled = false;
+        this._userMinimalToolbarEnabled = false;
+        this._isMinimalToolbarLocked = false;
         this._toolbarAdaptiveRaf = null;
         this._minimalToolbarEventsBound = false;
         this._minimalToolbarTextEnabled = false;
@@ -116,19 +116,33 @@ export default class Layout {
         return this.SN.containerDom.offsetWidth < 900;
     }
 
-    /** @type {'full'|'minimal'} */
-    get toolbarMode() {
-        return this._toolbarMode;
+    /** @type {boolean} */
+    get minimalToolbarEnabled() {
+        return this._minimalToolbarEnabled;
     }
 
     /** @type {boolean} */
-    get isToolbarModeLocked() {
-        return this._toolbarModeLocked;
+    set minimalToolbarEnabled(enabled) {
+        this._userMinimalToolbarEnabled = !!enabled;
+        this._applyMinimalToolbarState();
+        this._syncMinimalToolbarCheckboxUI();
+    }
+
+    /** @type {boolean} */
+    get isMinimalToolbarLocked() {
+        return this._isMinimalToolbarLocked;
     }
 
     /** @type {boolean} */
     get minimalToolbarTextEnabled() {
         return this._minimalToolbarTextEnabled;
+    }
+
+    /** @type {boolean} */
+    set minimalToolbarTextEnabled(enabled) {
+        this._setMinimalToolbarTextEnabled(enabled);
+        this._syncMinimalToolbarCheckboxUI();
+        this._scheduleToolbarAdaptiveLayout();
     }
 
     /**
@@ -188,6 +202,7 @@ export default class Layout {
         } else {
             this.snChat.style.display = "none";
         }
+        this._syncAIChatMask();
         this.updateCanvasSize();
     }
 
@@ -269,6 +284,7 @@ export default class Layout {
             this.snChat.style.transform = "none";
         }
 
+        this._syncAIChatMask();
         this.updateCanvasSize();
     }
 
@@ -386,6 +402,12 @@ export default class Layout {
         this._scheduleToolbarAdaptiveLayout();
     }
 
+    _syncAIChatMask() {
+        if (!this.snChatMask) return;
+        const shouldShowMask = this._showAIChat && this._showAIChatWindow && this.isSmallWindow;
+        this.snChatMask.classList.toggle('active', shouldShowMask);
+    }
+
     _refreshPanelCheckboxStates(panel) {
         if (!panel || !this._toolbarBuilder) return;
         const checkboxes = panel.querySelectorAll('input[type="checkbox"]');
@@ -425,49 +447,32 @@ export default class Layout {
         return null;
     }
 
-    /** @param {boolean} enabled */
-    toggleMinimalToolbar(enabled) {
-        const nextEnabled = !!enabled;
-        if (!nextEnabled && this._toolbarModeLocked) {
-            this._syncMinimalToolbarCheckboxUI();
-            return;
-        }
-
-        this._userToolbarMode = nextEnabled ? 'minimal' : 'pro';
-        this._setToolbarMode(this._userToolbarMode);
-        this._syncMinimalToolbarCheckboxUI();
-    }
-
-    /** @param {boolean} enabled */
-    toggleMinimalToolbarText(enabled) {
-        this._setMinimalToolbarTextEnabled(enabled);
-        this._syncMinimalToolbarCheckboxUI();
-        this._scheduleToolbarAdaptiveLayout();
-    }
-
     _setMinimalToolbarTextEnabled(enabled) {
         const nextEnabled = !!enabled;
         this._minimalToolbarTextEnabled = nextEnabled;
         this.SN.containerDom.classList.toggle('sn-toolbar-minimal-text', nextEnabled);
     }
 
-    _syncToolbarModeByWidth(width = this.SN.containerDom.offsetWidth) {
+    _applyMinimalToolbarState() {
+        this._setMinimalToolbarEnabled(this._isMinimalToolbarLocked || this._userMinimalToolbarEnabled);
+    }
+
+    _syncMinimalToolbarByWidth(width = this.SN.containerDom.offsetWidth) {
         const shouldLock = width < 1400;
-        this._toolbarModeLocked = shouldLock;
-        const nextMode = shouldLock ? 'minimal' : this._userToolbarMode;
-        this._setToolbarMode(nextMode);
+        this._isMinimalToolbarLocked = shouldLock;
+        this._applyMinimalToolbarState();
         this._syncMinimalToolbarCheckboxUI();
     }
 
-    _setToolbarMode(mode) {
-        const normalized = mode === 'minimal' ? 'minimal' : 'pro';
-        if (this._toolbarMode === normalized) {
+    _setMinimalToolbarEnabled(enabled) {
+        const nextEnabled = !!enabled;
+        if (this._minimalToolbarEnabled === nextEnabled) {
             this._scheduleToolbarAdaptiveLayout();
             return;
         }
 
-        this._toolbarMode = normalized;
-        this.SN.containerDom.classList.toggle('sn-toolbar-minimal', normalized === 'minimal');
+        this._minimalToolbarEnabled = nextEnabled;
+        this.SN.containerDom.classList.toggle('sn-toolbar-minimal', nextEnabled);
         this._scheduleToolbarAdaptiveLayout();
         requestAnimationFrame(() => this.updateCanvasSize());
     }
@@ -483,16 +488,15 @@ export default class Layout {
     _syncMenuMinimalToggleUI() {
         const menuToggle = this.SN.containerDom.querySelector('.sn-menu-minimal-toggle input[data-role="menu-minimal-toolbar-toggle"]');
         if (!menuToggle) return;
-        const isMinimal = this._toolbarMode === 'minimal';
-        menuToggle.checked = isMinimal;
-        menuToggle.disabled = this._toolbarModeLocked && isMinimal;
+        menuToggle.checked = this._minimalToolbarEnabled;
+        menuToggle.disabled = this._isMinimalToolbarLocked;
     }
 
     _bindMenuRightEvents() {
         const menuToggle = this.SN.containerDom.querySelector('.sn-menu-minimal-toggle input[data-role="menu-minimal-toolbar-toggle"]');
         if (!menuToggle) return;
         menuToggle.addEventListener('change', () => {
-            this.toggleMinimalToolbar(menuToggle.checked);
+            this.minimalToolbarEnabled = menuToggle.checked;
         });
     }
 
@@ -509,7 +513,18 @@ export default class Layout {
 
             const panelName = item.dataset.panel;
             const tab = menuList.querySelector('.sn-menu-tab[data-panel="' + panelName + '"]');
-            if (tab) this._switchToTab(tab);
+            if (tab) this._handleMenuTabClick(tab, e);
+        });
+
+        menuList.addEventListener('mousedown', (e) => {
+            const toggle = e.target.closest('.sn-tab-overflow > .sn-dropdown-toggle');
+            if (!toggle || !menuList.contains(toggle)) return;
+            const host = toggle.closest('.sn-tab-overflow');
+            if (!host) return;
+
+            requestAnimationFrame(() => {
+                if (host.classList.contains('active')) this._positionTabOverflowMenu(host);
+            });
         });
 
         this.SN.containerDom.addEventListener('mousedown', (e) => {
@@ -541,6 +556,12 @@ export default class Layout {
                 if (!host.contains(e.target)) host.classList.remove('active');
             });
         });
+
+        window.addEventListener('resize', () => {
+            const host = this.SN.containerDom.querySelector('.sn-tab-overflow.active');
+            if (!host) return;
+            requestAnimationFrame(() => this._positionTabOverflowMenu(host));
+        });
     }
 
     _scheduleToolbarAdaptiveLayout() {
@@ -555,7 +576,7 @@ export default class Layout {
     }
 
     _applyToolbarAdaptiveLayout() {
-        if (this._toolbarMode !== 'minimal') {
+        if (!this._minimalToolbarEnabled) {
             this._restoreTabOverflow();
             this._restoreAllPanelOverflow();
             return;
@@ -590,6 +611,40 @@ export default class Layout {
         return host;
     }
 
+    _positionTabOverflowMenu(host) {
+        const menu = host?.querySelector('.sn-tab-overflow-menu');
+        if (!menu) return;
+
+        const hostRect = host.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const safeGap = 8;
+        const gap = 4;
+
+        menu.style.position = 'fixed';
+        menu.style.marginTop = '0';
+        menu.style.marginBottom = '0';
+        menu.style.left = '0';
+        menu.style.top = '0';
+        menu.style.right = '';
+        menu.style.bottom = '';
+        menu.style.maxHeight = Math.max(160, viewportHeight - safeGap * 2) + 'px';
+
+        const menuWidth = Math.max(menu.offsetWidth, 140);
+        const menuHeight = menu.offsetHeight;
+
+        const maxLeft = Math.max(safeGap, viewportWidth - menuWidth - safeGap);
+        const left = Math.min(maxLeft, Math.max(safeGap, hostRect.right - menuWidth));
+
+        let top = hostRect.bottom + gap;
+        if (top + menuHeight > viewportHeight - safeGap) {
+            top = Math.max(safeGap, hostRect.top - menuHeight - gap);
+        }
+
+        menu.style.left = Math.round(left) + 'px';
+        menu.style.top = Math.round(top) + 'px';
+    }
+
     _restoreTabOverflow() {
         const menuList = this.SN.containerDom.querySelector('.sn-menu-list');
         if (!menuList) return;
@@ -606,6 +661,7 @@ export default class Layout {
 
         const menu = host.querySelector('.sn-tab-overflow-menu');
         if (menu) menu.innerHTML = '';
+        host.classList.remove('active', 'closing');
         host.style.display = 'none';
     }
 
@@ -660,12 +716,20 @@ export default class Layout {
             const item = document.createElement('li');
             item.dataset.panel = tab.dataset.panel || '';
             item.textContent = (tab.textContent || '').trim();
-            if (tab.classList.contains('active')) item.classList.add('active');
+            Array.from(tab.classList)
+                .filter(className => className !== 'sn-menu-tab')
+                .forEach(className => item.classList.add(className));
             overflowMenu.appendChild(item);
         });
 
         if (!hidden.length) {
             host.style.display = 'none';
+            host.classList.remove('active', 'closing');
+            return;
+        }
+
+        if (host.classList.contains('active')) {
+            requestAnimationFrame(() => this._positionTabOverflowMenu(host));
         }
     }
 
@@ -1610,10 +1674,40 @@ export default class Layout {
         this._scheduleToolbarAdaptiveLayout();
     }
 
+    _handleMenuTabClick(tab, event) {
+        const panelName = tab?.dataset?.panel;
+        if (!panelName) return false;
+
+        const tabConfig = this._toolbarBuilder?.config?.find(panel => panel.key === panelName);
+        if (!tabConfig) return false;
+
+        if (tabConfig.trigger === 'action') {
+            this._runMenuTabAction(tabConfig.action, tab, event);
+            return true;
+        }
+
+        this._switchToTab(tab);
+        return true;
+    }
+
+    _runMenuTabAction(action, target, event) {
+        if (typeof action !== 'string' || !action.trim()) return;
+
+        try {
+            const executor = new Function('event', action);
+            executor.call(target || this.SN.containerDom, event);
+        } catch (error) {
+            console.error('SheetNext menu action tab failed:', error);
+        }
+    }
+
     _switchToTab(tab) {
         const menuList = tab.parentElement;
         const tools = this.SN.containerDom.querySelector('.sn-tools');
         const panelName = tab.dataset.panel;
+        const tabConfig = this._toolbarBuilder?.config?.find(panel => panel.key === panelName);
+
+        if (tabConfig?.trigger === 'action') return;
 
         // 更新标签状态
         menuList.querySelectorAll('.sn-menu-tab').forEach(t => t.classList.remove('active'));
@@ -1762,6 +1856,7 @@ export default class Layout {
         this.snFormulaBar = this.SN.containerDom.querySelector('.sn-input');
         this.snSheetTabBar = this.SN.containerDom.querySelector('.sn-sheets');
         this.snChat = this.SN.containerDom.querySelector('.sn-chat');
+        this.snChatMask = this.SN.containerDom.querySelector('.sn-chat-mask');
         this.snMain = this.SN.containerDom.querySelector('.sn-main');
         this.snOp = this.SN.containerDom.querySelector('.sn-op');
         this.snCanvas = this.SN.containerDom.querySelector('.sn-canvas');
@@ -1787,7 +1882,7 @@ export default class Layout {
 
         this._bindMenuRightEvents();
         this._bindMinimalToolbarEvents();
-        this._syncToolbarModeByWidth(this.SN.containerDom.offsetWidth);
+        this._syncMinimalToolbarByWidth(this.SN.containerDom.offsetWidth);
         this._scheduleToolbarAdaptiveLayout();
     }
 }

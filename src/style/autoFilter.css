@@ -147,6 +147,79 @@
     font-size: 11px;
 }
 
+.sn-filter-tree-section-title {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+}
+
+.sn-filter-tree-children {
+    display: block;
+}
+
+.sn-filter-tree-toggle {
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    color: #666;
+    cursor: pointer;
+    line-height: 18px;
+    flex: 0 0 18px;
+    position: relative;
+    border-radius: 3px;
+}
+
+.sn-filter-tree-toggle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 1.8px solid currentColor;
+    border-bottom: 1.8px solid currentColor;
+    transform: translate(-60%, -50%) rotate(45deg);
+    transition: transform 0.12s ease, color 0.12s ease;
+}
+
+.sn-filter-tree-toggle:hover {
+    color: #355db3;
+    background: #eef3ff;
+}
+
+.sn-filter-tree-toggle.collapsed::before {
+    transform: translate(-70%, -50%) rotate(-45deg);
+}
+
+.sn-filter-tree-toggle-placeholder {
+    display: inline-block;
+    width: 18px;
+    flex: 0 0 18px;
+    visibility: hidden;
+}
+
+.sn-filter-tree-item.level-0 {
+    padding-left: 12px;
+}
+
+.sn-filter-tree-item.level-1 {
+    padding-left: 28px;
+}
+
+.sn-filter-tree-item.level-2 {
+    padding-left: 44px;
+}
+
+.sn-filter-tree-item label,
+.sn-filter-mixed-item label {
+    flex: 1;
+}
+
 .sn-filter-footer {
     padding: 8px 12px;
     border-top: 1px solid #e5e5e5;

@@ -530,21 +530,10 @@ export function baseMousedown(event) {
     if (!this.inputEditing) this.r('s')
     // #endregion
 
-    // 检查是否点击了透视表区域（使用单元格索引判断，更可靠）
-    const clickedPivotTable = getPivotTableByCellIndex(sheet, start.r, start.c);
-    if (clickedPivotTable) {
-        this.SN.Layout?.updateContextualToolbar({
-            type: 'pivotTable',
-            data: clickedPivotTable,
-            autoSwitch: true
-        });
-        this.SN.Layout?.autoOpenPivotPanel(clickedPivotTable);
-    } else {
-        // 点击了透视表区域外，关闭面板
-        this.SN.Layout?.closePivotPanel?.();
-    }
+    // Detect whether the click is inside a pivot table area.
+    this.SN.Layout?.closePivotPanel?.();
 
-    areaSel.call(this, start, left, top, width, height) // 区域选择
+    areaSel.call(this, start, left, top, width, height) // Range selection
 }
 
 export function rightDown(event) {

@@ -1,6 +1,5 @@
 import { CELL_TYPES } from './constants.js';
 import { compareValue, dateTrans, numFmtFun, dateStrToDate, formatValue } from './helpers.js';
-import { buildCellXml } from './xmlBuilder.js';
 
 function _inferDateValueType(value, numFmt) {
     const format = (numFmt ?? "").replaceAll('[Red]', '').toLowerCase();
@@ -1012,18 +1011,6 @@ export default class Cell {
         });
     }
 
-    /**
-     * Build Cell XML
-     * @type {Object}     */
-    /**
-     * Build Cell XML
-     * @type {Object}     */
-
-    get buildXml() { return buildCellXml(this); }
-
-    /**
-     * Do you need to build XML
-     * @type {boolean}     */
     /**
      * Do you need to build XML
      * @type {boolean}     */
