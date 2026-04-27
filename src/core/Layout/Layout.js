@@ -8,6 +8,7 @@ import * as DOMBuilder from './DOMBuilder.js';
 import * as ResizeHandler from './ResizeHandler.js';
 import * as DragHandler from './DragHandler.js';
 import * as EventManager from './EventManager.js';
+import * as SheetTabs from './SheetTabs.js';
 import * as MenuConfig from './MenuConfig.js';
 import { initToolsEvents, refreshActiveButtons as refreshActiveButtonsFn, refreshDisabledToolbarItems as refreshDisabledToolbarItemsFn, syncToolbarState } from './ToolbarBuilder.js';
 import getSvg from '../../assets/mainSvgs.js';
@@ -1901,5 +1902,15 @@ Object.assign(Layout.prototype, {
     // 事件管理
     initEventListeners: EventManager.initEventListeners,
     initColorComponents: EventManager.initColorComponents,
-    removeLoading: EventManager.removeLoading
+    removeLoading: EventManager.removeLoading,
+
+    // Worksheet tab handling
+    _initSheetTabEvents: SheetTabs._initSheetTabEvents,
+    _activateSheetTab: SheetTabs._activateSheetTab,
+    _showSheetTabContextMenu: SheetTabs._showSheetTabContextMenu,
+    _handleSheetTabMenuClick: SheetTabs._handleSheetTabMenuClick,
+    _beginSheetTabRename: SheetTabs._beginSheetTabRename,
+    _openUnhideSheetDialog: SheetTabs._openUnhideSheetDialog,
+    _openMoveSheetDialog: SheetTabs._openMoveSheetDialog,
+    _positionSheetTabContextMenu: SheetTabs._positionSheetTabContextMenu
 });

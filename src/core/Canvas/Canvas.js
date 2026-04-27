@@ -12,9 +12,13 @@ import * as FilterRenderer from './FilterRenderer.js';
 import * as PivotTableRenderer from './PivotTableRenderer.js';
 import FilterPanel from '../AutoFilter/FilterPanel.js';
 import LazyDOM from '../Layout/LazyDOM.js';
+import { _layerZIndex } from '../Layout/LayerConfig.js';
 
-const INPUT_VISIBLE_Z_INDEX = '999';
+const INPUT_VISIBLE_Z_INDEX = String(_layerZIndex.cellEditor);
 const INPUT_HIDDEN_Z_INDEX = '-1';
+const SCROLL_INERTIA_MIN_VELOCITY = 0.018;
+const SCROLL_INERTIA_DECAY = 0.94;
+const SCROLL_INERTIA_FRAME_MS = 16.67;
 
 const _clm = new WeakMap();
 export const _cgl = (canvas) => _clm.get(canvas);
@@ -78,6 +82,13 @@ export default class Canvas {
          * @type {HTMLCanvasElement}
          */
         this.showLayerKZ = document.createElement('canvas');
+        /**
+         * Scroll loading skeleton layer
+         * @type {HTMLCanvasElement}
+         */
+        this.scrollSkeletonLayer = document.createElement('canvas');
+        this.scrollSkeletonLayer.className = 'sn-scroll-skeleton-layer';
+        this.dom.insertBefore(this.scrollSkeletonLayer, this.handleLayer);
         /**
          * Brush preview canvas
          * @type {HTMLCanvasElement}
@@ -173,6 +184,7 @@ export default class Canvas {
          * @type {HTMLElement}
          */
         this.drawingsCon = SN.containerDom.querySelector('.sn-drawings-con')
+        this.middleLayer = SN.containerDom.querySelector('.sn-middle-layer')
         /**
          * Slicer Container
          * @type {HTMLElement}
@@ -189,6 +201,19 @@ export default class Canvas {
          * @type {number}
          */
         this.maxLeft = 0;
+        this._renderOverscan = 128;
+        this._scrollRenderRaf = null;
+        this._scrollPreviewing = false;
+        this._renderedScrollLeft = 0;
+        this._renderedScrollTop = 0;
+        this._scrollInertiaRaf = null;
+        this._scrollInertiaLastTime = 0;
+        this._scrollInertiaVelocityX = 0;
+        this._scrollInertiaVelocityY = 0;
+        this._lastTouchTap = null;
+        this._touchSelectionInfo = null;
+        this._touchSelectionToastAt = 0;
+        this._ignoreTouchMouseUntil = 0;
 
         /**
          * Lazy loading Dom manager
@@ -311,7 +336,7 @@ export default class Canvas {
         this.dpr = window.devicePixelRatio || 1;
         const { clientWidth: w, clientHeight: h } = this.dom;
         const hasViewport = this.dom.isConnected && w > 0 && h > 0;
-        [this.showLayer, this.handleLayer, this.buffer, this.showLayerKZ].forEach(canvas => {
+        [this.showLayer, this.handleLayer, this.buffer, this.showLayerKZ, this.scrollSkeletonLayer].forEach(canvas => {
             const canvasWidth = hasViewport ? w * this.dpr : 0;
             const canvasHeight = hasViewport ? h * this.dpr : 0;
             canvas.width = canvasWidth;
@@ -326,6 +351,7 @@ export default class Canvas {
         this.ctx = this.showLayer.getContext('2d');
         this.ctxKZ = this.showLayerKZ.getContext('2d'); // 快照1
         this.HDctx = this.handleLayer.getContext('2d');
+        this.SKctx = this.scrollSkeletonLayer.getContext('2d');
 
         if (!hasViewport) return false;
 
@@ -517,27 +543,23 @@ export default class Canvas {
      * @returns {{c: number, r: number}}
      */
     getCellIndexByPosition(x, y) {
-        let cellX = this.activeSheet.indexWidth;
-        let cellY = this.activeSheet.headHeight;
         let clickedRow = -1;
-
-        this.activeSheet.vi.rowsIndex.forEach(rowIndex => {
-            const rowHeight = this.activeSheet.getRow(rowIndex).height;
-            if (y >= cellY && y < cellY + rowHeight && clickedRow === -1) {
-                clickedRow = rowIndex;
+        const rowLayouts = this.activeSheet.vi.rowLayouts || [];
+        for (const row of rowLayouts) {
+            if (y >= row.y && y < row.y + row.h) {
+                clickedRow = row.index;
+                break;
             }
-            cellY += rowHeight;
-        });
+        }
 
         let clickedCol = -1;
-        cellX = this.activeSheet.indexWidth;
-        this.activeSheet.vi.colsIndex.forEach(colIndex => {
-            const colWidth = this.activeSheet.getCol(colIndex).width;
-            if (x >= cellX && x < cellX + colWidth && clickedCol === -1) {
-                clickedCol = colIndex;
+        const colLayouts = this.activeSheet.vi.colLayouts || [];
+        for (const col of colLayouts) {
+            if (x >= col.x && x < col.x + col.w) {
+                clickedCol = col.index;
+                break;
             }
-            cellX += colWidth;
-        });
+        }
 
         if (clickedCol == -1 && x >= this.activeSheet.vi.w) clickedCol = this.activeSheet.vi.colsIndex[this.activeSheet.vi.colsIndex.length - 1]
         if (clickedRow == -1 && y >= this.activeSheet.vi.h) clickedRow = this.activeSheet.vi.rowsIndex[this.activeSheet.vi.rowsIndex.length - 1];
@@ -603,8 +625,10 @@ export default class Canvas {
         const sheet = this.activeSheet;
         if (!sheet) return;
 
-        const viewH = Math.max(0, this.viewHeight - sheet.headHeight);
-        const viewW = Math.max(0, this.viewWidth - sheet.indexWidth);
+        const frozenH = Math.max(0, (sheet.vi?.fh ?? sheet.headHeight) - sheet.headHeight);
+        const frozenW = Math.max(0, (sheet.vi?.fw ?? sheet.indexWidth) - sheet.indexWidth);
+        const viewH = Math.max(1, this.viewHeight - sheet.headHeight - frozenH);
+        const viewW = Math.max(1, this.viewWidth - sheet.indexWidth - frozenW);
         const totalH = sheet.getTotalHeight();
         const totalW = sheet.getTotalWidth();
 
@@ -612,8 +636,8 @@ export default class Canvas {
         const trackW = this.rollX.offsetWidth;
 
 
-        const yRatio = Math.min(0.3, viewH / totalH);
-        const xRatio = Math.min(0.3, viewW / totalW);
+        const yRatio = Math.min(0.3, viewH / Math.max(1, totalH));
+        const xRatio = Math.min(0.3, viewW / Math.max(1, totalW));
 
         const scrollBarH = Math.max(30, trackH * yRatio);
         const scrollBarW = Math.max(30, trackW * xRatio);
@@ -652,6 +676,279 @@ export default class Canvas {
         applyBounds(this.drawingsCon);
     }
 
+    _drawScrollSkeleton(translateX = 0, translateY = 0, forceFull = false) {
+        if (!this.SKctx || !this.scrollSkeletonLayer) return;
+        const ctx = this.SKctx;
+        const width = this.scrollSkeletonLayer.width;
+        const height = this.scrollSkeletonLayer.height;
+        if (width <= 0 || height <= 0) return;
+
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        const dpr = this.dpr || 1;
+        const sheet = this.activeSheet;
+        const zoom = sheet?.zoom ?? 1;
+        const bodyLeft = Math.round((sheet?.indexWidth || 0) * zoom * dpr);
+        const bodyTop = Math.round((sheet?.headHeight || 0) * zoom * dpr);
+        const bodyWidth = Math.max(0, width - bodyLeft);
+        const bodyHeight = Math.max(0, height - bodyTop);
+        const regions = [];
+        const dx = Math.round(translateX * dpr);
+        const dy = Math.round(translateY * dpr);
+        const pushRegion = (x, y, w, h) => {
+            const left = Math.max(0, Math.round(x));
+            const top = Math.max(0, Math.round(y));
+            const right = Math.min(width, Math.round(x + w));
+            const bottom = Math.min(height, Math.round(y + h));
+            if (right > left && bottom > top) {
+                regions.push({ x: left, y: top, w: right - left, h: bottom - top });
+            }
+        };
+
+        if (forceFull || Math.abs(dx) >= width || Math.abs(dy) >= height) {
+            pushRegion(bodyLeft, bodyTop, bodyWidth, bodyHeight);
+        } else {
+            if (dx > 0) pushRegion(bodyLeft, bodyTop, dx, bodyHeight);
+            if (dx < 0) pushRegion(width + dx, bodyTop, -dx, bodyHeight);
+            if (dy > 0) pushRegion(bodyLeft, bodyTop, bodyWidth, dy);
+            if (dy < 0) pushRegion(bodyLeft, height + dy, bodyWidth, -dy);
+        }
+
+        if (!regions.length) {
+            this.scrollSkeletonLayer.style.display = 'none';
+            ctx.restore();
+            return;
+        }
+
+        this.scrollSkeletonLayer.style.display = 'block';
+        regions.forEach(region => {
+            ctx.fillStyle = '#f7f8fa';
+            ctx.fillRect(region.x, region.y, region.w, region.h);
+        });
+        this._drawScrollPreviewHeaders(ctx);
+        ctx.restore();
+    }
+
+    _drawScrollPreviewHeaders(ctx) {
+        const sheet = this.activeSheet;
+        if (!sheet?.vi) return;
+
+        const dpr = this.dpr || 1;
+        const scale = dpr * (sheet.zoom ?? 1);
+        const viewWidth = this.viewWidth;
+        const viewHeight = this.viewHeight;
+        const indexWidth = sheet.indexWidth;
+        const headHeight = sheet.headHeight;
+        const rowLayouts = sheet.vi.rowLayouts || [];
+        const colLayouts = sheet.vi.colLayouts || [];
+
+        ctx.save();
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, viewWidth, headHeight);
+        ctx.fillRect(0, 0, indexWidth, viewHeight);
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1 / scale;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+
+        ctx.beginPath();
+        ctx.moveTo(indexWidth / 2, headHeight - 5);
+        ctx.lineTo(indexWidth - 5, 3);
+        ctx.lineTo(indexWidth - 5, headHeight - 5);
+        ctx.fillStyle = '#ccc';
+        ctx.fill();
+        ctx.strokeStyle = '#ccc';
+        ctx.strokeRect(0, 0, indexWidth, headHeight);
+
+        ctx.font = '13px Arial';
+        colLayouts.forEach(({ index: c, x, w, frozen }) => {
+            if (x === 0) return;
+            const clipLeft = frozen ? indexWidth : sheet.vi.fw;
+            const clipRight = frozen ? sheet.vi.fw : viewWidth;
+            const drawLeft = Math.max(clipLeft, x);
+            const drawRight = Math.min(clipRight, x + w);
+            if (drawRight <= drawLeft) return;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(clipLeft, 0, clipRight - clipLeft, headHeight);
+            ctx.clip();
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(x, 0, w, headHeight);
+            ctx.strokeStyle = '#ccc';
+            ctx.strokeRect(x, 0, w, headHeight);
+            ctx.fillStyle = '#333';
+            ctx.fillText(this.Utils.numToChar(c), x + w / 2, headHeight / 2 + 2);
+            ctx.restore();
+        });
+
+        ctx.font = '14.6px Arial';
+        rowLayouts.forEach(({ index: r, y, h, frozen }) => {
+            if (y === 0) return;
+            const clipTop = frozen ? headHeight : sheet.vi.fh;
+            const clipBottom = frozen ? sheet.vi.fh : viewHeight;
+            const drawTop = Math.max(clipTop, y);
+            const drawBottom = Math.min(clipBottom, y + h);
+            if (drawBottom <= drawTop) return;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, clipTop, indexWidth, clipBottom - clipTop);
+            ctx.clip();
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, y, indexWidth, h);
+            ctx.strokeStyle = '#ccc';
+            ctx.strokeRect(0, y, indexWidth, h);
+            ctx.fillStyle = '#333';
+            ctx.fillText(r + 1, indexWidth / 2, y + h / 2 + 2);
+            ctx.restore();
+        });
+        ctx.restore();
+    }
+
+    _hideScrollSkeleton() {
+        if (!this.scrollSkeletonLayer || !this.SKctx) return;
+        this.scrollSkeletonLayer.style.display = 'none';
+        this.SKctx.save();
+        this.SKctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.SKctx.clearRect(0, 0, this.scrollSkeletonLayer.width, this.scrollSkeletonLayer.height);
+        this.SKctx.restore();
+    }
+
+    _applyScrollPreview(forceFullSkeleton = false) {
+        const sheet = this.activeSheet;
+        if (!sheet?.vi) return;
+        const zoom = sheet.zoom ?? 1;
+        const translateX = (this._renderedScrollLeft - (sheet.vi.scrollLeft ?? 0)) * zoom;
+        const translateY = (this._renderedScrollTop - (sheet.vi.scrollTop ?? 0)) * zoom;
+        const shouldPreview = Math.abs(translateX) > 0.5 || Math.abs(translateY) > 0.5;
+        const transform = shouldPreview ? `translate3d(${translateX}px, ${translateY}px, 0)` : '';
+        const clipPath = shouldPreview
+            ? `inset(${sheet.headHeight * zoom}px 0px 0px ${sheet.indexWidth * zoom}px)`
+            : '';
+
+        this.showLayer.style.transform = transform;
+        this.showLayer.style.clipPath = clipPath;
+        this._scrollPreviewing = shouldPreview;
+
+        if (shouldPreview) {
+            this._drawScrollSkeleton(translateX, translateY, forceFullSkeleton);
+        } else {
+            this._hideScrollSkeleton();
+        }
+    }
+
+    _resetScrollPreview(syncRendered = true) {
+        this.showLayer.style.transform = '';
+        this.showLayer.style.clipPath = '';
+        this._scrollPreviewing = false;
+        this._hideScrollSkeleton();
+        if (syncRendered && this.activeSheet?.vi) {
+            this._renderedScrollLeft = this.activeSheet.vi.scrollLeft ?? 0;
+            this._renderedScrollTop = this.activeSheet.vi.scrollTop ?? 0;
+        }
+    }
+
+    _cancelScrollRenderRequest() {
+        if (this._scrollRenderRaf) {
+            cancelAnimationFrame(this._scrollRenderRaf);
+            this._scrollRenderRaf = null;
+        }
+    }
+
+    _requestScrollRender(options = {}) {
+        if (this._scrollRenderRaf) return;
+        this._scrollRenderRaf = requestAnimationFrame(() => {
+            this._scrollRenderRaf = null;
+            this.r(options.snapshot ? 's' : undefined);
+        });
+    }
+
+    _stopScrollInertia() {
+        if (this._scrollInertiaRaf) {
+            cancelAnimationFrame(this._scrollInertiaRaf);
+            this._scrollInertiaRaf = null;
+        }
+        this._scrollInertiaLastTime = 0;
+        this._scrollInertiaVelocityX = 0;
+        this._scrollInertiaVelocityY = 0;
+    }
+
+    _startScrollInertia(velocityX = 0, velocityY = 0) {
+        this._stopScrollInertia();
+        this._scrollInertiaVelocityX = velocityX;
+        this._scrollInertiaVelocityY = velocityY;
+        this._scrollInertiaLastTime = performance.now();
+
+        const step = (now) => {
+            this._scrollInertiaRaf = null;
+            const sheet = this.activeSheet;
+            if (!sheet?.vi || this.disableScroll) {
+                this._stopScrollInertia();
+                return;
+            }
+
+            const speed = Math.max(Math.abs(this._scrollInertiaVelocityX), Math.abs(this._scrollInertiaVelocityY));
+            if (speed < SCROLL_INERTIA_MIN_VELOCITY) {
+                this._stopScrollInertia();
+                this.r();
+                return;
+            }
+
+            const dt = Math.max(1, Math.min(34, now - this._scrollInertiaLastTime));
+            this._scrollInertiaLastTime = now;
+            const beforeLeft = sheet.vi.scrollLeft ?? 0;
+            const beforeTop = sheet.vi.scrollTop ?? 0;
+            const moved = this.scrollByPixels(
+                this._scrollInertiaVelocityX * dt,
+                this._scrollInertiaVelocityY * dt,
+                { fast: speed > 0.35 }
+            );
+            const afterLeft = sheet.vi.scrollLeft ?? 0;
+            const afterTop = sheet.vi.scrollTop ?? 0;
+
+            if (!moved) {
+                this._stopScrollInertia();
+                this.r();
+                return;
+            }
+
+            if (Math.abs(afterLeft - beforeLeft) < 0.01) this._scrollInertiaVelocityX = 0;
+            if (Math.abs(afterTop - beforeTop) < 0.01) this._scrollInertiaVelocityY = 0;
+
+            const decay = Math.pow(SCROLL_INERTIA_DECAY, dt / SCROLL_INERTIA_FRAME_MS);
+            this._scrollInertiaVelocityX *= decay;
+            this._scrollInertiaVelocityY *= decay;
+            this._scrollInertiaRaf = requestAnimationFrame(step);
+        };
+
+        this._scrollInertiaRaf = requestAnimationFrame(step);
+    }
+
+    scrollByPixels(deltaX = 0, deltaY = 0, options = {}) {
+        const sheet = this.activeSheet;
+        if (!sheet) return false;
+        if (!sheet.vi) sheet._updView();
+        const nextLeft = (sheet.vi.scrollLeft ?? sheet.getScrollLeft(sheet.vi.colArr?.[0] ?? 0)) + deltaX;
+        const nextTop = (sheet.vi.scrollTop ?? sheet.getScrollTop(sheet.vi.rowArr?.[0] ?? 0)) + deltaY;
+        return this.scrollToPixels(nextLeft, nextTop, options);
+    }
+
+    scrollToPixels(scrollLeft, scrollTop, options = {}) {
+        const sheet = this.activeSheet;
+        if (!sheet) return false;
+        const changed = sheet._setViewScroll(scrollLeft, scrollTop, this.viewWidth, this.viewHeight);
+        if (!changed && !options.force) return false;
+        this.updateScrollBarSize();
+        this.updateScrollBar();
+        this.updateOverlayContainers();
+        this._applyScrollPreview(!!options.fullSkeleton);
+        this._requestScrollRender(options);
+        return true;
+    }
+
 
     /**
      * Update scrollbar position
@@ -664,20 +961,28 @@ export default class Canvas {
         const totalH = sheet.getTotalHeight();
         const totalW = sheet.getTotalWidth();
 
-        const lastRowH = sheet.getRow(sheet.rowCount - 1)?.height || 0;
-        const lastColW = sheet.getCol(sheet.colCount - 1)?.width || 0;
+        const frozenH = Math.max(0, (sheet.vi.fh ?? sheet.headHeight) - sheet.headHeight);
+        const frozenW = Math.max(0, (sheet.vi.fw ?? sheet.indexWidth) - sheet.indexWidth);
+        const bodyH = Math.max(1, this.viewHeight - sheet.headHeight - frozenH);
+        const bodyW = Math.max(1, this.viewWidth - sheet.indexWidth - frozenW);
+        const minTop = sheet.getScrollTop(sheet._frozenRows || 0);
+        const minLeft = sheet.getScrollLeft(sheet._frozenCols || 0);
+        const maxScrollTop = Math.max(minTop, totalH - bodyH);
+        const maxScrollLeft = Math.max(minLeft, totalW - bodyW);
 
 
-        const scrollableH = Math.max(0, totalH - lastRowH);
-        const scrollableW = Math.max(0, totalW - lastColW);
+        const scrollTop = sheet.vi.scrollTop ?? sheet.getScrollTop(sheet.vi.rowArr[0]);
+        const scrollLeft = sheet.vi.scrollLeft ?? sheet.getScrollLeft(sheet.vi.colArr[0]);
+        const topProgress = maxScrollTop > minTop ? (scrollTop - minTop) / (maxScrollTop - minTop) : 0;
+        const leftProgress = maxScrollLeft > minLeft ? (scrollLeft - minLeft) / (maxScrollLeft - minLeft) : 0;
+        const top = topProgress * this.maxTop;
+        const left = leftProgress * this.maxLeft;
 
         // 当前滚动位置
-        const scrollTop = sheet.getScrollTop(sheet.vi.rowArr[0]);
-        const scrollLeft = sheet.getScrollLeft(sheet.vi.colArr[0]);
 
 
-        const top = scrollableH > 0 ? (scrollTop / scrollableH) * this.maxTop : 0;
-        const left = scrollableW > 0 ? (scrollLeft / scrollableW) * this.maxLeft : 0;
+
+
 
         this.rollYS.style.transform = `translateY(${Math.min(top, this.maxTop)}px)`;
         this.rollXS.style.transform = `translateX(${Math.min(left, this.maxLeft)}px)`;
@@ -689,7 +994,16 @@ export default class Canvas {
         if (Object.keys(this.mpBorder).length < 1) return
         const { x, y, w, h, inView } = sheet.getAreaInviewInfo(this.mpBorder)
         if (!inView) return
+        const clipX = sheet.indexWidth;
+        const clipY = sheet.headHeight;
+        const clipW = this.viewWidth - clipX;
+        const clipH = this.viewHeight - clipY;
+        if (clipW <= 0 || clipH <= 0) return;
         const rect = this.snapRect(x, y, w, h);
+        this.bc.save();
+        this.bc.beginPath();
+        this.bc.rect(clipX, clipY, clipW, clipH);
+        this.bc.clip();
         const dash = this.px(5);
         this.bc.beginPath();
         this.bc.lineWidth = this.px(1.5);
@@ -699,6 +1013,7 @@ export default class Canvas {
         this.bc.closePath();
         this.bc.lineWidth = this.px(1);
         this.bc.setLineDash([]);
+        this.bc.restore();
     }
 
     #rFreezeLine(sheet) {
@@ -810,6 +1125,7 @@ export default class Canvas {
      */
     async r(type, options = {}) {
         const _startTime = performance.now();
+        this._cancelScrollRenderRequest();
 
         const isScreenshot = !!options.targetCanvas;
         const originalDpr = this.dpr;
@@ -841,7 +1157,6 @@ export default class Canvas {
                         this.r(this._rDirtyType);
                     }
                 });
-                this.ctx.clearRect(0, 0, this.showLayer.width, this.showLayer.height); // 清除显示画布
             } else {
 
                 sheet = options.sheet || this.activeSheet;
@@ -864,6 +1179,7 @@ export default class Canvas {
             if (type == 's') {
                 this.ctx.drawImage(this.showLayerKZ, 0, 0);
                 this.rIndex(sheet);
+                if (!isScreenshot) this._resetScrollPreview(true);
                 this._updateStats();
                 return
             }
@@ -933,6 +1249,7 @@ export default class Canvas {
                 // 更新滚动条尺寸和位置
                 this.updateScrollBarSize();
                 this.updateScrollBar();
+                this._resetScrollPreview(true);
             }
 
             // -------------------- 平均3毫秒每次渲染 --------------------
@@ -1052,8 +1369,10 @@ Canvas.prototype._initAreaSelector = function() {
 
         // 不在可视区域内才滚动
         if (!inView) {
-            targetSheet.vi.rowArr[0] = Math.max(0, rangeObj.s.r - 2);
-            targetSheet.vi.colArr[0] = Math.max(0, rangeObj.s.c - 1);
+            targetSheet.viewStart = {
+                r: Math.max(0, rangeObj.s.r - 2),
+                c: Math.max(0, rangeObj.s.c - 1)
+            };
         }
 
         // 设置选区

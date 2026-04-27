@@ -1,20 +1,18 @@
 /**
- * Insert Table Module
- * Capable of processing the insertion of table data from a given location
+ * Insert Template Module
+ * Capable of processing the insertion of template data from a given location.
  */
 
-/**
- * Insert Table Module
- * Capable of processing the insertion of table data from a given location
- */
+const INSERT_TABLE_DEPRECATION_DATE = '2026-05-27';
+let insertTableDeprecatedWarned = false;
 
 /**
- * Insert a table from the given position
- * @param {Array} arr - Table data array
+ * Insert a template from the given position.
+ * @param {Array} arr - Template data array
  * @param {Object|String} pos - Insert Location
  * @param {Object} options - Configure Options
  */
-export function insertTable(arr, pos, options = {}) {
+export function insertTemplate(arr, pos, options = {}) {
     if (!Array.isArray(arr) || !pos) return;
     if (typeof pos == 'string') pos = this.Utils.cellStrToNum(pos);
 
@@ -95,4 +93,19 @@ export function insertTable(arr, pos, options = {}) {
 
     const range = { s: pos, e: { r: pos.r + arr.length - 1, c: pos.c + maxCol - 1 } };
     return range;
+}
+
+/**
+ * Insert a template from the given position.
+ * @deprecated Use insertTemplate(arr, pos, options) instead. insertTable has ambiguous naming and will be deprecated after 2026-05-27.
+ * @param {Array} arr - Template data array
+ * @param {Object|String} pos - Insert Location
+ * @param {Object} options - Configure Options
+ */
+export function insertTable(arr, pos, options = {}) {
+    if (!insertTableDeprecatedWarned && typeof console !== 'undefined') {
+        insertTableDeprecatedWarned = true;
+        console.warn(`[SheetNext] sheet.insertTable() is kept for compatibility, but the name is ambiguous and will be deprecated after ${INSERT_TABLE_DEPRECATION_DATE}. Use sheet.insertTemplate() instead.`);
+    }
+    return insertTemplate.call(this, arr, pos, options);
 }

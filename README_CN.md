@@ -68,11 +68,11 @@ const SN = new SheetNext(document.querySelector('#SNContainer'));
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SheetNext Demo</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sheetnext/dist/sheetnext.css">
 </head>
 <body>
   <div id="SNContainer" style="width:100vw;height:100vh;padding:0 7px 7px"></div>
-  <script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sheetnext/dist/sheetnext.umd.js"></script>
   <script>
     const SN = new SheetNext(document.querySelector('#SNContainer'));
   </script>
@@ -100,8 +100,8 @@ const SN = new SheetNext(document.querySelector('#SNContainer'), {
 CDN 方式引入语言包：
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sheetnext@0.2.0/dist/sheetnext.locale.zh-CN.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sheetnext/dist/sheetnext.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sheetnext/dist/sheetnext.locale.zh-CN.umd.js"></script>
 <script>
   const SN = new SheetNext(document.querySelector('#SNContainer'), {
     locale: 'zh-CN'
@@ -113,20 +113,28 @@ CDN 方式引入语言包：
 
 #### Step 1：下载 AI 开发资料
 
-- 打开仓库中的 `docs/detail/` 目录。
-- 核心参考文档为 `docs/detail/core-api.md`、`docs/detail/events.md`、`docs/detail/enums.md`。
+- 如果使用 Codex Skills，可直接使用已生成的 skill 目录：`docs/skill/sheetnext-dev/`。
+- 如果使用其他 AI 工具，打开仓库中的 `docs/skill/sheetnext-dev/references/` 目录。
+- 核心参考文档为 `docs/skill/sheetnext-dev/references/core-api.md`、`docs/skill/sheetnext-dev/references/events.md`、`docs/skill/sheetnext-dev/references/enums.md`。
+- 协议补充文档为 `docs/skill/sheetnext-dev/references/ai-relay.md`、`docs/skill/sheetnext-dev/references/json-format.md`。
 
-#### Step 2：把 `docs/detail` 交给 AI
+#### Step 2：使用 Skill 或把 `references` 交给 AI
 
-可使用 Cursor / Claude / ChatGPT / Copilot 等工具，先喂 `docs/detail/` 这组资料再提需求。
+Codex 用户可把生成的 skill 复制到 Codex skills 目录，然后重启 Codex：
+
+```powershell
+Copy-Item -Recurse -Force .\docs\skill\sheetnext-dev "$env:USERPROFILE\.codex\skills\sheetnext-dev"
+```
+
+Cursor / Claude / ChatGPT / Copilot 等工具，可先喂 `docs/skill/sheetnext-dev/references/` 这组资料再提需求。
 
 推荐指令模板：
 
 ```text
 你是资深 SheetNext AI 开发专家，请先阅读并理解我提供的文档，再给出可直接落地的方案。
 执行顺序：
-1) 先阅读：docs/detail/core-api.md
-2) 再按需阅读：docs/detail/events.md、docs/detail/enums.md
+1) 先阅读：docs/skill/sheetnext-dev/references/core-api.md
+2) 再按需阅读：docs/skill/sheetnext-dev/references/events.md、docs/skill/sheetnext-dev/references/enums.md、docs/skill/sheetnext-dev/references/ai-relay.md、docs/skill/sheetnext-dev/references/json-format.md
 3) 识别用户目标（业务目标 + 技术目标）
 4) 输出最小可行实现（先能跑，再优化）
 5) 所有 API 与代码写法必须严格对齐文档

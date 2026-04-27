@@ -340,11 +340,12 @@ export function hasClipboardData() {
  * Copy Cell Data
  */
 function copyCellData(cell, sheet) {
+    const style = cell.style || {};
     return {
         editVal: cell._editVal,
         calcVal: cell._calcVal,
         type: cell._type,
-        style: cell._style ? JSON.parse(JSON.stringify(cell._style)) : null,
+        style: Object.keys(style).length ? JSON.parse(JSON.stringify(style)) : null,
         hyperlink: cell._hyperlink ? JSON.parse(JSON.stringify(cell._hyperlink)) : null,
         dataValidation: cell._dataValidation ? JSON.parse(JSON.stringify(cell._dataValidation)) : null,
         isMerged: cell.isMerged,

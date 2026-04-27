@@ -23,6 +23,26 @@ const COLORS = {
 const CONDITION_OPS = { '=': (a, b) => a === b, '<>': (a, b) => a !== b, '>': (a, b) => a > b, '<': (a, b) => a < b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b };
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 31);
+const DBNUM_PROFILES = {
+    1: {
+        digits: ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
+        units: ['', '十', '百', '千'],
+        largeUnits: ['', '万', '亿', '兆'],
+        omitLeadingOneTen: true
+    },
+    2: {
+        digits: ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'],
+        units: ['', '拾', '佰', '仟'],
+        largeUnits: ['', '万', '亿', '兆'],
+        omitLeadingOneTen: false
+    },
+    3: {
+        digits: ['零', '１', '２', '３', '４', '５', '６', '７', '８', '９'],
+        units: ['', '十', '百', '千'],
+        largeUnits: ['', '万', '亿', '兆'],
+        omitLeadingOneTen: false
+    }
+};
 
 // ==================== 缓存 ====================
 
@@ -43,7 +63,7 @@ function getCachedAST(fmt) {
 // ==================== 词法分析 ====================
 
 const TokenType = {
-    LITERAL: 1, CONDITION: 2, COLOR: 3, LOCALE: 4,
+    LITERAL: 1, CONDITION: 2, COLOR: 3, LOCALE: 4, DBNUM: 5,
     DIGIT_0: 10, DIGIT_HASH: 11, DIGIT_Q: 12,
     DECIMAL: 13, THOUSAND: 14, PERCENT: 15, EXPONENT: 16, FRACTION: 17,
     DATE_Y: 20, DATE_M: 21, DATE_D: 22, TIME_H: 23, TIME_S: 24, TIME_ELAPSED: 25, AMPM: 26,
@@ -82,7 +102,10 @@ function tokenize(fmt) {
             else if (/^[hms]{1,2}$/i.test(content)) {
                 tokens.push({ type: TokenType.TIME_ELAPSED, unit: lower[0], len: content.length });
             }
-            // DBNum 等忽略
+            else if (/^dbnum[123]$/i.test(content)) {
+                tokens.push({ type: TokenType.DBNUM, value: Number(content.match(/\d/)[0]) });
+            }
+            // 未支持的方括号控制符暂不输出字面量
             else {
                 tokens.push({ type: TokenType.LITERAL, value: '' });
             }
@@ -206,7 +229,7 @@ function parseFormat(fmt) {
 
 function parseSection(fmt, index, total) {
     const tokens = tokenize(fmt);
-    const section = { tokens: [], condition: null, color: null, locale: null, type: 'number' };
+    const section = { tokens: [], condition: null, color: null, locale: null, dbNum: null, type: 'number' };
 
     // 提取元信息
     const contentTokens = [];
@@ -217,6 +240,7 @@ function parseSection(fmt, index, total) {
             section.locale = tok;
             if (tok.symbol) contentTokens.push({ type: TokenType.LITERAL, value: tok.symbol });
         }
+        else if (tok.type === TokenType.DBNUM) section.dbNum = tok.value;
         else contentTokens.push(tok);
     }
 
@@ -339,6 +363,10 @@ export function formatValue(value, fmt, cellType) {
             result = formatNumber(numValue, section.tokens);
     }
 
+    if (section.dbNum) {
+        result = applyDbNumResult(result, section.dbNum);
+    }
+
     // 会计格式返回结构化数据
     if (result && result.isAccounting) {
         return {
@@ -373,6 +401,90 @@ function formatGeneral(value) {
     let str = value.toPrecision(10);
     if (str.includes('.')) str = str.replace(/\.?0+$/, '');
     return str;
+}
+
+function applyDbNumResult(result, dbNumType) {
+    if (result && typeof result === 'object' && result.isAccounting) {
+        return { ...result, number: applyDbNumText(result.number, dbNumType) };
+    }
+    return applyDbNumText(String(result ?? ''), dbNumType);
+}
+
+function applyDbNumText(text, dbNumType) {
+    const profile = DBNUM_PROFILES[dbNumType];
+    if (!profile || !text) return text;
+
+    return text.replace(/[+-]?\d[\d,]*(?:\.\d+)?/g, (match, offset, source) => {
+        const prev = source[offset - 1];
+        const next = source[offset + match.length];
+        if ((prev && /[A-Za-z]/.test(prev)) || (next && /[A-Za-z]/.test(next))) return match;
+
+        const sign = match.startsWith('-') || match.startsWith('+') ? match[0] : '';
+        const unsigned = sign ? match.slice(1) : match;
+        const [integerText, decimalText] = unsigned.replace(/,/g, '').split('.');
+        if (!/^\d+$/.test(integerText)) return match;
+
+        let out = dbNumInteger(integerText, profile);
+        if (decimalText !== undefined) {
+            out += '.' + decimalText.split('').map(ch => profile.digits[Number(ch)] ?? ch).join('');
+        }
+        return sign + out;
+    });
+}
+
+function dbNumInteger(integerText, profile) {
+    if (!integerText || !/^\d+$/.test(integerText)) return integerText;
+    if (/^0+$/.test(integerText)) return profile.digits[0];
+
+    const leadingZeros = integerText.match(/^0+(?=\d)/)?.[0]?.length || 0;
+    const normalized = integerText.replace(/^0+/, '');
+    const groups = [];
+    for (let end = normalized.length; end > 0; end -= 4) {
+        groups.unshift(normalized.slice(Math.max(0, end - 4), end));
+    }
+
+    let result = '';
+    let zeroPending = false;
+    for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const groupValue = Number(group);
+        const largeUnitIndex = groups.length - 1 - i;
+        if (groupValue === 0) {
+            if (result) zeroPending = true;
+            continue;
+        }
+
+        const omitLeadingOneTen = profile.omitLeadingOneTen && !result;
+        if (result && (zeroPending || groupValue < 1000)) result += profile.digits[0];
+        result += dbNumFourDigits(group, profile, omitLeadingOneTen) + (profile.largeUnits[largeUnitIndex] || '');
+        zeroPending = false;
+    }
+
+    return profile.digits[0].repeat(leadingZeros) + result;
+}
+
+function dbNumFourDigits(groupText, profile, omitLeadingOneTen = false) {
+    const group = groupText.padStart(4, '0');
+    let result = '';
+    let zeroPending = false;
+
+    for (let i = 0; i < group.length; i++) {
+        const digit = Number(group[i]);
+        const unitIndex = group.length - 1 - i;
+        if (digit === 0) {
+            if (result) zeroPending = true;
+            continue;
+        }
+
+        if (zeroPending) result += profile.digits[0];
+        result += profile.digits[digit] + profile.units[unitIndex];
+        zeroPending = false;
+    }
+
+    if (omitLeadingOneTen && result.startsWith(profile.digits[1] + profile.units[1])) {
+        result = result.slice(profile.digits[1].length);
+    }
+    return result;
 }
 
 // ==================== 文本格式 ====================

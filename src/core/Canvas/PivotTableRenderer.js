@@ -57,7 +57,10 @@ export function rPivotTablePlaceholders(sheet) {
         pt.location.ref = `${startRef}:${endCellStr}`;
 
         // 计算占位区域在视图中的位置
-        const areaInfo = getPlaceholderAreaInfo(sheet, startCell.r, startCell.c);
+        const areaInfo = sheet._getAreaInviewInfo2({
+            s: { r: startCell.r, c: startCell.c },
+            e: { r: endRow, c: endCol }
+        });
         if (!areaInfo || !areaInfo.inView) continue;
 
         // 保存透视表的占位区域信息（用于鼠标检测）

@@ -169,7 +169,7 @@ class SheetNext {
         this._workbookName = name;
 
         const fileNameDom = this.containerDom.querySelector(".sn-file-name");
-        if (fileNameDom) fileNameDom.innerHTML = name;
+        if (fileNameDom) fileNameDom.textContent = name;
         if (this.Event.hasListeners('afterWorkbookRename')) {
             this.Event.emit('afterWorkbookRename', { oldName, newName: name });
         }
@@ -192,11 +192,7 @@ class SheetNext {
             while (this._sheetNames.some(name => name.toLowerCase() === `sheet${index}`.toLowerCase())) index++;
             sheetName = `Sheet${index}`;
         } else {
-            if (typeof sheetName != 'string' || sheetName.trim() === '') return this.Utils.toast(this.t('workbook.errors.sheetNameInvalidType'));
-            if (this._sheetNames.some(name => name.toLowerCase() === sheetName.toLowerCase()))
-                return this.Utils.toast(this.t('workbook.errors.sheetNameExists', { name: sheetName }));
-            if (sheetName.length > 31) return this.Utils.toast(this.t('workbook.errors.sheetNameLength'));
-            if (/[:\/\\\*\?\[\]]/.test(sheetName)) return this.Utils.toast(this.t('workbook.errors.sheetNameInvalidChars'));
+            if (!this._validateSheetName(sheetName)) return null;
         }
         if (this.Event.hasListeners('beforeSheetAdd')) {
             const beforeEvent = this.Event.emit('beforeSheetAdd', { name: sheetName });
@@ -212,7 +208,7 @@ class SheetNext {
         return newSheet
     }
 
-    /** @param {string} name */
+    /** @param {string} name @returns {boolean|void} */
     delSheet(name) {
         if (this.sheets.filter(st => !st.hidden && st.name != name).length == 0) return this.Utils.toast(this.t('workbook.errors.lastVisibleSheetCannotDelete'));
         const index = this.sheets.findIndex(st => st.name == name);
@@ -228,6 +224,7 @@ class SheetNext {
         if (this.Event.hasListeners('afterSheetDelete')) {
             this.Event.emit('afterSheetDelete', { sheet, name, index });
         }
+        return true;
     }
 
     /** @param {string} sheetName @returns {Sheet|null} */
@@ -235,6 +232,35 @@ class SheetNext {
         const sheet = this.sheets.find(sheet => sheet.name == sheetName)
         if (!sheet) return null
         return sheet
+    }
+
+    /** @param {Sheet|string} sheetOrName @param {number} targetIndex @returns {boolean} */
+    moveSheet(sheetOrName, targetIndex) {
+        const sheet = typeof sheetOrName === 'string' ? this.getSheet(sheetOrName) : sheetOrName;
+        const fromIndex = this.sheets.indexOf(sheet);
+        if (!sheet || fromIndex === -1) {
+            const name = typeof sheetOrName === 'string' ? sheetOrName : '';
+            this.Utils.toast(this.t('workbook.errors.sheetNotFound', { name }));
+            return false;
+        }
+
+        const nextIndex = Math.max(0, Math.min(this.sheets.length - 1, Math.trunc(Number(targetIndex))));
+        if (!Number.isFinite(nextIndex)) return false;
+        if (fromIndex === nextIndex) return true;
+
+        if (this.Event.hasListeners('beforeSheetMove')) {
+            const beforeEvent = this.Event.emit('beforeSheetMove', { sheet, fromIndex, toIndex: nextIndex });
+            if (beforeEvent.canceled) return false;
+        }
+
+        this.sheets.splice(fromIndex, 1);
+        this.sheets.splice(nextIndex, 0, sheet);
+        this._updListDom();
+
+        if (this.Event.hasListeners('afterSheetMove')) {
+            this.Event.emit('afterSheetMove', { sheet, fromIndex, toIndex: nextIndex });
+        }
+        return true;
     }
 
     /** @param {boolean} [currentSheetOnly=false] */
@@ -245,7 +271,7 @@ class SheetNext {
             const sheet = this.activeSheet;
             if (!sheet) return;
 
-            for (let r = 0; r < sheet.rowCount; r++) {
+            for (let r = 0; r < sheet.rows.length; r++) {
                 const row = sheet.rows[r];
                 if (!row) continue;
                 for (let c = 0; c < row.cells.length; c++) {
@@ -264,7 +290,7 @@ class SheetNext {
 
             for (const sheet of this.sheets) {
                 if (!sheet.initialized) continue;
-                for (let r = 0; r < sheet.rowCount; r++) {
+                for (let r = 0; r < sheet.rows.length; r++) {
                     const row = sheet.rows[r];
                     if (!row) continue;
                     for (let c = 0; c < row.cells.length; c++) {
@@ -289,6 +315,26 @@ class SheetNext {
 
     get _currentOperation() {
         return this._opStack[this._opStack.length - 1] || null;
+    }
+
+    _validateSheetName(sheetName, currentSheet = null) {
+        if (typeof sheetName != 'string' || sheetName.trim() === '') {
+            this.Utils.toast(this.t('workbook.errors.sheetNameInvalidType'));
+            return false;
+        }
+        if (sheetName.length > 31) {
+            this.Utils.toast(this.t('workbook.errors.sheetNameLength'));
+            return false;
+        }
+        if (/[:\/\\\*\?\[\]]/.test(sheetName)) {
+            this.Utils.toast(this.t('workbook.errors.sheetNameInvalidChars'));
+            return false;
+        }
+        if (this.sheets.some(sheet => sheet !== currentSheet && sheet.name.toLowerCase() === sheetName.toLowerCase())) {
+            this.Utils.toast(this.t('workbook.errors.sheetNameExists', { name: sheetName }));
+            return false;
+        }
+        return true;
     }
 
     /** @param {string} locale */
@@ -424,22 +470,30 @@ class SheetNext {
     }
 
     _updListDom() {
-        const ns = this.namespace;
-        const sheetName = this.activeSheet.name
-        let sheetsHtml = ""
-        this.sheets.forEach((item, index) => {
-            if (item.name == sheetName || this._sheetNames.length == 1) {
-                sheetsHtml += `<button class="sheet-sel sn-sheet-item" onmousedown="this.classList.add('sheet-sel')" ontouchstart="this.classList.add('sheet-sel')">${item.name}</button>`
-            } else if (!item.hidden) {
-                sheetsHtml += `<button class="sn-sheet-item" onmousedown="${ns}.activeSheet=${ns}.getSheet('${item.name}');this.classList.add('sheet-sel')" ontouchstart="${ns}.activeSheet=${ns}.getSheet('${item.name}');this.classList.add('sheet-sel')">${item.name}</button>`
-            }
-        })
+        const sheetName = this.activeSheet?.name
         const scrollContainer = this.containerDom.querySelector('.sn-sheet-scroll');
-        if (scrollContainer) {
-            scrollContainer.innerHTML = sheetsHtml;
-        } else {
-            this.containerDom.querySelector('.sn-sheet-list').innerHTML = `<div class="sn-sheet-scroll">${sheetsHtml}</div>`;
+        let target = scrollContainer;
+        if (!target) {
+            const list = this.containerDom.querySelector('.sn-sheet-list');
+            if (!list) return;
+            target = document.createElement('div');
+            target.className = 'sn-sheet-scroll';
+            list.textContent = '';
+            list.appendChild(target);
         }
+        target.textContent = '';
+        this.sheets.forEach((item, index) => {
+            if (item.hidden && item.name !== sheetName) return;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = item.name == sheetName || this._sheetNames.length == 1
+                ? 'sheet-sel sn-sheet-item'
+                : 'sn-sheet-item';
+            button.dataset.sheetIndex = String(index);
+            button.title = item.name;
+            button.textContent = item.name;
+            target.appendChild(button);
+        });
     }
 
     _r() {

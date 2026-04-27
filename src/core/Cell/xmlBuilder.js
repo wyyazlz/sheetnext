@@ -2,7 +2,12 @@
 import { BUILTIN_NUMFMTS } from './constants.js';
 import { getDefaultCellFont, getFontName, getFontSize } from './fontDefaults.js';
 import { expandHex } from './helpers.js';
-import { _getCellEffectiveStyle } from './styleUtils.js';
+import { _getCellEffectiveStyle, _getCellExplicitStyle } from './styleUtils.js';
+import { applyCellControlXfExtension, isCheckboxControl } from './cellControlXml.js';
+
+const INLINE_STRING_UNIQUE_THRESHOLD = 50000;
+const INLINE_STRING_LONG_TEXT_THRESHOLD = 5000;
+const INLINE_STRING_LONG_TEXT_LENGTH = 256;
 
 function buildFontColorNode(font) {
     if (font.colorTheme !== undefined && font.colorTheme !== null && font.colorTheme !== '') {
@@ -87,6 +92,17 @@ function _normalizeColorForCompare(color) {
     if (!color || typeof color !== 'string') return color ?? null;
     const normalized = expandHex(color);
     return typeof normalized === 'string' ? normalized.toUpperCase() : normalized;
+}
+
+function _hasStyleValue(style) {
+    return !!style && Object.keys(style).length > 0;
+}
+
+function _shouldUseInlineString(SN, text) {
+    if (typeof text !== 'string' || text.includes('\n') || text.includes('\r')) return false;
+    const uniqueCount = SN._Xml._sharedStringCount || 0;
+    return uniqueCount >= INLINE_STRING_UNIQUE_THRESHOLD
+        || (text.length >= INLINE_STRING_LONG_TEXT_LENGTH && uniqueCount >= INLINE_STRING_LONG_TEXT_THRESHOLD);
 }
 
 function _getTableFillColorForExport(cell, rowIndex, colIndex) {
@@ -296,6 +312,10 @@ export function buildStyleXfFromObject(style, SN, options = {}) {
         }
     }
 
+    if (isCheckboxControl(style.control)) {
+        applyCellControlXfExtension(xfObj, SN, style.control);
+    }
+
     return xfObj;
 }
 
@@ -339,14 +359,15 @@ export function buildCellXml(cell, rowIndex, colIndex) {
         obj["_$t"] = 'e';
         obj.v = cell._showVal;
     } else if (isNaN(cell._editVal)) {
-        obj["_$t"] = 's';
-        const sst = SN._Xml.sst;
         if (cell._richText) {
+            obj["_$t"] = 's';
+            const sst = SN._Xml.sst;
             // 富文本：构建 r 数组结构
             const key = JSON.stringify(cell._richText);
-            if (SN._Xml.sharedStringsObj[key] === undefined) {
-                SN._Xml.sharedStringsObj[key] = Object.keys(SN._Xml.sharedStringsObj).length;
-                sst['_$uniqueCount']++;
+            let sharedIndex = SN._Xml.sharedStringsObj[key];
+            if (sharedIndex === undefined) {
+                sharedIndex = SN._Xml._sharedStringCount++;
+                SN._Xml.sharedStringsObj[key] = sharedIndex;
                 const rArr = cell._richText.map(run => {
                     const rf = run.font;
                     // rPr 必须在 t 之前（Excel 要求的 XML 顺序）
@@ -378,26 +399,44 @@ export function buildCellXml(cell, rowIndex, colIndex) {
                 });
                 sst.si.push({ r: rArr });
             }
-            sst['_$count']++;
-            obj.v = SN._Xml.sharedStringsObj[key];
+            SN._Xml._sharedStringTotalCount++;
+            obj.v = sharedIndex;
         } else {
             // 纯文本
             const key = cell.editVal;
-            if (SN._Xml.sharedStringsObj[key] === undefined) {
-                SN._Xml.sharedStringsObj[key] = Object.keys(SN._Xml.sharedStringsObj).length;
-                sst['_$uniqueCount']++;
+            let sharedIndex = SN._Xml.sharedStringsObj[key];
+            if (sharedIndex !== undefined) {
+                obj["_$t"] = 's';
+                SN._Xml._sharedStringTotalCount++;
+                obj.v = sharedIndex;
+            } else if (_shouldUseInlineString(SN, key)) {
+                delete obj.v;
+                obj["_$t"] = 'inlineStr';
+                obj.is = { t: key };
+            } else {
+                obj["_$t"] = 's';
+                const sst = SN._Xml.sst;
+                sharedIndex = SN._Xml._sharedStringCount++;
+                SN._Xml.sharedStringsObj[key] = sharedIndex;
                 sst.si.push({ t: key });
+                SN._Xml._sharedStringTotalCount++;
+                obj.v = sharedIndex;
             }
-            sst['_$count']++;
-            obj.v = SN._Xml.sharedStringsObj[key];
         }
     } else {
         obj.v = cell.editVal;
     }
 
     // 样式构建
-    const hasLineBreak = typeof cell.editVal === 'string' && cell.editVal.includes('\n');
-    const { style: effectiveStyle, xfObj } = _buildCellEffectiveStyleXf(cell, rowIndex, colIndex);
+    const hasLineBreak = typeof cell._editVal === 'string' && cell._editVal.includes('\n');
+    const explicitStyle = _getCellExplicitStyle(cell);
+    const rowStyle = cell.row?._rowStyle;
+    const colStyle = cell.row?.sheet?.cols?.[colIndex]?._colStyle;
+    if (!hasLineBreak && !_hasStyleValue(explicitStyle) && !_hasStyleValue(rowStyle) && !_hasStyleValue(colStyle)) {
+        return obj;
+    }
+
+    const { style: effectiveStyle, xfObj } = _buildCellEffectiveStyleXf(cell, rowIndex, colIndex, { explicitStyle, rowStyle, colStyle });
     if (Object.keys(effectiveStyle).length == 0 && !hasLineBreak) return obj;
     // 含换行符时强制设置 wrapText，Excel 需要此属性才能显示换行
     if (hasLineBreak) {
@@ -416,11 +455,16 @@ export function buildCellXml(cell, rowIndex, colIndex) {
     return obj;
 }
 
-function _buildCellEffectiveStyleXf(cell, rowIndex, colIndex) {
-    const style = _getCellEffectiveStyle(cell, {
-        rowStyle: cell.row?._rowStyle,
-        colStyle: cell.row?.sheet?.cols?.[colIndex]?._colStyle
-    });
+function _buildCellEffectiveStyleXf(cell, rowIndex, colIndex, options = {}) {
+    const styleOptions = {
+        rowStyle: options.rowStyle,
+        colStyle: options.colStyle ?? cell.row?.sheet?.cols?.[colIndex]?._colStyle
+    };
+    if (Object.prototype.hasOwnProperty.call(options, 'explicitStyle')) {
+        styleOptions.cellStyle = options.explicitStyle || {};
+    }
+
+    const style = _getCellEffectiveStyle(cell, styleOptions);
     const xfObj = buildStyleXfFromObject(
         style,
         cell._SN,

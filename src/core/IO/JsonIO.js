@@ -221,8 +221,8 @@ function _resolveSheetSize(sheetData) {
 function _ensureSheetSize(sheet, rowCount, colCount) {
     const safeRows = Math.max(1, rowCount);
     const safeCols = Math.max(1, colCount);
-    sheet.getRow(safeRows - 1);
-    sheet.getCol(safeCols - 1);
+    sheet._virtualRowCount = Math.max(sheet._virtualRowCount || 0, safeRows);
+    sheet._virtualColCount = Math.max(sheet._virtualColCount || 0, safeCols);
 }
 
 function _resetSheetForImport(sheet) {
@@ -238,6 +238,8 @@ function _resetSheetForImport(sheet) {
     sheet._rowVisibilityVersion = 0;
     sheet._totalWidthCache = undefined;
     sheet._totalHeightCache = undefined;
+    sheet._virtualRowCount = 0;
+    sheet._virtualColCount = 0;
     sheet._idCount = 0;
 
     sheet.protection = new SheetProtection(sheet);
@@ -743,8 +745,8 @@ export async function getData() {
             activeCell: _clone(_normalizeCellRef(sheet.activeCell, { r: 0, c: 0 })),
             viewStart: _clone(_normalizeCellRef(sheet.viewStart, { r: 0, c: 0 })),
             printSettings: sheet.printSettings ? _clone(sheet.printSettings) : null,
-            rowCount: sheet.rows.length,
-            colCount: sheet.cols.length,
+            rowCount: sheet.rowCount,
+            colCount: sheet.colCount,
             cols: [],
             rows: [],
             merges: [],

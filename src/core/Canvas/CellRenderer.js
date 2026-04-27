@@ -2,6 +2,7 @@ import { interpolateColor } from './helpers.js';
 import { shouldHideFormula } from './helpers.js'
 import { getFilterIconLayout } from './FilterRenderer.js';
 import { getCanvasFont, getFontSizePx } from '../Cell/fontDefaults.js';
+import { isCheckboxControl } from '../Cell/cellControlXml.js';
 
 /**
  * Cell Rendering Module
@@ -75,6 +76,36 @@ function finalizeTableCellStyle(style, dataFallbackFg) {
     };
 }
 
+function getPaneClip(canvas, sheet, rowLayout, colLayout) {
+    const left = colLayout.frozen ? sheet.indexWidth : sheet.vi.fw;
+    const top = rowLayout.frozen ? sheet.headHeight : sheet.vi.fh;
+    const right = colLayout.frozen ? sheet.vi.fw : canvas.viewWidth;
+    const bottom = rowLayout.frozen ? sheet.vi.fh : canvas.viewHeight;
+    const x = Math.max(left, colLayout.x);
+    const y = Math.max(top, rowLayout.y);
+    const w = Math.min(right, colLayout.x + colLayout.w) - x;
+    const h = Math.min(bottom, rowLayout.y + rowLayout.h) - y;
+    if (w <= 0 || h <= 0) return { empty: true };
+    if (x <= colLayout.x && y <= rowLayout.y && x + w >= colLayout.x + colLayout.w && y + h >= rowLayout.y + rowLayout.h) {
+        return null;
+    }
+    return { x, y, w, h };
+}
+
+function withPaneClip(ctx, clip, draw) {
+    if (clip?.empty) return;
+    if (!clip) {
+        draw();
+        return;
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(clip.x, clip.y, clip.w, clip.h);
+    ctx.clip();
+    draw();
+    ctx.restore();
+}
+
 function getStripeColor(index, stripe1Color, stripe2Color, stripe1Size = 1, stripe2Size = 1) {
     const s1 = Math.max(1, stripe1Size || 1);
     const s2 = Math.max(1, stripe2Size || 1);
@@ -103,6 +134,51 @@ function applyTableBorderColor(border, color) {
     }
 
     return changed ? next : border;
+}
+
+function rCellCheckbox(x, y, w, h, cell, layoutRect = null) {
+    const drawX = layoutRect?.x ?? x;
+    const drawY = layoutRect?.y ?? y;
+    const drawW = layoutRect?.w ?? w;
+    const drawH = layoutRect?.h ?? h;
+    const maxSize = Math.min(drawW - 4, drawH - 4, 16);
+    if (maxSize < 6) {
+        delete cell._checkboxRect;
+        return;
+    }
+    const size = Math.max(6, maxSize);
+    const boxX = this.snap(drawX + (drawW - size) / 2);
+    const boxY = this.snap(drawY + (drawH - size) / 2);
+    const checked = cell.calcVal === true;
+    const radius = Math.max(2, Math.min(3, size / 5));
+
+    cell._checkboxRect = { x: boxX, y: boxY, w: size, h: size };
+
+    this.bc.save();
+    this.bc.lineWidth = this.px(1.25);
+    this.bc.beginPath();
+    if (this.bc.roundRect) {
+        this.bc.roundRect(boxX, boxY, size, size, radius);
+    } else {
+        this.bc.rect(boxX, boxY, size, size);
+    }
+    this.bc.fillStyle = checked ? '#217346' : '#ffffff';
+    this.bc.strokeStyle = checked ? '#217346' : '#6b7280';
+    this.bc.fill();
+    this.bc.stroke();
+
+    if (checked) {
+        this.bc.beginPath();
+        this.bc.strokeStyle = '#ffffff';
+        this.bc.lineWidth = this.px(2);
+        this.bc.lineCap = 'round';
+        this.bc.lineJoin = 'round';
+        this.bc.moveTo(boxX + size * 0.25, boxY + size * 0.52);
+        this.bc.lineTo(boxX + size * 0.43, boxY + size * 0.70);
+        this.bc.lineTo(boxX + size * 0.76, boxY + size * 0.32);
+        this.bc.stroke();
+    }
+    this.bc.restore();
 }
 
 function getTableCellStyle(sheet, row, col) {
@@ -513,6 +589,11 @@ export function rCellText(x, y, w, h, cell, layoutRect = null) {
     const sheet = this.activeSheet;
     const hideFormula = shouldHideFormula(sheet, cell);
     const showFormula = sheet?.showFormulas && !hideFormula;
+    if (!showFormula && isCheckboxControl(cell.control)) {
+        rCellCheckbox.call(this, x, y, w, h, cell, layoutRect);
+        return;
+    }
+    if (cell._checkboxRect) delete cell._checkboxRect;
     const v = showFormula ? cell.editVal.toString() : cell.showVal.toString();
     if (!v) return;
 
@@ -549,6 +630,11 @@ export function rCellTextWithOverflow(r, c, x, y, w, h, cell, sheet, nonEmptyCel
     // 显示公式模式：显示 editVal 而不是 showVal
     const hideFormula = shouldHideFormula(sheet, cell);
     const showFormula = sheet?.showFormulas && !hideFormula;
+    if (!showFormula && isCheckboxControl(cell.control)) {
+        rCellCheckbox.call(this, x, y, w, h, cell);
+        return;
+    }
+    if (cell._checkboxRect) delete cell._checkboxRect;
     const v = showFormula ? cell.editVal.toString() : cell.showVal.toString();
     if (!v) return;
 
@@ -1593,6 +1679,12 @@ export function rBorder(ciArr) {
     // 应用边框样式
     // { b: cellInfo.border, x: _x, y: _y, w: nowCellWidth, h: rowHeight, r: r, c: c }
     ciArr.forEach(info => {
+        if (info.paneClip) {
+            this.bc.save();
+            this.bc.beginPath();
+            this.bc.rect(info.paneClip.x, info.paneClip.y, info.paneClip.w, info.paneClip.h);
+            this.bc.clip();
+        }
         // 获取该单元格需要隐藏的边框信息
         const hiddenInfo = this.hiddenBorders && info.r !== undefined && info.c !== undefined
             ? this.hiddenBorders.get(`${info.r},${info.c}`)
@@ -1621,6 +1713,7 @@ export function rBorder(ciArr) {
                 drawBorder(this.bc, info.x, info.y, info.w, info.h, 'diagonalUp', diagonal.style, diagonal.color);
             }
         }
+        if (info.paneClip) this.bc.restore();
     });
 
 }
@@ -1654,14 +1747,19 @@ export function rBaseData(sheet) {
     }
 
     // 第一遍：绘制背景，收集单元格信息
-    let y = sheet.headHeight;
-    sheet.vi.rowsIndex.forEach(r => {
-        let x = sheet.indexWidth;
-        let rowHeight = sheet.getRow(r).height;
-        const row = sheet.getRow(r);
+    const rowLayouts = sheet.vi.rowLayouts || [];
+    const colLayouts = sheet.vi.colLayouts || [];
+    rowLayouts.forEach(rowLayout => {
+        const r = rowLayout.index;
+        const y = rowLayout.y;
+        const rowHeight = rowLayout.h;
 
-        sheet.vi.colsIndex.forEach(c => {
-            let nowCellWidth = sheet.getCol(c).width;
+        colLayouts.forEach(colLayout => {
+            const c = colLayout.index;
+            const x = colLayout.x;
+            const nowCellWidth = colLayout.w;
+            const paneClip = getPaneClip(this, sheet, rowLayout, colLayout);
+            if (paneClip?.empty) return;
             const cellInfo = sheet.getCell(r, c);
 
             if (!cellInfo.isMerged) {
@@ -1675,7 +1773,9 @@ export function rBaseData(sheet) {
                 const tableStyle = getTableCellStyle(sheet, r, c);
 
                 // 绘制背景（合并条件格式背景和超级表样式）
-                rCellBackground.call(this, _x, _y, nowCellWidth, rowHeight, cellInfo, true, cfFormat, tableStyle);
+                withPaneClip(this.bc, paneClip, () => {
+                    rCellBackground.call(this, _x, _y, nowCellWidth, rowHeight, cellInfo, true, cfFormat, tableStyle);
+                });
 
                 // 收集单元格位置信息（包含条件格式结果和超级表样式）
                 cellPositions.set(`${r},${c}`, {
@@ -1687,7 +1787,8 @@ export function rBaseData(sheet) {
                     row: r,
                     col: c,
                     cfFormat,
-                    tableStyle
+                    tableStyle,
+                    paneClip
                 });
 
                 // 收集非空单元格
@@ -1709,15 +1810,13 @@ export function rBaseData(sheet) {
                         w: nowCellWidth,
                         h: rowHeight,
                         r: r,
-                        c: c
+                        c: c,
+                        paneClip
                     });
                 }
             }
 
-            x += nowCellWidth;
         });
-
-        y += rowHeight;
     });
 
     // 存储 cellPositions 供 rConditionalFormats 使用（图标）
@@ -1726,19 +1825,21 @@ export function rBaseData(sheet) {
 
     // 第二遍：绘制数据条（在文字之前，避免覆盖）
     cellPositions.forEach((pos, key) => {
-        const { x, y, w, h, cfFormat } = pos;
+        const { x, y, w, h, cfFormat, paneClip } = pos;
         if (cfFormat?.dataBar) {
-            this.rDataBar(x, y, w, h, cfFormat.dataBar);
+            withPaneClip(this.bc, paneClip, () => this.rDataBar(x, y, w, h, cfFormat.dataBar));
         }
     });
 
     // 第三遍：绘制文本（带溢出支持，合并条件格式字体色和超级表样式）
     cellPositions.forEach((pos, key) => {
-        const { x, y, w, h, cellInfo, row, col, cfFormat, tableStyle } = pos;
+        const { x, y, w, h, cellInfo, row, col, cfFormat, tableStyle, paneClip } = pos;
 
         // 只渲染非空且非合并的单元格文本
         if (cellInfo.showVal && cellInfo.showVal.toString() && !cellInfo.isMerged) {
-            rCellTextWithOverflow.call(this, row, col, x, y, w, h, cellInfo, sheet, nonEmptyCells, cfFormat, tableStyle);
+            withPaneClip(this.bc, paneClip, () => {
+                rCellTextWithOverflow.call(this, row, col, x, y, w, h, cellInfo, sheet, nonEmptyCells, cfFormat, tableStyle);
+            });
         }
     });
 
@@ -1746,7 +1847,7 @@ export function rBaseData(sheet) {
     if (sheet.showGridLines) {
         const lineWidth = this.px(1);
         cellPositions.forEach((pos, key) => {
-            const { x, y, w, h, cellInfo, cfFormat } = pos;
+            const { x, y, w, h, cellInfo, cfFormat, paneClip } = pos;
             const hiddenInfo = this.hiddenBorders.get(key);
             const x1 = this.snap(x);
             const y1 = this.snap(y);
@@ -1758,6 +1859,14 @@ export function rBaseData(sheet) {
             this.bc.strokeStyle = cfFillColor || cellInfo.fill.fgColor || '#ddd';
             this.bc.lineWidth = lineWidth;
             this.bc.beginPath();
+
+            if (paneClip) {
+                this.bc.save();
+                this.bc.beginPath();
+                this.bc.rect(paneClip.x, paneClip.y, paneClip.w, paneClip.h);
+                this.bc.clip();
+                this.bc.beginPath();
+            }
 
             if (!hiddenInfo) {
                 // 没有隐藏信息，绘制完整网格线
@@ -1782,6 +1891,7 @@ export function rBaseData(sheet) {
                 }
                 this.bc.stroke();
             }
+            if (paneClip) this.bc.restore();
         });
     }
 

@@ -4,6 +4,7 @@ import snXml from './template.js';
 import { getColor, getColorByIndex as _getColorByIndex, getThemeColor as _getThemeColor } from './helpers.js';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import { BUILTIN_NUMFMTS } from '../Cell/constants.js';
+import { getCellControlForStyle } from '../Cell/cellControlXml.js';
 
 // ==================== Xml 类 ====================
 
@@ -35,6 +36,8 @@ export default class Xml {
                 'worksheet.AutoFilter.filterColumn',
                 'worksheet.tableParts.tablePart',
                 'styleSheet.numFmts.numFmt',
+                'styleSheet.cellXfs.xf',
+                'styleSheet.cellXfs.xf.extLst.ext',
                 'Relationships.Relationship',
                 'sst.si',
                 // 超级表相关
@@ -60,7 +63,12 @@ export default class Xml {
                 'pivotTableDefinition.colFields.field',
                 'pivotTableDefinition.dataFields.dataField',
                 'pivotTableDefinition.pageFields.pageField',
-                'pivotTableDefinition.formats.format'
+                'pivotTableDefinition.formats.format',
+                'FeaturePropertyBags.bag',
+                'FeaturePropertyBags.bag.bagId',
+                'FeaturePropertyBags.bag.a',
+                'FeaturePropertyBags.bag.a.bagId',
+                'FeaturePropertyBags.bag.i'
             ];
             return paths.includes(jPath);
         }
@@ -100,7 +108,9 @@ export default class Xml {
          * Share String to Heavy Object
          * @type {Object}
          */
-        this.sharedStringsObj = {} // 共享字符串去重对象清空
+        this.sharedStringsObj = Object.create(null) // 共享字符串去重对象清空
+        this._sharedStringCount = 0
+        this._sharedStringTotalCount = 0
         /**
          * XML Template
          * @type {Object}
@@ -573,6 +583,9 @@ export default class Xml {
                 result.protection = protectionObj;
             }
         }
+
+        const cellControl = getCellControlForStyle(this, styleIndex);
+        if (cellControl) result.control = cellControl;
 
         return this._styleCache[styleIndex] = result;
     }

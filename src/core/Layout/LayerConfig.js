@@ -1,0 +1,21 @@
+export const _layerZIndex = Object.freeze({
+    canvasShow: 100,
+    canvasMiddle: 200,
+    canvasHandle: 300,
+    canvasTop: 400,
+    canvasControl: 430,
+    canvasFloating: 450,
+    cellEditor: 999,
+    dropdown: 1000,
+    dropdownSubmenu: 1001,
+    toolbarOverflow: 1100,
+    contextMenu: 3000,
+    autoFilterPanel: 3100,
+    chatMask: 8000,
+    sidePanel: 8100,
+    chatWindow: 8100,
+    modal: 9000,
+    modalPopover: 9010,
+    tooltip: 9100,
+    toast: 9200
+});

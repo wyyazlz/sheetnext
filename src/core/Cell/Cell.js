@@ -1,5 +1,6 @@
 import { CELL_TYPES } from './constants.js';
 import { compareValue, dateTrans, numFmtFun, dateStrToDate, formatValue } from './helpers.js';
+import { isCheckboxControl, normalizeCellControl } from './cellControlXml.js';
 
 function _inferDateValueType(value, numFmt) {
     const format = (numFmt ?? "").replaceAll('[Red]', '').toLowerCase();
@@ -14,6 +15,25 @@ function _inferDateValueType(value, numFmt) {
     if (hasTimeFormat) return 'time';
     if (hasDateFormat) return hasTimeValue ? 'dateTime' : 'date';
     return hasTimeValue ? 'dateTime' : 'date';
+}
+
+function _normalizeBooleanValue(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    const text = String(value ?? '').trim().toUpperCase();
+    return text === 'TRUE' || text === '1';
+}
+
+function _formatBooleanValue(value) {
+    return _normalizeBooleanValue(value) ? 'TRUE' : 'FALSE';
+}
+
+function _cloneStyle(style) {
+    return JSON.parse(JSON.stringify(style ?? {}));
+}
+
+function _isCheckboxBooleanEditValue(value) {
+    return typeof value === 'boolean' || /^(true|false)$/i.test(String(value ?? '').trim());
 }
 
 /**
@@ -70,6 +90,7 @@ export default class Cell {
 
         // Spill 相关属性
         this._spillRange = null;      // 溢出范围 { rows, cols }
+        this._spillArray = null;      // 完整溢出结果，源单元格缓存二维数组
         this._spillParent = null;     // 溢出源单元格引用
         this._spillOffset = null;     // 相对于源单元格的偏移 { r, c }
 
@@ -105,9 +126,13 @@ export default class Cell {
             } else {
                 this._editVal = `=${f?.['#text'] ?? ""}`;
             }
-            this._calcVal = ['date', 'dateTime', 'time', 'number'].includes(type) && v ? Number(v) : v;
+            this._calcVal = type === 'boolean' && v !== undefined && v !== null
+                ? _normalizeBooleanValue(v)
+                : ['date', 'dateTime', 'time', 'number'].includes(type) && v ? Number(v) : v;
         } else {
-            if (!v && !is) {
+            if (_$t === 'b') {
+                this._editVal = _normalizeBooleanValue(v);
+            } else if (!v && !is) {
                 this._editVal = "";
             } else if (_$t === 's') {
                 const result = this._SN.Xml._xGetSharedStrings(v);
@@ -136,7 +161,9 @@ export default class Cell {
                 this._editVal = v;
             }
 
-            if (['date', 'dateTime', 'time'].includes(type) && this._editVal) {
+            if (type === 'boolean') {
+                this._calcVal = this._editVal;
+            } else if (['date', 'dateTime', 'time'].includes(type) && this._editVal) {
                 this._calcVal = this._editVal;
                 this._editVal = dateTrans(Number(this._editVal));
             } else {
@@ -151,6 +178,9 @@ export default class Cell {
     set editVal(val) {
         const oldValue = this._editVal;
         const oldType = this._type;
+        const oldStyle = _cloneStyle(this.style);
+        const clearCheckboxControl = isCheckboxControl(oldStyle.control) && !_isCheckboxBooleanEditValue(val);
+        let newStyle = null;
 
         // 触发 beforeCellEdit 事件（可取消）
         const beforeEvent = this._SN.Event.emit('beforeCellEdit', {
@@ -162,6 +192,31 @@ export default class Cell {
             newValue: val
         });
         if (beforeEvent.canceled) return;
+
+        if (clearCheckboxControl) {
+            newStyle = _cloneStyle(oldStyle);
+            delete newStyle.control;
+            if (this._SN.Event.hasListeners('beforeCellStyleChange')) {
+                const beforeStyleEvent = this._SN.Event.emit('beforeCellStyleChange', {
+                    sheet: this.row.sheet,
+                    cell: this,
+                    row: this.row.rIndex,
+                    col: this.cIndex,
+                    oldStyle,
+                    newStyle
+                });
+                if (beforeStyleEvent.canceled) return;
+            }
+            this._style = newStyle;
+        }
+
+        if (this._spillParent) {
+            const parent = this._spillParent;
+            parent._clearSpillRefs();
+            parent._calcVal = undefined;
+            parent._showVal = undefined;
+            parent._fmtResult = undefined;
+        }
 
         // 手动计算模式下保留缓存值（除非是新公式）
         if (this._SN.calcMode !== 'manual') {
@@ -176,14 +231,17 @@ export default class Cell {
         if (val == null || val === '' || val == undefined || Number.isNaN(val)) {
             this._type = undefined;
             this._editVal = "";
+        } else if (typeof val === 'boolean') {
+            this._editVal = val;
+            this._type = 'boolean';
         } else if (!isNaN(val)) {
             this._editVal = parseFloat(val);
             this._type = undefined;
         } else if (val?.trim?.().startsWith('=')) {
             this._editVal = val.trim();
             this._type = undefined;
-        } else if (/^(true|false)$/i.test(val)) {
-            this._editVal = val.toUpperCase() == 'TRUE' ? true : false;
+        } else if (/^(true|false)$/i.test(val.trim())) {
+            this._editVal = _normalizeBooleanValue(val);
             this._type = 'boolean';
         } else {
             if (typeof val != 'string') debugger;
@@ -204,8 +262,9 @@ export default class Cell {
 
         const newValue = this._editVal;
         const newType = this._type;
+        if (clearCheckboxControl) newStyle = _cloneStyle(this.style);
 
-        if (oldValue === newValue && oldType === newType) return;
+        if (oldValue === newValue && oldType === newType && !clearCheckboxControl) return;
 
         const sheet = this.row.sheet;
         this._SN._withOperation('cellEdit', {
@@ -225,6 +284,7 @@ export default class Cell {
         // 如果之前是公式，清除 volatile 状态（新公式计算时会重新注册）
         if (wasFormula) {
             this._clearVolatileStatus();
+            this._clearSpillRefs();
         }
 
         if (this._SN.DependencyGraph) {
@@ -253,6 +313,7 @@ export default class Cell {
             undo: () => {
                 this._editVal = oldValue;
                 this._type = oldType;
+                if (clearCheckboxControl) this._style = _cloneStyle(oldStyle);
                 this._calcVal = undefined;
                 this._showVal = undefined;
                 this._fmtResult = undefined;
@@ -267,6 +328,7 @@ export default class Cell {
             redo: () => {
                 this._editVal = newValue;
                 this._type = newType;
+                if (clearCheckboxControl) this._style = _cloneStyle(newStyle);
                 this._calcVal = undefined;
                 this._showVal = undefined;
                 this._fmtResult = undefined;
@@ -296,6 +358,17 @@ export default class Cell {
         });
 
         // 触发 afterCellEdit 事件
+        if (clearCheckboxControl && this._SN.Event.hasListeners('afterCellStyleChange')) {
+            this._SN.Event.emit('afterCellStyleChange', {
+                sheet,
+                cell: this,
+                row: this.row.rIndex,
+                col: this.cIndex,
+                oldStyle,
+                newStyle
+            });
+        }
+
         this._SN.Event.emit('afterCellEdit', {
             cell: this,
             sheet,
@@ -318,6 +391,7 @@ export default class Cell {
             else if (type == 'time') return this._editVal.toLocaleTimeString();
             else return this._editVal.toLocaleString();
         }
+        if (typeof this._editVal === 'boolean') return _formatBooleanValue(this._editVal);
         return this._editVal?.toString() ?? "";
     }
 
@@ -329,6 +403,27 @@ export default class Cell {
     set richText(runs) {
         const old = this._richText;
         const oldEditVal = this._editVal;
+        const oldStyle = _cloneStyle(this.style);
+        const clearCheckboxControl = !!runs && isCheckboxControl(oldStyle.control);
+        let newStyle = null;
+
+        if (clearCheckboxControl) {
+            newStyle = _cloneStyle(oldStyle);
+            delete newStyle.control;
+            if (this._SN.Event.hasListeners('beforeCellStyleChange')) {
+                const beforeStyleEvent = this._SN.Event.emit('beforeCellStyleChange', {
+                    sheet: this.row.sheet,
+                    cell: this,
+                    row: this.row.rIndex,
+                    col: this.cIndex,
+                    oldStyle,
+                    newStyle
+                });
+                if (beforeStyleEvent.canceled) return;
+            }
+            this._style = newStyle;
+        }
+
         this._richText = runs;
         this._showVal = undefined;
         this._calcVal = undefined;
@@ -338,9 +433,33 @@ export default class Cell {
             this._editVal = runs.map(r => r.text).join('');
         }
         this._SN.UndoRedo.add({
-            undo: () => { this._richText = old; this._editVal = oldEditVal; this._showVal = undefined; this._calcVal = undefined; this._fmtResult = undefined; },
-            redo: () => { this._richText = runs; this._editVal = runs ? runs.map(r => r.text).join('') : oldEditVal; this._showVal = undefined; this._calcVal = undefined; this._fmtResult = undefined; }
+            undo: () => {
+                this._richText = old;
+                this._editVal = oldEditVal;
+                if (clearCheckboxControl) this._style = _cloneStyle(oldStyle);
+                this._showVal = undefined;
+                this._calcVal = undefined;
+                this._fmtResult = undefined;
+            },
+            redo: () => {
+                this._richText = runs;
+                this._editVal = runs ? runs.map(r => r.text).join('') : oldEditVal;
+                if (clearCheckboxControl) this._style = _cloneStyle(newStyle);
+                this._showVal = undefined;
+                this._calcVal = undefined;
+                this._fmtResult = undefined;
+            }
         });
+        if (clearCheckboxControl && this._SN.Event.hasListeners('afterCellStyleChange')) {
+            this._SN.Event.emit('afterCellStyleChange', {
+                sheet: this.row.sheet,
+                cell: this,
+                row: this.row.rIndex,
+                col: this.cIndex,
+                oldStyle,
+                newStyle
+            });
+        }
     }
 
     /**
@@ -352,7 +471,7 @@ export default class Cell {
 
     get showVal() {
         if (this._showVal != undefined) return this._showVal;
-        if (this.type == 'boolean') return this._showVal = this.calcVal ? 'TRUE' : 'FALSE';
+        if (this.type == 'boolean') return this._showVal = _formatBooleanValue(this.calcVal);
         else if (this._type == 'error') return this._showVal = this.calcVal ?? "";
         else if (this.numFmt || ['date', 'time', 'dateTime'].includes(this._type)) {
             // 使用 formatValue 获取完整结果（含会计格式数据）
@@ -386,7 +505,10 @@ export default class Cell {
 
         // 如果是 spill 引用单元格，返回源单元格的对应值
         if (this._spillParent && this._spillOffset) {
-            const parentVal = this._spillParent.calcVal;
+            if (!Array.isArray(this._spillParent._spillArray)) {
+                const _ = this._spillParent.calcVal;
+            }
+            const parentVal = this._spillParent._spillArray;
             if (Array.isArray(parentVal) && Array.isArray(parentVal[0])) {
                 const { r, c } = this._spillOffset;
                 return this._calcVal = parentVal[r]?.[c] ?? '';
@@ -395,6 +517,8 @@ export default class Cell {
         }
 
         if (this.isFormula) {
+            this._clearSpillRefs();
+            if (this._type === 'error') this._type = undefined;
             let calcRes = this._SN.Formula.calcFormula(this.editVal.trim().substring(1), this);
 
             // 检测并注册 Volatile 状态
@@ -424,14 +548,15 @@ export default class Cell {
                     }
 
                     if (hasConflict) {
+                        this._type = 'error';
+                        this._spillRange = null;
+                        this._spillArray = null;
                         return this._calcVal = '#SPILL!';
                     }
 
                     // 设置 spill 范围
                     this._spillRange = { rows, cols };
-
-                    // 清除旧的 spill 引用
-                    this._clearSpillRefs();
+                    this._spillArray = calcRes;
 
                     // 设置 spill 引用单元格
                     for (let r = 0; r < rows; r++) {
@@ -452,6 +577,7 @@ export default class Cell {
                 }
 
                 // 1x1 数组，直接返回值
+                this._spillArray = null;
                 return this._calcVal = calcRes[0][0];
             }
 
@@ -465,8 +591,10 @@ export default class Cell {
             }
             if (calcRes instanceof Error) {
                 this._type = 'error';
+                this._spillArray = null;
                 return this._calcVal = calcRes.message;
             }
+            this._spillArray = null;
             return this._calcVal = calcRes;
         } else {
             if (this._editVal instanceof Date) return this._calcVal = dateTrans(this._editVal);
@@ -492,6 +620,7 @@ export default class Cell {
             }
         }
         this._spillRange = null;
+        this._spillArray = null;
     }
 
     // 更新 Volatile 状态（根据公式计算结果注册/注销）
@@ -533,8 +662,9 @@ export default class Cell {
 
     get spillArray() {
         if (!this._spillRange || !this.isFormula) return null;
+        if (Array.isArray(this._spillArray)) return this._spillArray;
         const calcRes = this._SN.Formula.calcFormula(this.editVal.trim().substring(1), this);
-        return Array.isArray(calcRes) ? calcRes : null;
+        return Array.isArray(calcRes) ? (this._spillArray = calcRes) : null;
     }
 
     /**
@@ -697,6 +827,51 @@ export default class Cell {
                 else delete this._style.protection;
             }
         });
+    }
+
+    /**
+     * Cell control configuration.
+     * @type {Object|null}
+     */
+    get control() {
+        return this.style?.control || null;
+    }
+    set control(obj) {
+        const oldStyle = JSON.parse(JSON.stringify(this.style ?? {}));
+        const nextControl = normalizeCellControl(obj);
+        const newStyle = JSON.parse(JSON.stringify(this.style ?? {}));
+
+        if (nextControl) newStyle.control = nextControl;
+        else delete newStyle.control;
+
+        if (this._SN.Event.hasListeners('beforeCellStyleChange')) {
+            const beforeEvent = this._SN.Event.emit('beforeCellStyleChange', {
+                sheet: this.row.sheet,
+                cell: this,
+                row: this.row.rIndex,
+                col: this.cIndex,
+                oldStyle,
+                newStyle
+            });
+            if (beforeEvent.canceled) return;
+        }
+
+        this._style = newStyle;
+        this._SN.UndoRedo.add({
+            undo: () => { this._style = oldStyle; },
+            redo: () => { this._style = newStyle; }
+        });
+
+        if (this._SN.Event.hasListeners('afterCellStyleChange')) {
+            this._SN.Event.emit('afterCellStyleChange', {
+                sheet: this.row.sheet,
+                cell: this,
+                row: this.row.rIndex,
+                col: this.cIndex,
+                oldStyle,
+                newStyle
+            });
+        }
     }
 
     /**

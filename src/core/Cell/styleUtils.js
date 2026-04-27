@@ -1,4 +1,4 @@
-const _STYLE_FIELDS = ['font', 'fill', 'alignment', 'border', 'numFmt', 'protection'];
+const _STYLE_FIELDS = ['font', 'fill', 'alignment', 'border', 'numFmt', 'protection', 'control'];
 const _MERGEABLE_FIELDS = new Set(['font', 'fill', 'alignment', 'border']);
 
 function _isPlainObject(value) {

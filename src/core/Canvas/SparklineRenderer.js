@@ -23,18 +23,19 @@ const getColor = (group, key) => group?.colors?.[key] ?? SPARKLINE_COLOR_FALLBAC
 export function rSparklines(sheet) {
     if (!sheet.Sparkline || sheet.Sparkline.map.size === 0) return;
 
-    const { rowsIndex, colsIndex } = sheet.vi;
+    const rowLayouts = sheet.vi.rowLayouts || [];
+    const colLayouts = sheet.vi.colLayouts || [];
 
     // 遍历视图内的所有单元格，累加位置
-    let y = sheet.headHeight;
-    for (let ri = 0; ri < rowsIndex.length; ri++) {
-        const r = rowsIndex[ri];
-        const rowHeight = sheet.getRow(r).height;
+    for (const rowLayout of rowLayouts) {
+        const r = rowLayout.index;
+        const y = rowLayout.y;
+        const rowHeight = rowLayout.h;
 
-        let x = sheet.indexWidth;
-        for (let ci = 0; ci < colsIndex.length; ci++) {
-            const c = colsIndex[ci];
-            const colWidth = sheet.getCol(c).width;
+        for (const colLayout of colLayouts) {
+            const c = colLayout.index;
+            const x = colLayout.x;
+            const colWidth = colLayout.w;
 
             // 检查该位置是否有迷你图
             const sparkline = sheet.Sparkline.get({ r, c });
@@ -51,10 +52,7 @@ export function rSparklines(sheet) {
                 }
             }
 
-            x += colWidth;
         }
-
-        y += rowHeight;
     }
 }
 

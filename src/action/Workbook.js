@@ -2,6 +2,12 @@ import { applyLocaleDefaultCellFont } from '../core/Cell/fontDefaults.js';
 
 // Workbook actions
 
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+}
+
 export function fullScreen() {
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
@@ -13,13 +19,13 @@ export function fullScreen() {
 export function moreSheet(dom) {
     let html = '';
     const ns = this.SN.namespace;
-    this.SN.sheets.forEach((sheet) => {
+    this.SN.sheets.forEach((sheet, index) => {
         if (sheet.name === this.SN.activeSheet.name) {
-            html += `<li class="sn-text-primary" data-ds="true">${sheet.name}</li>`;
+            html += `<li class="sn-text-primary" data-ds="true">${escapeHtml(sheet.name)}</li>`;
             return;
         }
         if (sheet.hidden) return;
-        html += `<li onmousedown="${ns}.activeSheet=${ns}.getSheet('${sheet.name}')" ontouchstart="${ns}.activeSheet=${ns}.getSheet('${sheet.name}')">${sheet.name}</li>`;
+        html += `<li onmousedown="${ns}.activeSheet=${ns}.sheets[${index}]" ontouchstart="${ns}.activeSheet=${ns}.sheets[${index}]">${escapeHtml(sheet.name)}</li>`;
     });
     dom.nextElementSibling.innerHTML = html;
 }

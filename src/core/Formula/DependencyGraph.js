@@ -31,6 +31,9 @@ export default class DependencyGraph {
         // 用于更新A时清理旧依赖，建立新依赖
         this.dependencies = new Map();
 
+        // Range dependencies are tracked as areas to avoid expanding whole rows/columns.
+        this.rangeDependencies = new Map();
+
         // Volatile 单元格集合 - 包含 RAND, TODAY, NOW 等函数的单元格
         // 这些单元格在每次重算时都需要清除缓存
         this.volatileCells = new Set();
@@ -103,6 +106,36 @@ export default class DependencyGraph {
         return this.volatileCells.has(key);
     }
 
+    _collectVolatileRecalcKeys(seedKeys = []) {
+        const out = new Set(seedKeys);
+        for (const key of this.volatileCells) {
+            out.add(key);
+            const affected = this.getAffectedCells(key);
+            for (const affectedKey of affected) out.add(affectedKey);
+        }
+        return out;
+    }
+
+    _recalculateKeys(keys) {
+        if (!keys.size) return;
+        const sorted = this.topologicalSort(keys);
+        for (const key of sorted) {
+            try {
+                const { sheetName, r, c } = this.parseKey(key);
+                const sheet = this.SN.getSheet(sheetName);
+                const cell = sheet?.getCell(r, c);
+                if (!cell) continue;
+
+                cell._calcVal = undefined;
+                cell._showVal = undefined;
+                cell._fmtResult = undefined;
+                const _ = cell.calcVal;
+            } catch (e) {
+                console.warn(`Failed to recalculate cell ${key}:`, e);
+            }
+        }
+    }
+
     /**
      * Recalculate all Volatile cells and their dependency chains
      * This is the core approach of the Volatile mechanism
@@ -110,44 +143,7 @@ export default class DependencyGraph {
      */
     recalculateVolatile() {
         if (this.volatileCells.size === 0) return;
-
-        // 收集所有需要重算的单元格（Volatile + 其依赖链）
-        const toRecalc = new Set();
-
-        // 1. 首先清除所有 Volatile 单元格的缓存
-        for (const key of this.volatileCells) {
-            toRecalc.add(key);
-
-            // 2. 获取依赖 Volatile 单元格的所有单元格
-            const affected = this.getAffectedCells(key);
-            for (const affectedKey of affected) {
-                toRecalc.add(affectedKey);
-            }
-        }
-
-        // 3. 拓扑排序确定正确的计算顺序
-        const sorted = this.topologicalSort(toRecalc);
-
-        // 4. 按顺序清除缓存并重新计算
-        for (const key of sorted) {
-            try {
-                const { sheetName, r, c } = this.parseKey(key);
-                const sheet = this.SN.getSheet(sheetName);
-                if (sheet) {
-                    const cell = sheet.getCell(r, c);
-                    if (cell) {
-                        // 清除缓存
-                        cell._calcVal = undefined;
-                        cell._showVal = undefined;
-                        cell._fmtResult = undefined;
-                        // 触发重新计算
-                        const _ = cell.calcVal;
-                    }
-                }
-            } catch (e) {
-                console.warn(`Failed to recalculate volatile cell ${key}:`, e);
-            }
-        }
+        this._recalculateKeys(this._collectVolatileRecalcKeys());
     }
 
     /**
@@ -196,7 +192,25 @@ export default class DependencyGraph {
                 }
                 this.dependencies.delete(fromKey);
             }
+            this.rangeDependencies.delete(fromKey);
         }
+    }
+
+    /**
+     * Add an area dependency without expanding every cell in the area.
+     * @param {string} fromKey - Formula cell key
+     * @param {string} sheetName - Dependency sheet name
+     * @param {{s:{r:number,c:number},e:{r:number,c:number}}} area - Dependency area
+     */
+    addRangeDependency(fromKey, sheetName, area) {
+        if (!this.rangeDependencies.has(fromKey)) {
+            this.rangeDependencies.set(fromKey, []);
+        }
+        this.rangeDependencies.get(fromKey).push({
+            sheetName,
+            s: { r: area.s.r, c: area.s.c },
+            e: { r: area.e.r, c: area.e.c }
+        });
     }
 
     /**
@@ -215,33 +229,16 @@ export default class DependencyGraph {
         if (!cell.isFormula) return;
 
         try {
-            // 使用Formula类的tokenize和parseDeps解析依赖
             const formulaStr = cell.editVal.substring(1); // 去掉开头的=
-            const tokens = this.SN.Formula.tokenize(formulaStr);
-            const deps = this.SN.Formula.parseDeps(tokens);
+            const areas = this.SN.Formula.parseDependencyAreas(formulaStr, sheetName);
 
-            // 添加新的依赖关系
-            for (const dep of deps) {
-                // 解析是否跨表引用
-                let depSheetName = sheetName; // 默认同表
-                let depR = dep.r;
-                let depC = dep.c;
-
-                // 检查token中是否有跨表引用
-                for (const token of tokens) {
-                    if (token.type === 'CELL_REF' && token.value.includes('!')) {
-                        const [refSheet, refCell] = token.value.split('!');
-                        const refSheetClean = refSheet.replace(/^'|'$/g, ''); // 去除引号
-                        const refPos = this.SN.Utils.cellStrToNum(refCell);
-                        if (refPos.r === depR && refPos.c === depC) {
-                            depSheetName = refSheetClean;
-                            break;
-                        }
-                    }
+            for (const dep of areas) {
+                const depSheetName = dep.sheetName || sheetName;
+                if (dep.s.r === dep.e.r && dep.s.c === dep.e.c) {
+                    this.addDependency(fromKey, this.cellKey(depSheetName, dep.s.r, dep.s.c));
+                } else {
+                    this.addRangeDependency(fromKey, depSheetName, dep);
                 }
-
-                const toKey = this.cellKey(depSheetName, depR, depC);
-                this.addDependency(fromKey, toKey);
             }
         } catch (error) {
             console.warn(`Failed to parse dependencies for ${fromKey}:`, error);
@@ -271,9 +268,30 @@ export default class DependencyGraph {
                     queue.push(dep);
                 }
             }
+
+            for (const dep of this._getRangeDependents(current)) {
+                affected.add(dep);
+                queue.push(dep);
+            }
         }
 
         return affected;
+    }
+
+    _getRangeDependents(cellKey) {
+        const { sheetName, r, c } = this.parseKey(cellKey);
+        const out = [];
+
+        for (const [fromKey, areas] of this.rangeDependencies) {
+            for (const area of areas) {
+                if (area.sheetName !== sheetName) continue;
+                if (r < area.s.r || r > area.e.r || c < area.s.c || c > area.e.c) continue;
+                out.push(fromKey);
+                break;
+            }
+        }
+
+        return out;
     }
 
     /**
@@ -402,8 +420,7 @@ Trigger update when
     notifyChange(sheetName, r, c) {
         const cellKey = this.cellKey(sheetName, r, c);
 
-        // 获取所有受影响的单元格
-        const affected = this.getAffectedCells(cellKey);
+        const affected = this._collectVolatileRecalcKeys(this.getAffectedCells(cellKey));
 
         if (affected.size === 0) return;
 
@@ -413,21 +430,7 @@ Trigger update when
                 this.batchUpdates.add(key);
             }
         } else {
-            // 立即模式：立即更新
-            const sorted = this.topologicalSort(affected);
-
-            for (const key of sorted) {
-                const { sheetName: s, r: row, c: col } = this.parseKey(key);
-                const sheet = this.SN.getSheet(s);
-                if (sheet) {
-                    const cell = sheet.getCell(row, col);
-                    // 清除缓存，强制重新计算
-                    cell._calcVal = undefined;
-                    cell._showVal = undefined;
-                    // 触发计算
-                    const _ = cell.calcVal;
-                }
-            }
+            this._recalculateKeys(affected);
         }
     }
 
@@ -470,6 +473,7 @@ Trigger update when
         // 清空所有依赖
         this.dependencies.clear();
         this.dependents.clear();
+        this.rangeDependencies.clear();
 
         // 重建每个工作表
         for (const sheet of this.SN.sheets) {
@@ -514,6 +518,7 @@ Trigger update when
     clear() {
         this.dependencies.clear();
         this.dependents.clear();
+        this.rangeDependencies.clear();
         this.volatileCells.clear();
         this.batchUpdates.clear();
     }
@@ -525,6 +530,7 @@ Trigger update when
         return {
             totalDependencies: this.dependencies.size,
             totalDependents: this.dependents.size,
+            rangeDependencies: this.rangeDependencies.size,
             volatileCells: this.volatileCells.size,
             batchMode: this.batchMode,
             batchUpdatesCount: this.batchUpdates.size

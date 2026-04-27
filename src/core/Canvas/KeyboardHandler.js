@@ -1,3 +1,5 @@
+import { isCheckboxControl } from '../Cell/cellControlXml.js';
+
 /**
  * Keyboard Event Processing Module
  * Calling the Action Layer's Clipboard Method
@@ -187,6 +189,15 @@ export function docKeyDown(event) {
     }
     // Delete 删除内容
     else if (event.key == 'Delete') {
+        if (sheet.hasCheckboxControl(sheet.activeAreas)) {
+            event.preventDefault();
+            sheet.deleteCheckboxControlOrValue(sheet.activeAreas);
+            if (this.SN.DependencyGraph && this.SN.calcMode !== 'manual') {
+                this.SN.DependencyGraph.recalculateVolatile();
+            }
+            this.r();
+            return;
+        }
         sheet.eachCells(sheet.activeAreas, (r, c) => {
             sheet.getCell(r, c).editVal = "";
         });
@@ -210,6 +221,21 @@ export function docKeyDown(event) {
         }
     }
     // 开启输入框条件
+    else if ((event.key === ' ' || event.key === 'Spacebar') &&
+        document.activeElement === this.input &&
+        !this.inputEditing) {
+        const active = sheet.getCell(sheet.activeCell.r, sheet.activeCell.c);
+        if (isCheckboxControl(active.control)) {
+            event.preventDefault();
+            const areas = sheet.activeAreas?.length
+                ? sheet.activeAreas
+                : [{ s: sheet.activeCell, e: sheet.activeCell }];
+            sheet.setCheckboxValue(areas, active.calcVal !== true);
+            this.r();
+            return;
+        }
+        this.showCellInput(true, true);
+    }
     else if (document.activeElement === this.input && !this.inputEditing) {
         this.showCellInput(true, true);
     }

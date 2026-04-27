@@ -1,3 +1,25 @@
+:root {
+    --sn-z-canvas-show: 100;
+    --sn-z-canvas-middle: 200;
+    --sn-z-canvas-handle: 300;
+    --sn-z-canvas-top: 400;
+    --sn-z-canvas-control: 430;
+    --sn-z-canvas-floating: 450;
+    --sn-z-cell-editor: 999;
+    --sn-z-dropdown: 1000;
+    --sn-z-dropdown-submenu: 1001;
+    --sn-z-toolbar-overflow: 1100;
+    --sn-z-context-menu: 3000;
+    --sn-z-auto-filter-panel: 3100;
+    --sn-z-chat-mask: 8000;
+    --sn-z-side-panel: 8100;
+    --sn-z-chat-window: 8100;
+    --sn-z-modal: 9000;
+    --sn-z-modal-popover: 9010;
+    --sn-z-tooltip: 9100;
+    --sn-z-toast: 9200;
+}
+
 .sn-f16{
     font-size: 16px !important;
 }

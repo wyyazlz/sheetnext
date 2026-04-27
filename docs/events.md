@@ -1,6 +1,6 @@
 # Event API
 
-> Generated: 2026-03-27
+> Generated: 2026-04-27
 
 ## Subscription surface
 
@@ -157,7 +157,7 @@ SN.Event.once('afterSheetAdd', (e) => {
 
 ## Emitted events
 
-- Total detected events: 114
+- Total detected events: 120
 - Dynamic event patterns: 7
 
 ### Col
@@ -172,6 +172,7 @@ SN.Event.once('afterSheetAdd', (e) => {
 | Event | Mode | Cancelable | Payload Keys |
 | --- | --- | --- | --- |
 | after${eventSuffix} | emit | No | [indexKey], changedCount, limitedCount, maxLevel, sheet |
+| afterClearCellControl | emit | No | ...summary, sheet |
 | afterClearDataValidation | emit | No | ...summary, sheet |
 | afterConsolidate | emit | No | ...summary, sheet |
 | afterDeleteColumns | emit | No | col, count, sheet |
@@ -182,14 +183,15 @@ SN.Event.once('afterSheetAdd', (e) => {
 | afterMerge | emit | No | areas, mode, sheet |
 | afterMoveArea | emit | No | moveArea, sheet, targetArea |
 | afterSelectionChange | emit | No | newAreas, newCell, oldAreas, oldCell, sheet, type |
+| afterSetCellControl | emit | No | ...summary, control, sheet |
 | afterSetDataValidation | emit | No | ...summary, sheet |
 | afterSheetRename | emit | No | newName, oldName, sheet |
-| afterSort | emit | No | range, sheet, sortKeys, success |
+| afterSort | emit | No | options, range, sheet, sortKeys, success |
 | afterSubtotal | emit | No | ...summary, options, sheet |
 | afterTextToColumns | emit | No | columnCount, rowCount, sheet, sourceRange, targetRange |
 | afterUnmerge | emit | No | cellAd, sheet |
-| afterZoomChange | emit | No | newZoom, oldZoom, sheet |
 | before${eventSuffix} | emit | No | [indexKey], areas, maxLevel, sheet |
+| beforeClearCellControl | emit | No | areas, sheet |
 | beforeClearDataValidation | emit | No | areas, sheet |
 | beforeConsolidate | emit | No | functionName, sheet, skipBlanks, sourceRanges, targetRange |
 | beforeDeleteColumns | emit | No | col, count, sheet |
@@ -200,13 +202,13 @@ SN.Event.once('afterSheetAdd', (e) => {
 | beforeMerge | emit | No | areas, mode, sheet |
 | beforeMoveArea | emit | No | moveArea, sheet, targetArea |
 | beforeSelectionChange | emit | No | newAreas, newCell, oldAreas, oldCell, sheet, type |
+| beforeSetCellControl | emit | No | areas, control, sheet |
 | beforeSetDataValidation | emit | No | areas, rule, sheet |
 | beforeSheetRename | emit | No | newName, oldName, sheet |
-| beforeSort | emit | No | range, sheet, sortKeys |
+| beforeSort | emit | No | options, range, sheet, sortKeys |
 | beforeSubtotal | emit | No | options, range, sheet |
 | beforeTextToColumns | emit | No | options, sheet, sourceRange, targetRange |
 | beforeUnmerge | emit | No | cellAd, sheet |
-| beforeZoomChange | emit | No | newZoom, oldZoom, sheet |
 
 ### Workbook
 | Event | Mode | Cancelable | Payload Keys |
@@ -216,12 +218,14 @@ SN.Event.once('afterSheetAdd', (e) => {
 | afterOperation:${op.type} | emitAsync | No | - |
 | afterSheetAdd | emit | No | name, sheet |
 | afterSheetDelete | emit | No | index, name, sheet |
+| afterSheetMove | emit | No | fromIndex, sheet, toIndex |
 | afterWorkbookRename | emit | No | newName, oldName |
 | beforeActiveSheetChange | emit | No | newSheet, oldSheet |
 | beforeOperation | emit | No | ...data, operation |
 | beforeOperation:${type} | emit | No | ...data, operation |
 | beforeSheetAdd | emit | No | name |
 | beforeSheetDelete | emit | No | index, name, sheet |
+| beforeSheetMove | emit | No | fromIndex, sheet, toIndex |
 | beforeWorkbookRename | emit | No | newName, oldName |
 
 ### AI
@@ -324,6 +328,12 @@ SN.Event.once('afterSheetAdd', (e) => {
 | beforeTableResize | emit | No | newRef, oldRef, sheet, table |
 | beforeTableStyleChange | emit | No | newStyle, oldStyle, sheet, table |
 | beforeTableTotalsRowToggle | emit | No | newValue, oldValue, sheet, table |
+
+### Canvas
+| Event | Mode | Cancelable | Payload Keys |
+| --- | --- | --- | --- |
+| afterZoomChange | emit | No | newZoom, oldZoom, sheet |
+| beforeZoomChange | emit | No | newZoom, oldZoom, sheet |
 
 ### Comment
 | Event | Mode | Cancelable | Payload Keys |

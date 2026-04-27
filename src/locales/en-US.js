@@ -1117,6 +1117,14 @@ const enUS = {
             "insertBelow": "Insert {countInput} row(s) below",
             "ungroup": "Ungroup Rows",
             "unhide": "Unhide Rows"
+        },
+        "sheet": {
+            "delete": "Delete",
+            "hide": "Hide",
+            "insert": "Insert",
+            "move": "Move...",
+            "rename": "Rename",
+            "unhide": "Unhide..."
         }
     },
     "core": {
@@ -1788,7 +1796,8 @@ const enUS = {
     },
     "toolbar": {
         "insert": {
-            "chart": "Chart"
+            "chart": "Chart",
+            "checkbox": "Checkbox"
         },
         "numFmt": {
             "accounting": "Accounting",
@@ -1837,7 +1846,23 @@ const enUS = {
                 "title": "New Workbook"
             }
         },
-        "renamePrompt": "Please enter a new worksheet name:"
+        "renameLabel": "Workbook name",
+        "renamePrompt": "Please enter a new workbook name:",
+        "renameTitle": "Rename workbook",
+        "sheetTab": {
+            "deleteConfirm": "Delete",
+            "deleteMessage": "Delete worksheet \"{name}\"?",
+            "deleteTitle": "Delete Sheet",
+            "moveBeforeLabel": "Before sheet:",
+            "moveBeforeSheet": "Before {name}",
+            "moveConfirm": "Move",
+            "moveTitle": "Move Sheet",
+            "moveToEnd": "Move to end",
+            "noHiddenSheets": "No hidden worksheets.",
+            "renameLabel": "Worksheet name",
+            "unhideLabel": "Sheet:",
+            "unhideTitle": "Unhide Sheet"
+        }
     }
 };
 

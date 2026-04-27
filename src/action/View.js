@@ -48,35 +48,57 @@ export function zoomCustom() {
 // 冻结窗格操作
 // ============================================================
 
+function _normalizeFreezeCount(count) {
+    return Math.max(0, Math.floor(Number(count) || 0));
+}
+
+function _getFrozenRowCount(sheet) {
+    return Math.max(0, (sheet._frozenRows || 0) - (sheet._freezeStartRow || 0));
+}
+
+function _getFrozenColCount(sheet) {
+    return Math.max(0, (sheet._frozenCols || 0) - (sheet._freezeStartCol || 0));
+}
+
 // 冻结首行（当前视图的第一行，只冻结1行）
 export function freezeRows(count) {
     const sheet = this.SN.activeSheet;
+    const freezeCount = _normalizeFreezeCount(count);
+    if (_getFrozenRowCount(sheet) === freezeCount) return;
+
     const currentFirstRow = sheet.vi?.rowArr?.[0] ?? 0;
     // 冻结起始 = 当前视图首行
     sheet._freezeStartRow = currentFirstRow;
     // 冻结结束 = 起始 + count
-    sheet.frozenRows = currentFirstRow + count;
+    sheet.frozenRows = currentFirstRow + freezeCount;
     this.SN._r();
 }
 
 // 冻结首列（当前视图的第一列，只冻结1列）
 export function freezeCols(count) {
     const sheet = this.SN.activeSheet;
+    const freezeCount = _normalizeFreezeCount(count);
+    if (_getFrozenColCount(sheet) === freezeCount) return;
+
     const currentFirstCol = sheet.vi?.colArr?.[0] ?? 0;
     sheet._freezeStartCol = currentFirstCol;
-    sheet.frozenCols = currentFirstCol + count;
+    sheet.frozenCols = currentFirstCol + freezeCount;
     this.SN._r();
 }
 
 // 同时冻结首行首列
 export function freezeRowsAndCols(rows, cols) {
     const sheet = this.SN.activeSheet;
+    const rowCount = _normalizeFreezeCount(rows);
+    const colCount = _normalizeFreezeCount(cols);
+    if (_getFrozenRowCount(sheet) === rowCount && _getFrozenColCount(sheet) === colCount) return;
+
     const currentFirstRow = sheet.vi?.rowArr?.[0] ?? 0;
     const currentFirstCol = sheet.vi?.colArr?.[0] ?? 0;
     sheet._freezeStartRow = currentFirstRow;
     sheet._freezeStartCol = currentFirstCol;
-    sheet.frozenRows = currentFirstRow + rows;
-    sheet.frozenCols = currentFirstCol + cols;
+    sheet.frozenRows = currentFirstRow + rowCount;
+    sheet.frozenCols = currentFirstCol + colCount;
     this.SN._r();
 }
 

@@ -42,6 +42,22 @@ function drawStar(ctx, x, y, w, h, points, innerRadiusRatio = 0.38) {
     ctx.closePath();
 }
 
+// 绘制径向不规则形（爆炸形等）
+function drawRadialShape(ctx, x, y, w, h, radii, rotation = -Math.PI / 2) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const radiusX = w / 2;
+    const radiusY = h / 2;
+    radii.forEach((ratio, index) => {
+        const angle = (Math.PI * 2 / radii.length) * index + rotation;
+        const px = cx + radiusX * ratio * Math.cos(angle);
+        const py = cy + radiusY * ratio * Math.sin(angle);
+        if (index === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
+}
+
 // 绘制圆角矩形（通用）
 function drawRoundRect(ctx, x, y, w, h, radiusRatio = 0.1) {
     const radius = Math.min(w, h) * radiusRatio;
@@ -59,6 +75,66 @@ function drawRoundRect(ctx, x, y, w, h, radiusRatio = 0.1) {
         ctx.arcTo(x, y, x + radius, y, radius);
         ctx.closePath();
     }
+}
+
+// 绘制归一化路径，复杂形状统一使用 0..1 坐标
+function ux(x, w, value) {
+    return x + w * value;
+}
+
+function uy(y, h, value) {
+    return y + h * value;
+}
+
+function drawUnitPath(ctx, x, y, w, h, commands) {
+    commands.forEach((command) => {
+        const [type, ...args] = command;
+        switch (type) {
+            case 'M':
+                ctx.moveTo(ux(x, w, args[0]), uy(y, h, args[1]));
+                break;
+            case 'L':
+                ctx.lineTo(ux(x, w, args[0]), uy(y, h, args[1]));
+                break;
+            case 'C':
+                ctx.bezierCurveTo(
+                    ux(x, w, args[0]), uy(y, h, args[1]),
+                    ux(x, w, args[2]), uy(y, h, args[3]),
+                    ux(x, w, args[4]), uy(y, h, args[5])
+                );
+                break;
+            case 'Q':
+                ctx.quadraticCurveTo(
+                    ux(x, w, args[0]), uy(y, h, args[1]),
+                    ux(x, w, args[2]), uy(y, h, args[3])
+                );
+                break;
+            case 'Z':
+                ctx.closePath();
+                break;
+        }
+    });
+}
+
+function drawUnitPolygon(ctx, x, y, w, h, points) {
+    points.forEach(([px, py], index) => {
+        if (index === 0) ctx.moveTo(ux(x, w, px), uy(y, h, py));
+        else ctx.lineTo(ux(x, w, px), uy(y, h, py));
+    });
+    ctx.closePath();
+}
+
+function drawRibbonTail(ctx, x, y, w, h, side, top, bottom, attachX) {
+    const outerX = side === 'left' ? 0 : 1;
+    const notchX = side === 'left' ? 0.13 : 0.87;
+    const middle = (top + bottom) / 2;
+    drawUnitPolygon(ctx, x, y, w, h, [
+        [attachX, top],
+        [outerX, top],
+        [notchX, middle],
+        [outerX, bottom],
+        [attachX, bottom]
+    ]);
 }
 
 // 绘制箭头（通用方向）
@@ -558,19 +634,19 @@ export const shapePaths = {
     },
 
     lightningBolt(ctx, x, y, w, h) {
-        // 左上到右下的闪电路径
-        ctx.moveTo(x + w * 0.35, y);
-        ctx.lineTo(x + w * 0.45, y + h * 0.38);
-        ctx.lineTo(x + w * 0.25, y + h * 0.38);
-        ctx.lineTo(x + w * 0.4, y + h * 0.72);
-        ctx.lineTo(x + w * 0.15, y + h * 0.72);
-        ctx.lineTo(x + w * 0.35, y + h);
-        ctx.lineTo(x + w * 0.6, y + h * 0.78);
-        ctx.lineTo(x + w * 0.5, y + h * 0.78);
-        ctx.lineTo(x + w * 0.7, y + h * 0.44);
-        ctx.lineTo(x + w * 0.6, y + h * 0.44);
-        ctx.lineTo(x + w * 0.8, y + h * 0.06);
-        ctx.closePath();
+        drawUnitPolygon(ctx, x, y, w, h, [
+            [0.3909, 0],
+            [0, 0.1527],
+            [0.3878, 0.3837],
+            [0.2726, 0.5038],
+            [0.6164, 0.6829],
+            [0.5037, 0.859],
+            [1, 1],
+            [0.7715, 0.7618],
+            [0.8272, 0.6458],
+            [0.5319, 0.4612],
+            [0.6526, 0.2726]
+        ]);
     },
 
     sun(ctx, x, y, w, h) {
@@ -600,14 +676,18 @@ export const shapePaths = {
     },
 
     cloud(ctx, x, y, w, h) {
-        const r1 = w * 0.2, r2 = h * 0.25, r3 = w * 0.25;
-        ctx.arc(x + r1, y + r2, r1, Math.PI, Math.PI * 1.5);
-        ctx.arc(x + w / 2, y + r2 * 0.8, r3, Math.PI * 1.2, Math.PI * 1.8);
-        ctx.arc(x + w - r1, y + r2, r1, Math.PI * 1.5, 0);
-        ctx.arc(x + w - r1 * 0.5, y + h - r2, r2, 0, Math.PI * 0.5);
-        ctx.arc(x + w / 2, y + h - r2 * 0.6, r3, Math.PI * 0.2, Math.PI * 0.8);
-        ctx.arc(x + r1 * 0.5, y + h - r2, r2, Math.PI * 0.5, Math.PI);
-        ctx.closePath();
+        drawUnitPath(ctx, x, y, w, h, [
+            ['M', 0.18, 0.74],
+            ['C', 0.08, 0.74, 0, 0.65, 0, 0.54],
+            ['C', 0, 0.44, 0.08, 0.36, 0.2, 0.34],
+            ['C', 0.25, 0.16, 0.42, 0.07, 0.58, 0.14],
+            ['C', 0.71, 0.18, 0.79, 0.29, 0.82, 0.42],
+            ['C', 0.92, 0.41, 1, 0.5, 1, 0.61],
+            ['C', 1, 0.74, 0.89, 0.83, 0.77, 0.8],
+            ['C', 0.72, 0.92, 0.57, 0.96, 0.47, 0.85],
+            ['C', 0.36, 0.94, 0.22, 0.88, 0.18, 0.74],
+            ['Z']
+        ]);
     },
 
     arc(ctx, x, y, w, h) {
@@ -1448,37 +1528,17 @@ export const shapePaths = {
     // ==================== 星形和丝带 ====================
 
     irregularSeal1(ctx, x, y, w, h) {
-        // 爆炸形1：固定不规则多边形（Excel标准）
-        const cx = x + w / 2, cy = y + h / 2;
-        const outerR = Math.min(w, h) / 2;
-        // 固定半径比例，模拟不规则效果
-        const radii = [0.85, 0.95, 0.75, 1.0, 0.8, 0.9, 0.7, 0.95, 0.85, 0.9];
-        for (let i = 0; i < radii.length; i++) {
-            const angle = (Math.PI * 2 / radii.length) * i - Math.PI / 2;
-            const r = outerR * radii[i];
-            const px = cx + r * Math.cos(angle);
-            const py = cy + r * Math.sin(angle);
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
+        drawRadialShape(ctx, x, y, w, h, [
+            0.96, 0.46, 0.78, 0.5, 0.98, 0.42, 0.68, 0.54, 0.92,
+            0.44, 0.82, 0.5, 1, 0.42, 0.7, 0.52
+        ], -Math.PI / 2);
     },
 
     irregularSeal2(ctx, x, y, w, h) {
-        // 爆炸形2：固定不规则多边形（Excel标准）
-        const cx = x + w / 2, cy = y + h / 2;
-        const outerR = Math.min(w, h) / 2;
-        // 固定半径比例，模拟不规则效果
-        const radii = [0.9, 0.7, 1.0, 0.75, 0.85, 0.95, 0.7, 0.9, 0.8, 1.0, 0.75, 0.85];
-        for (let i = 0; i < radii.length; i++) {
-            const angle = (Math.PI * 2 / radii.length) * i;
-            const r = outerR * radii[i];
-            const px = cx + r * Math.cos(angle);
-            const py = cy + r * Math.sin(angle);
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
+        drawRadialShape(ctx, x, y, w, h, [
+            0.92, 0.42, 0.72, 0.5, 1, 0.38, 0.68, 0.52, 0.9, 0.44,
+            0.74, 0.56, 0.96, 0.36, 0.7, 0.5, 0.88, 0.42, 0.76, 0.54
+        ], -Math.PI / 2);
     },
 
     star4(ctx, x, y, w, h) {
@@ -1522,68 +1582,39 @@ export const shapePaths = {
     },
 
     ribbon(ctx, x, y, w, h) {
-        const fold = w * 0.15;
-        const tailH = h * 0.2;
-        ctx.moveTo(x + fold, y);
-        ctx.lineTo(x + w - fold, y);
-        ctx.lineTo(x + w, y + tailH);
-        ctx.lineTo(x + w, y + h - fold);
-        ctx.lineTo(x + w - fold, y + h);
-        ctx.lineTo(x + w * 0.6, y + h - tailH);
-        ctx.lineTo(x + w * 0.4, y + h - tailH);
-        ctx.lineTo(x + fold, y + h);
-        ctx.lineTo(x, y + h - fold);
-        ctx.lineTo(x, y + tailH);
-        ctx.closePath();
+        drawRibbonTail(ctx, x, y, w, h, 'left', 0.18, 0.62, 0.32);
+        drawRibbonTail(ctx, x, y, w, h, 'right', 0.18, 0.62, 0.68);
+        drawRoundRect(ctx, x + w * 0.27, y + h * 0.32, w * 0.46, h * 0.5, 0.08);
     },
 
     ribbon2(ctx, x, y, w, h) {
-        const fold = w * 0.15;
-        const tailH = h * 0.2;
-        ctx.moveTo(x + fold, y + fold);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x, y + h - tailH);
-        ctx.lineTo(x + w - fold, y + h - tailH);
-        ctx.lineTo(x + w, y + h - tailH - fold);
-        ctx.lineTo(x + w, y);
-        ctx.lineTo(x + w - fold, y + fold);
-        ctx.lineTo(x + w - fold, y + h);
-        ctx.lineTo(x + w * 0.6, y + h - tailH * 1.5);
-        ctx.lineTo(x + w * 0.4, y + h - tailH * 1.5);
-        ctx.lineTo(x + fold, y + h);
-        ctx.closePath();
+        drawRoundRect(ctx, x + w * 0.27, y + h * 0.18, w * 0.46, h * 0.5, 0.08);
+        drawRibbonTail(ctx, x, y, w, h, 'left', 0.38, 0.82, 0.32);
+        drawRibbonTail(ctx, x, y, w, h, 'right', 0.38, 0.82, 0.68);
     },
 
     ellipseRibbon(ctx, x, y, w, h) {
-        const cx = x + w / 2;
-        const ribbonW = w * 0.25;
-        const bendH = h * 0.15;
-        ctx.moveTo(x, y + bendH);
-        ctx.quadraticCurveTo(cx, y, x + w, y + bendH);
-        ctx.lineTo(x + w, y + h - bendH);
-        ctx.lineTo(x + w - ribbonW, y + h);
-        ctx.lineTo(x + w - ribbonW, y + h * 0.7);
-        ctx.lineTo(cx, y + h * 0.8);
-        ctx.lineTo(x + ribbonW, y + h * 0.7);
-        ctx.lineTo(x + ribbonW, y + h);
-        ctx.lineTo(x, y + h - bendH);
-        ctx.closePath();
+        drawRibbonTail(ctx, x, y, w, h, 'left', 0.24, 0.62, 0.31);
+        drawRibbonTail(ctx, x, y, w, h, 'right', 0.24, 0.62, 0.69);
+        drawUnitPath(ctx, x, y, w, h, [
+            ['M', 0.28, 0.38],
+            ['C', 0.41, 0.48, 0.59, 0.48, 0.72, 0.38],
+            ['L', 0.72, 0.78],
+            ['C', 0.59, 0.9, 0.41, 0.9, 0.28, 0.78],
+            ['Z']
+        ]);
     },
 
     ellipseRibbon2(ctx, x, y, w, h) {
-        const cx = x + w / 2;
-        const ribbonW = w * 0.25;
-        const bendH = h * 0.15;
-        ctx.moveTo(x, y + bendH);
-        ctx.lineTo(x, y + h - bendH);
-        ctx.quadraticCurveTo(cx, y + h, x + w, y + h - bendH);
-        ctx.lineTo(x + w, y + bendH);
-        ctx.lineTo(x + w - ribbonW, y);
-        ctx.lineTo(x + w - ribbonW, y + h * 0.3);
-        ctx.lineTo(cx, y + h * 0.2);
-        ctx.lineTo(x + ribbonW, y + h * 0.3);
-        ctx.lineTo(x + ribbonW, y);
-        ctx.closePath();
+        drawRibbonTail(ctx, x, y, w, h, 'left', 0.38, 0.76, 0.31);
+        drawRibbonTail(ctx, x, y, w, h, 'right', 0.38, 0.76, 0.69);
+        drawUnitPath(ctx, x, y, w, h, [
+            ['M', 0.28, 0.22],
+            ['C', 0.41, 0.1, 0.59, 0.1, 0.72, 0.22],
+            ['L', 0.72, 0.62],
+            ['C', 0.59, 0.52, 0.41, 0.52, 0.28, 0.62],
+            ['Z']
+        ]);
     },
 
     verticalScroll(ctx, x, y, w, h) {
@@ -1611,29 +1642,31 @@ export const shapePaths = {
     },
 
     wave(ctx, x, y, w, h) {
-        const amplitude = h * 0.2;
-        const cy = y + h / 2;
-        ctx.moveTo(x, cy);
-        ctx.quadraticCurveTo(x + w * 0.25, y, x + w / 2, cy);
-        ctx.quadraticCurveTo(x + w * 0.75, y + h, x + w, cy);
-        ctx.lineTo(x + w, cy + amplitude);
-        ctx.quadraticCurveTo(x + w * 0.75, y + h + amplitude, x + w / 2, cy + amplitude);
-        ctx.quadraticCurveTo(x + w * 0.25, y + amplitude, x, cy + amplitude);
-        ctx.closePath();
+        drawUnitPath(ctx, x, y, w, h, [
+            ['M', 0, 0.28],
+            ['C', 0.18, 0.06, 0.32, 0.06, 0.5, 0.28],
+            ['C', 0.68, 0.5, 0.82, 0.5, 1, 0.28],
+            ['L', 1, 0.76],
+            ['C', 0.82, 0.98, 0.68, 0.98, 0.5, 0.76],
+            ['C', 0.32, 0.54, 0.18, 0.54, 0, 0.76],
+            ['Z']
+        ]);
     },
 
     doubleWave(ctx, x, y, w, h) {
-        const amplitude = h * 0.15;
-        const cy = y + h / 2;
-        ctx.moveTo(x, cy);
-        ctx.quadraticCurveTo(x + w * 0.17, y, x + w * 0.33, cy);
-        ctx.quadraticCurveTo(x + w * 0.5, y + h, x + w * 0.67, cy);
-        ctx.quadraticCurveTo(x + w * 0.83, y, x + w, cy);
-        ctx.lineTo(x + w, cy + amplitude);
-        ctx.quadraticCurveTo(x + w * 0.83, y + h + amplitude, x + w * 0.67, cy + amplitude);
-        ctx.quadraticCurveTo(x + w * 0.5, y + amplitude, x + w * 0.33, cy + amplitude);
-        ctx.quadraticCurveTo(x + w * 0.17, y + h + amplitude, x, cy + amplitude);
-        ctx.closePath();
+        drawUnitPath(ctx, x, y, w, h, [
+            ['M', 0, 0.36],
+            ['C', 0.08, 0.18, 0.17, 0.18, 0.25, 0.36],
+            ['C', 0.33, 0.54, 0.42, 0.54, 0.5, 0.36],
+            ['C', 0.58, 0.18, 0.67, 0.18, 0.75, 0.36],
+            ['C', 0.83, 0.54, 0.92, 0.54, 1, 0.36],
+            ['L', 1, 0.68],
+            ['C', 0.92, 0.86, 0.83, 0.86, 0.75, 0.68],
+            ['C', 0.67, 0.5, 0.58, 0.5, 0.5, 0.68],
+            ['C', 0.42, 0.86, 0.33, 0.86, 0.25, 0.68],
+            ['C', 0.17, 0.5, 0.08, 0.5, 0, 0.68],
+            ['Z']
+        ]);
     },
 
     // ==================== 标注 ====================

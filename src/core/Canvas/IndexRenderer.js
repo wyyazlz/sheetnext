@@ -7,6 +7,25 @@ import { syncToolbarState } from '../Layout/ToolbarBuilder.js';
 import { _cgl } from './Canvas.js';
 import { getFormulaBarValue } from './helpers.js';
 
+function isCoarsePointer() {
+    return typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+}
+
+function withGridBodyClip(canvas, sheet, draw) {
+    const left = sheet.indexWidth;
+    const top = sheet.headHeight;
+    const width = canvas.viewWidth - left;
+    const height = canvas.viewHeight - top;
+    if (width <= 0 || height <= 0) return;
+
+    canvas.bc.save();
+    canvas.bc.beginPath();
+    canvas.bc.rect(left, top, width, height);
+    canvas.bc.clip();
+    draw();
+    canvas.bc.restore();
+}
+
 // 获取高亮信息（选中区域的行列）
 export function getLight() {
     const sheet = this.activeSheet;
@@ -17,14 +36,18 @@ export function getLight() {
     areas.forEach(area => {
         const { x, y, w, h, inView } = sheet.getAreaInviewInfo(area);
         frames.push({ x, y, w, h, inView, area });
+        const sr = Math.min(area.s.r, area.e.r);
+        const er = Math.max(area.s.r, area.e.r);
+        const sc = Math.min(area.s.c, area.e.c);
+        const ec = Math.max(area.s.c, area.e.c);
         // 收集高亮行
-        for (let r = area.s.r; r <= area.e.r; r++) {
-            if (sheet.vi.rowsIndex.includes(r)) rowsSet.add(r);
-        }
+        (sheet.vi.rowLayouts || []).forEach(({ index: r }) => {
+            if (r >= sr && r <= er) rowsSet.add(r);
+        });
         // 收集高亮列
-        for (let c = area.s.c; c <= area.e.c; c++) {
-            if (sheet.vi.colsIndex.includes(c)) colsSet.add(c);
-        }
+        (sheet.vi.colLayouts || []).forEach(({ index: c }) => {
+            if (c >= sc && c <= ec) colsSet.add(c);
+        });
     });
     this.activeBorderInfo = frames[frames.length - 1]
     return {
@@ -57,8 +80,6 @@ export function rAllBtn() {
 export function rRowColHeaders(sheet, lightInfo) {
     this.rAllBtn(); // 全选按钮
 
-    let y = sheet.headHeight;
-    let x = sheet.indexWidth;
     this.bc.textBaseline = 'middle'
     this.bc.textAlign = 'center'
     this.bc.strokeStyle = '#ccc';
@@ -67,10 +88,16 @@ export function rRowColHeaders(sheet, lightInfo) {
 
     // 渲染列头
     this.bc.font = '13px Arial';
-    sheet.vi.colsIndex.forEach(c => {
+    (sheet.vi.colLayouts || []).forEach(({ index: c, x, w: nowCellWidth, frozen }) => {
         if (x == 0) return
         const isLight = lightInfo.columns.includes(c)
-        let nowCellWidth = sheet.getCol(c).width;
+        const clipLeft = frozen ? sheet.indexWidth : sheet.vi.fw;
+        const clipRight = frozen ? sheet.vi.fw : this.viewWidth;
+        if (Math.min(clipRight, x + nowCellWidth) <= Math.max(clipLeft, x)) return;
+        this.bc.save();
+        this.bc.beginPath();
+        this.bc.rect(clipLeft, 0, clipRight - clipLeft, sheet.headHeight);
+        this.bc.clip();
 
         // 背景
         this.bc.fillStyle = isLight ? '#d9d9d9' : '#f0f0f0';
@@ -100,16 +127,21 @@ export function rRowColHeaders(sheet, lightInfo) {
         this.bc.lineWidth = lineWidth;
         this.bc.fillStyle = '#333';
         this.bc.fillText(this.Utils.numToChar(c), x + nowCellWidth / 2, sheet.headHeight / 2 + 2);
-        x += nowCellWidth;
+        this.bc.restore();
     })
 
     // 渲染序号
     this.bc.font = '14.6px Arial';
-    sheet.vi.rowsIndex.forEach(r => {
+    (sheet.vi.rowLayouts || []).forEach(({ index: r, y, h: rowHeight, frozen }) => {
         if (y == 0) return
         const isLight = lightInfo.rows.includes(r)
-        x = sheet.indexWidth;
-        let rowHeight = sheet.getRow(r).height;
+        const clipTop = frozen ? sheet.headHeight : sheet.vi.fh;
+        const clipBottom = frozen ? sheet.vi.fh : this.viewHeight;
+        if (Math.min(clipBottom, y + rowHeight) <= Math.max(clipTop, y)) return;
+        this.bc.save();
+        this.bc.beginPath();
+        this.bc.rect(0, clipTop, sheet.indexWidth, clipBottom - clipTop);
+        this.bc.clip();
 
         // 背景
         this.bc.fillStyle = isLight ? '#d9d9d9' : '#f0f0f0';
@@ -139,7 +171,7 @@ export function rRowColHeaders(sheet, lightInfo) {
         this.bc.lineWidth = lineWidth;
         this.bc.fillStyle = '#333';
         this.bc.fillText(r + 1, sheet.indexWidth / 2, y + rowHeight / 2 + 2);
-        y += sheet.getRow(r).height
+        this.bc.restore();
     })
 }
 
@@ -224,12 +256,9 @@ export function rHighlightBars(sheet, lightInfo) {
 
     // 绘制行高亮条
     lightInfo.rows.forEach(r => {
-        let y = headHeight;
-        for (const ri of sheet.vi.rowsIndex) {
-            if (ri === r) break;
-            y += sheet.getRow(ri).height;
-        }
-        const h = sheet.getRow(r).height;
+        const layout = sheet.vi.rowMap?.get(r);
+        if (!layout) return;
+        const { y, h } = layout;
 
         // 收集并合并跳过区间
         const skipRanges = frames
@@ -248,12 +277,9 @@ export function rHighlightBars(sheet, lightInfo) {
 
     // 绘制列高亮条
     lightInfo.columns.forEach(c => {
-        let x = indexWidth;
-        for (const ci of sheet.vi.colsIndex) {
-            if (ci === c) break;
-            x += sheet.getCol(ci).width;
-        }
-        const w = sheet.getCol(c).width;
+        const layout = sheet.vi.colMap?.get(c);
+        if (!layout) return;
+        const { x, w } = layout;
 
         // 收集并合并跳过区间
         const skipRanges = frames
@@ -278,12 +304,20 @@ export function rPageBreaks(sheet) {
     const guides = this.SN.Print?.getPageBreakGuides?.(sheet);
     if (!guides?.range) return;
 
-    const rowIndices = sheet.vi?.rowsIndex || [];
-    const colIndices = sheet.vi?.colsIndex || [];
+    const rowLayouts = sheet.vi?.rowLayouts || [];
+    const colLayouts = sheet.vi?.colLayouts || [];
+    const rowIndices = rowLayouts.map(item => item.index);
+    const colIndices = colLayouts.map(item => item.index);
     if (!rowIndices.length || !colIndices.length) return;
 
-    const rowMap = buildStartMap(rowIndices, sheet.headHeight, r => sheet.getRow(r).height);
-    const colMap = buildStartMap(colIndices, sheet.indexWidth, c => sheet.getCol(c).width);
+    const rowMap = {
+        starts: new Map(rowLayouts.map(item => [item.index, item.y])),
+        end: Math.max(...rowLayouts.map(item => item.y + item.h))
+    };
+    const colMap = {
+        starts: new Map(colLayouts.map(item => [item.index, item.x])),
+        end: Math.max(...colLayouts.map(item => item.x + item.w))
+    };
 
     const xLeft = resolveBoundaryPosition(sheet, guides.range.s.c, colIndices, colMap.starts, sheet.indexWidth, colMap.end, 'col');
     const xRight = resolveBoundaryPosition(sheet, guides.range.e.c + 1, colIndices, colMap.starts, sheet.indexWidth, colMap.end, 'col');
@@ -361,10 +395,12 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
 
     // 绘制在区域中的选中的区域，将其背景设为#ddd
     if (!isScreenshot && selectionVisible) {
-        lightInfo.frames.forEach((frame) => {
-            if (!frame.inView) return;
-            this.bc.fillStyle = 'rgba(99, 99, 99, 0.2)';
-            this.bc.fillRect(frame.x + 1.5, frame.y + 1.5, frame.w - 3, frame.h - 3); // 边之间留了一些小空隙
+        withGridBodyClip(this, sheet, () => {
+            lightInfo.frames.forEach((frame) => {
+                if (!frame.inView) return;
+                this.bc.fillStyle = 'rgba(99, 99, 99, 0.2)';
+                this.bc.fillRect(frame.x + 1.5, frame.y + 1.5, frame.w - 3, frame.h - 3); // 边之间留了一些小空隙
+            });
         });
     }
 
@@ -375,29 +411,31 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
 
     const lf = lightInfo.lastFrame
     if (selectionVisible && lf && lf.inView && !(isScreenshot && hideSelectionFrame)) {
-        let { x, y, w, h } = lf
-        // 渲染当前活动的单元格
-        const activeCellInfo = sheet.getCellInViewInfo(sheet.activeCell.r, sheet.activeCell.c);
-        if (activeCellInfo.inView && !isScreenshot) this.bc.clearRect(activeCellInfo.x + 1, activeCellInfo.y + 1, activeCellInfo.w - 2, activeCellInfo.h - 2);
-        const hp = this.halfPixel;
-        const rect = this.snapRect(x, y, w, h);
-        this.bc.strokeStyle = '#36c';
-        this.bc.lineWidth = 1.5;  // 使用固定 CSS 像素，保持视觉一致性
-        this.bc.strokeRect(rect.x - hp, rect.y - hp, rect.w + hp * 2, rect.h + hp * 2);
-        // 右下角小方块
-        const size = 7;
-        // 将小方块中心点设在 (x+w, y+h) 处
-        const cx = x + w;
-        const cy = y + h;
-        const px = cx - size / 2;
-        const py = cy - size / 2;
-        this.bc.fillStyle = '#36c';
-        this.bc.fillRect(px, py, size, size);
-        this.bc.strokeStyle = '#ffffff';
-        this.bc.lineWidth = 2;  // 使用固定 CSS 像素
-        this.bc.strokeRect(px, py, size, size);
-        this.bc.beginPath();
-        this.bc.lineWidth = this.px(1);
+        withGridBodyClip(this, sheet, () => {
+            let { x, y, w, h } = lf
+            // 渲染当前活动的单元格
+            const activeCellInfo = sheet.getCellInViewInfo(sheet.activeCell.r, sheet.activeCell.c);
+            if (activeCellInfo.inView && !isScreenshot) this.bc.clearRect(activeCellInfo.x + 1, activeCellInfo.y + 1, activeCellInfo.w - 2, activeCellInfo.h - 2);
+            const hp = this.halfPixel;
+            const rect = this.snapRect(x, y, w, h);
+            this.bc.strokeStyle = '#36c';
+            this.bc.lineWidth = 1.5;  // 使用固定 CSS 像素，保持视觉一致性
+            this.bc.strokeRect(rect.x - hp, rect.y - hp, rect.w + hp * 2, rect.h + hp * 2);
+            // 右下角小方块
+            const size = isCoarsePointer() ? Math.max(7, this.toLogical(10)) : 7;
+            // 将小方块中心点设在 (x+w, y+h) 处
+            const cx = x + w;
+            const cy = y + h;
+            const px = cx - size / 2;
+            const py = cy - size / 2;
+            this.bc.fillStyle = '#36c';
+            this.bc.fillRect(px, py, size, size);
+            this.bc.strokeStyle = '#ffffff';
+            this.bc.lineWidth = 2;  // 使用固定 CSS 像素
+            this.bc.strokeRect(px, py, size, size);
+            this.bc.beginPath();
+            this.bc.lineWidth = this.px(1);
+        });
     }
 
     // 截图模式不操作显示画布

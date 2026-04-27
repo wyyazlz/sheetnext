@@ -20,6 +20,7 @@ import * as RowColHandler from './RowColHandler.js';
 import * as ViewCalculator from './ViewCalculator.js';
 import * as Initializer from './Initializer.js';
 import * as Clipboard from './Clipboard.js';
+import * as CellControl from './CellControl.js';
 
 /** @typedef {import('../Workbook/Workbook.js').default} SheetNext */
 
@@ -98,6 +99,10 @@ export default class Sheet {
         this._frozenRows = 0;
         this._freezeStartRow = 0;
         this._freezeStartCol = 0;
+        this._virtualRowCount = 0;
+        this._virtualColCount = 0;
+        this._maxVirtualRowCount = 1048576;
+        this._maxVirtualColCount = 16384;
         this._zoom = 1;
         this._idCount = 0;
     }
@@ -252,6 +257,8 @@ export default class Sheet {
         if (!Array.isArray(this.vi.colArr)) this.vi.colArr = [colStart];
         this.vi.rowArr[0] = rowStart;
         this.vi.colArr[0] = colStart;
+        this.vi.scrollTop = this.getScrollTop(rowStart);
+        this.vi.scrollLeft = this.getScrollLeft(colStart);
         this.activeCell = { r: minR, c: minC };
 
         const prevZoom = this.zoom;
@@ -272,8 +279,14 @@ export default class Sheet {
 
     set viewStart(val) {
         if (!this.vi) this.vi = { rowArr: [0], colArr: [0] };
-        if (val.r !== undefined) this.vi.rowArr = [val.r];
-        if (val.c !== undefined) this.vi.colArr = [val.c];
+        if (val.r !== undefined) {
+            this.vi.rowArr = [val.r];
+            this.vi.scrollTop = this.getScrollTop(val.r);
+        }
+        if (val.c !== undefined) {
+            this.vi.colArr = [val.c];
+            this.vi.scrollLeft = this.getScrollLeft(val.c);
+        }
     }
 
     /** @type {number} px */
@@ -404,6 +417,7 @@ export default class Sheet {
     set name(newName) {
         const oldName = this._name;
         if (oldName === newName) return;
+        if (!this.SN._validateSheetName(newName, this)) return;
         if (this.SN.Event.hasListeners('beforeSheetRename')) {
             const beforeEvent = this.SN.Event.emit('beforeSheetRename', { sheet: this, oldName, newName });
             if (beforeEvent.canceled) return;
@@ -417,12 +431,30 @@ export default class Sheet {
 
     /** @type {number} */
     get rowCount() {
-        return this.rows.length
+        return Math.max(this.rows.length, this._virtualRowCount || 0)
     }
 
     /** @type {number} */
     get colCount() {
-        return this.cols.length
+        return Math.max(this.cols.length, this._virtualColCount || 0)
+    }
+
+    _extendVirtualRows(count = 200) {
+        const current = this.rowCount;
+        const next = Math.min(this._maxVirtualRowCount, current + Math.max(1, count));
+        if (next <= current) return false;
+        this._virtualRowCount = next;
+        this._clearSizeCache();
+        return true;
+    }
+
+    _extendVirtualCols(count = 32) {
+        const current = this.colCount;
+        const next = Math.min(this._maxVirtualColCount, current + Math.max(1, count));
+        if (next <= current) return false;
+        this._virtualColCount = next;
+        this._clearSizeCache();
+        return true;
     }
 
     // ============================= Public Methods =============================
@@ -727,15 +759,11 @@ export default class Sheet {
     }
 
     showAllHidRows() {
-        for (let i = 0; i < this.rowCount; i++) {
-            this.getRow(i).hidden = false
-        }
+        this.rows.forEach(row => { if (row) row.hidden = false; });
     }
 
     showAllHidCols() {
-        for (let i = 0; i < this.colCount; i++) {
-            this.getCol(i).hidden = false
-        }
+        this.cols.forEach(col => { if (col) col.hidden = false; });
     }
 
     /** @param {string} position @param {Object|null} options @param {Array} [area] */
@@ -873,6 +901,15 @@ Object.assign(Sheet.prototype, {
     setDataValidation: DataValidation.setDataValidation,
     clearDataValidation: DataValidation.clearDataValidation,
     /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops] @returns {RangeNum} */
+    insertTemplate: InsertTable.insertTemplate,
+
+    /**
+     * @deprecated Use insertTemplate instead. insertTable has ambiguous naming and will be deprecated after 2026-05-27.
+     * @param {(ICellConfig|string|number)[][]} arr
+     * @param {CellRef} pos
+     * @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops]
+     * @returns {RangeNum}
+     */
     insertTable: InsertTable.insertTable,
 
     /** @param {number} startRow @param {number} endRow @returns {number} */
@@ -892,16 +929,16 @@ Object.assign(Sheet.prototype, {
     /** @param {RangeRef} range */
     mergeCells: Merge.mergeCells,
 
-    /** @param {number} index @param {number} count */
+    /** @param {number} r @param {number} number */
     addRows: RowColHandler.addRows,
 
-    /** @param {number} index @param {number} count */
+    /** @param {number} c @param {number} number */
     addCols: RowColHandler.addCols,
 
-    /** @param {number} start @param {number} count */
+    /** @param {number} r @param {number} number */
     delRows: RowColHandler.delRows,
 
-    /** @param {number} start @param {number} count */
+    /** @param {number} c @param {number} number */
     delCols: RowColHandler.delCols,
 
     /** @param {number} r @param {number} c @returns {Object} */
@@ -930,6 +967,7 @@ Object.assign(Sheet.prototype, {
 
     _getAreaInviewInfo2: ViewCalculator._getAreaInviewInfo2,
     _updView: ViewCalculator._updView,
+    _setViewScroll: ViewCalculator._setViewScroll,
     _findBeforeShowRow: ViewCalculator._findBeforeShowRow,
     _findBeforeShowCol: ViewCalculator._findBeforeShowCol,
     _findNextShowRow: ViewCalculator._findNextShowRow,
@@ -955,5 +993,23 @@ Object.assign(Sheet.prototype, {
     getClipboardData: Clipboard.getClipboardData,
 
     /** @returns {boolean} */
-    hasClipboardData: Clipboard.hasClipboardData
+    hasClipboardData: Clipboard.hasClipboardData,
+
+    /** @param {string|Object|Array<string|Object>} range @param {Object} control */
+    setCellControl: CellControl.setCellControl,
+
+    /** @param {string|Object|Array<string|Object>} range */
+    clearCellControl: CellControl.clearCellControl,
+
+    /** @param {number} row @param {number} col @returns {boolean} */
+    toggleCheckbox: CellControl.toggleCheckbox,
+
+    /** @param {string|Object|Array<string|Object>} range @param {boolean} checked */
+    setCheckboxValue: CellControl.setCheckboxValue,
+
+    /** @param {string|Object|Array<string|Object>} range */
+    deleteCheckboxControlOrValue: CellControl.deleteCheckboxControlOrValue,
+
+    /** @param {string|Object|Array<string|Object>} range @returns {boolean} */
+    hasCheckboxControl: CellControl.hasCheckboxControl
 });

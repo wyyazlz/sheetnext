@@ -4,7 +4,7 @@
     top: 0;
     overflow: hidden;
     pointer-events: none;
-    z-index: 420;
+    z-index: var(--sn-z-canvas-control, 430);
 }
 
 .sn-slicer {

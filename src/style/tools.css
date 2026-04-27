@@ -825,7 +825,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
-    z-index: 1001;
+    z-index: var(--sn-z-toolbar-overflow, 1100);
 }
 
 .sn-toolbar-more.active .sn-toolbar-overflow-menu {
@@ -868,7 +868,7 @@
 .sn-tab-overflow-menu {
     position: fixed;
     margin-top: 0;
-    z-index: 1002;
+    z-index: var(--sn-z-toolbar-overflow, 1100);
 }
 
 .sn-tab-overflow-menu li {

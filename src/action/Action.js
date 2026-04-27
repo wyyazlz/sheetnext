@@ -20,6 +20,7 @@ import * as TableActions from './Table.js';
 import * as ViewActions from './View.js';
 import * as PrintActions from './Print.js';
 import * as ProtectionActions from './Protection.js';
+import * as CellControlActions from './CellControl.js';
 
 export default class Fun {
 
@@ -109,6 +110,11 @@ Object.assign(Fun.prototype, {
     insertTextBox: InsertActions.insertTextBox,
     insertSparkline: InsertActions.insertSparkline,
     openSparklineDialog: InsertActions.openSparklineDialog
+});
+
+Object.assign(Fun.prototype, {
+    insertCheckbox: CellControlActions.insertCheckbox,
+    clearCheckbox: CellControlActions.clearCheckbox
 });
 
 // 使用原型链挂载工作簿操作模块方法

@@ -1,7 +1,7 @@
 /* Tooltip container */
 .sn-tooltip-container {
     position: absolute;
-    z-index: 9999;
+    z-index: var(--sn-z-tooltip, 9100);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;

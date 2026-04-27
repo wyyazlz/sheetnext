@@ -231,7 +231,7 @@
     border: 1px solid #d0d0d0;
     border-radius: 6px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    z-index: 10001;
+    z-index: var(--sn-z-modal-popover, 9010);
     display: none;
     width: 300px;
 }

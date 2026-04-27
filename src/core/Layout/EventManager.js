@@ -5,6 +5,49 @@
 
 import { getColorSelectHTML } from './helpers.js';
 
+function _beginWorkbookNameEdit(SN, labelEl) {
+    if (!labelEl || labelEl.querySelector('.sn-file-name-input')) return;
+
+    const oldName = SN.workbookName || '';
+    const input = document.createElement('input');
+    input.className = 'sn-file-name-input';
+    input.value = oldName;
+    input.setAttribute('aria-label', SN.t('workbook.renameLabel'));
+
+    labelEl.classList.add('sn-file-name-editing');
+    labelEl.textContent = '';
+    labelEl.appendChild(input);
+
+    let finished = false;
+    const finish = (commit) => {
+        if (finished) return;
+        finished = true;
+
+        if (commit && input.value.trim() !== oldName) {
+            SN.workbookName = input.value;
+        }
+        labelEl.classList.remove('sn-file-name-editing');
+        labelEl.textContent = SN.workbookName || oldName;
+    };
+
+    input.addEventListener('click', event => event.stopPropagation());
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            finish(true);
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            finish(false);
+        }
+    });
+    input.addEventListener('blur', () => finish(true));
+
+    requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+    });
+}
+
 /**
  * Initialize all event listeners.
  */
@@ -45,6 +88,19 @@ export function initEventListeners() {
             this.showAIChatWindow = false;
         });
     }
+
+    const fileNameEl = this.SN.containerDom.querySelector('.sn-file-name');
+    if (fileNameEl && !fileNameEl._snWorkbookNameEditBound) {
+        fileNameEl._snWorkbookNameEditBound = true;
+        fileNameEl.addEventListener('click', () => _beginWorkbookNameEdit(this.SN, fileNameEl));
+        fileNameEl.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== 'F2') return;
+            event.preventDefault();
+            _beginWorkbookNameEdit(this.SN, fileNameEl);
+        });
+    }
+
+    this._initSheetTabEvents?.();
 }
 
 /**

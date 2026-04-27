@@ -3,11 +3,20 @@
  * Responsible for adding event listeners to elements such as canvas, scrollbars, input boxes, etc.
  */
 
-import { canvasWheel, baseMousedown, canvasMousemove, canvasDblclick, rightDown, canvasTouchStart, canvasTouchMove, canvasTouchEnd } from "./InteractionHandler.js"
+import { baseMousedown, canvasMousemove, canvasDblclick, rightDown } from "./InteractionHandler.js"
+import { canvasWheel, canvasTouchStart, canvasTouchMove, canvasTouchEnd } from "./ScrollInteraction.js"
 import { docKeyDown, docPaste, docCopy, docCut } from "./KeyboardHandler.js"
 import { xDown, yDown, xTouchDown, yTouchDown } from "./scrollHandler.js"
 import { formulaBarFocus, inputInput, formulaBarKeyDown } from "./inputHandler.js"
 import { syncToolbarState } from "../Layout/ToolbarBuilder.js"
+
+function shouldIgnoreTouchMouse(canvas, event) {
+    if (event?._snPointerType === 'touch') return false;
+    if (!canvas._ignoreTouchMouseUntil || performance.now() > canvas._ignoreTouchMouseUntil) return false;
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    return true;
+}
 
 export function addEventListeners() {
     // 文档
@@ -16,16 +25,29 @@ export function addEventListeners() {
     document.addEventListener('copy', (event) => docCopy.call(this, event));
     document.addEventListener('cut', (event) => docCut.call(this, event));
     // 画布
-    this.handleLayer.addEventListener('mousedown', (event) => baseMousedown.call(this, event));
-    this.handleLayer.addEventListener('mousedown', (event) => rightDown.call(this, event));
+    this.handleLayer.addEventListener('mousedown', (event) => {
+        if (shouldIgnoreTouchMouse(this, event)) return;
+        baseMousedown.call(this, event);
+    });
+    this.handleLayer.addEventListener('mousedown', (event) => {
+        if (shouldIgnoreTouchMouse(this, event)) return;
+        rightDown.call(this, event);
+    });
     this.handleLayer.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-    this.handleLayer.addEventListener('mousemove', (event) => canvasMousemove.call(this, event));
+    this.handleLayer.addEventListener('mousemove', (event) => {
+        if (shouldIgnoreTouchMouse(this, event)) return;
+        canvasMousemove.call(this, event);
+    });
     this.handleLayer.addEventListener('wheel', (event) => canvasWheel.call(this, event));
-    this.handleLayer.addEventListener('dblclick', (event) => canvasDblclick.call(this, event));
+    this.handleLayer.addEventListener('dblclick', (event) => {
+        if (shouldIgnoreTouchMouse(this, event)) return;
+        canvasDblclick.call(this, event);
+    });
     // 触屏事件
-    this.handleLayer.addEventListener('touchstart', (event) => canvasTouchStart.call(this, event), { passive: true });
+    this.handleLayer.addEventListener('touchstart', (event) => canvasTouchStart.call(this, event), { passive: false });
     this.handleLayer.addEventListener('touchmove', (event) => canvasTouchMove.call(this, event), { passive: false });
-    this.handleLayer.addEventListener('touchend', (event) => canvasTouchEnd.call(this, event));
+    this.handleLayer.addEventListener('touchend', (event) => canvasTouchEnd.call(this, event), { passive: false });
+    this.handleLayer.addEventListener('touchcancel', (event) => canvasTouchEnd.call(this, event), { passive: false });
     // 滚动条
     this.rollYS.addEventListener('mousedown', (event) => xDown.call(this, event));
     this.rollXS.addEventListener('mousedown', (event) => yDown.call(this, event));

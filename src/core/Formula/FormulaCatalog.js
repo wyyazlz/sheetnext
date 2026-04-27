@@ -3,6 +3,10 @@
  * Provides formula classification, search, quick access, and more
  */
 import { FORMULA_DATA } from '../../assets/formulaData.js';
+import {
+    getFormulaCompatibility,
+    summarizeFormulaCompatibility
+} from './FormulaCompatibility.js';
 
 // 分类定义
 const CATEGORIES = [
@@ -55,7 +59,8 @@ FORMULA_DATA.forEach(item => {
         categoryKey: item.category,
         categoryLabelKey: CATEGORY_LABEL_KEY_MAP.get(item.category) || '',
         desc: item.desc,
-        version: item.version || ''
+        version: item.version || '',
+        compatibility: getFormulaCompatibility(item.name)
     };
     FORMULA_MAP.set(item.name, entry);
     const list = FORMULAS_BY_CATEGORY.get(item.category);
@@ -134,6 +139,14 @@ export const FormulaCatalog = {
             });
         }
         return picked.slice(0, limit);
+    },
+
+    getCompatibility(name) {
+        return getFormulaCompatibility(name);
+    },
+
+    getCompatibilityStats(categoryKey = 'all') {
+        return summarizeFormulaCompatibility(this.getFormulasByCategory(categoryKey));
     }
 };
 

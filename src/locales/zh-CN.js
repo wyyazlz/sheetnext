@@ -1117,6 +1117,14 @@ const zhCN = {
             "insertBelow": "向下插入 {countInput} 行",
             "ungroup": "取消组合行",
             "unhide": "取消隐藏行"
+        },
+        "sheet": {
+            "delete": "删除",
+            "hide": "隐藏",
+            "insert": "插入",
+            "move": "移动...",
+            "rename": "重命名",
+            "unhide": "取消隐藏..."
         }
     },
     "core": {
@@ -1788,7 +1796,8 @@ const zhCN = {
     },
     "toolbar": {
         "insert": {
-            "chart": "图表"
+            "chart": "图表",
+            "checkbox": "复选框"
         },
         "numFmt": {
             "accounting": "会计专用",
@@ -1837,7 +1846,23 @@ const zhCN = {
                 "title": "新建工作簿"
             }
         },
-        "renamePrompt": "请输入新的工作表名称："
+        "renameLabel": "工作簿名称",
+        "renamePrompt": "请输入新的工作簿名称：",
+        "renameTitle": "重命名工作簿",
+        "sheetTab": {
+            "deleteConfirm": "删除",
+            "deleteMessage": "删除工作表 “{name}” 吗？",
+            "deleteTitle": "删除工作表",
+            "moveBeforeLabel": "移动到以下工作表之前：",
+            "moveBeforeSheet": "{name} 之前",
+            "moveConfirm": "移动",
+            "moveTitle": "移动工作表",
+            "moveToEnd": "移至末尾",
+            "noHiddenSheets": "没有隐藏的工作表。",
+            "renameLabel": "工作表名称",
+            "unhideLabel": "工作表：",
+            "unhideTitle": "取消隐藏工作表"
+        }
     }
 };
 

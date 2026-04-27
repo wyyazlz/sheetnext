@@ -1,18 +1,33 @@
 import { dateTrans, numFmtFun, dateToSerial } from '../Cell/NumFmt.js';
-import { elementWise, unaryOp, toNumber, to2D, shape, expand, sum2D } from './ArrayBroadcast.js';
+import { elementWise, unaryOp, to2D, shape, expand } from './ArrayBroadcast.js';
 import { createMathStatFns } from './FormulaMathStatFns.js';
 import { createLookupArrayFns } from './FormulaLookupArrayFns.js';
 import { createTextInfoFns } from './FormulaTextInfoFns.js';
 import { createDateEngFns } from './FormulaDateEngFns.js';
+import {
+    collectReferenceTexts,
+    hasVolatileFunctionInAst,
+    parseFormula,
+    splitSheetReference
+} from './FormulaAst.js';
+import {
+    FormulaError,
+    coerceLogical,
+    coerceNumber,
+    coerceText,
+    errorCodeOf,
+    errorTypeNumber,
+    firstErrorValue,
+    isBlankValue,
+    isErrorCodeString,
+    isErrorValue,
+    normalizeBlank,
+    throwIfError,
+    toFormulaError
+} from './FormulaValue.js';
 
-// Excel Volatile 函数列表 - 这些函数每次重算时都会产生新值
-const VOLATILE_FUNCTIONS = new Set([
-    'RAND', 'RANDBETWEEN',      // 随机数函数
-    'NOW', 'TODAY',              // 当前时间函数
-    'OFFSET', 'INDIRECT',        // 动态引用函数
-    'INFO', 'CELL',              // 环境信息函数
-    'SUBTOTAL',                  // Depends on row hidden state
-]);
+const EXCEL_MAX_ROW_INDEX = 1048575;
+const EXCEL_MAX_COL_INDEX = 16383;
 
 /**
  * Formula Calculator
@@ -38,41 +53,17 @@ export default class Formula {
     }
 
     /**
-     * Detect if tokens contain volatile functions
-     * @param {Array} tokens - array of tokens after tokenize
-     * Does @ returns {boolean} contain the volatile function?
+     * Whether the last calculation was volatile
+     * @type {boolean}
      */
-    hasVolatileFunction(tokens) {
-        for (const token of tokens) {
-            if (token.type === 'FUNCTION' && VOLATILE_FUNCTIONS.has(token.value)) {
-                return true;
-            }
-            // 检查数组内的 tokens
-            if (token.type === 'ARRAY' && Array.isArray(token.value)) {
-                if (this.hasVolatileFunction(token.value)) return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Whether the last calculation was volatile
-     * @type {boolean}     */
-    /**
-     * Whether the last calculation was volatile
-     * @type {boolean}     */
-
     get lastCalcVolatile() {
         return this._lastCalcVolatile;
     }
 
     /**
      * Whether the last calculated result is a date type
-     * @type {boolean}     */
-    /**
-     * Whether the last calculated result is a date type
-     * @type {boolean}     */
-
+     * @type {boolean}
+     */
     get lastResultIsDate() {
         return this._lastResultIsDate;
     }
@@ -87,47 +78,32 @@ export default class Formula {
         try {
             this.currentCell = cell;
             this._lastResultIsDate = false; // 重置日期类型标记
-            const tokens = this.tokenize(formulaStr);
-
-            // 检测是否包含 volatile 函数
-            this._lastCalcVolatile = this.hasVolatileFunction(tokens);
-
-            return this.evaluate(tokens);
+            const ast = parseFormula(formulaStr);
+            this._lastCalcVolatile = hasVolatileFunctionInAst(ast);
+            return this.#finalizeFormulaResult(this.#evaluateAst(ast));
         } catch (error) {
             if (error?.message?.includes('循环')) this.SN.Utils.toast(error?.message);
-            const msg = String(error?.message || '');
-            const matched = msg.match(/#(?:NULL!|DIV\/0!|VALUE!?|REF!|NAME\?|NUM!|N\/A)/);
-            return new Error(matched ? matched[0] : '#VALUE');
+            return toFormulaError(error);
         }
     }
 
     /**
-     * Extract all dependent cell coordinates from tokens
-     * @param {Array} tokens - array of tokens after tokenize
-     * @ returns {CellNum []} dependencies list
+     * Extract all dependent cell coordinates from a formula AST/string.
+     * @param {string|Object} formulaOrAst - Formula string without equals or parsed AST
+     * @param {string} [defaultSheetName] - Sheet name used by local references
+     * @returns {{sheetName:string|null,r:number,c:number}[]}
      */
-    parseDeps(tokens) {
+    parseDeps(formulaOrAst, defaultSheetName = null) {
+        const ast = typeof formulaOrAst === 'string' ? parseFormula(formulaOrAst) : formulaOrAst;
+        const seen = new Set();
         const deps = [];
-        const U = this.SN.Utils;
 
-        for (let i = 0; i < tokens.length; i++) {
-            const tk = tokens[i];
-            if (tk.type === 'CELL_REF') {
-                const ref = tk.value.replace(/\$/g, '');  // 去掉 $ 锁定符
-                if (ref.includes(':')) {
-                    // 如果是区域引用 A1:B3
-                    const [start, end] = ref.split(':');
-                    const snum = U.cellStrToNum(start);
-                    const enum_ = U.cellStrToNum(end);
-                    for (let rr = snum.r; rr <= enum_.r; rr++) {
-                        for (let cc = snum.c; cc <= enum_.c; cc++) {
-                            deps.push({ r: rr, c: cc });
-                        }
-                    }
-                } else {
-                    // 单个单元格
-                    deps.push(U.cellStrToNum(ref));
-                }
+        for (const refText of collectReferenceTexts(ast)) {
+            for (const dep of this.#depsFromReferenceText(refText, defaultSheetName)) {
+                const key = `${dep.sheetName ?? ''}!${dep.r}:${dep.c}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                deps.push(dep);
             }
         }
 
@@ -135,550 +111,426 @@ export default class Formula {
     }
 
     /**
-     * The parsing formula is tokens
-     * @param {string} formula - Equation String (without Equals)
-     * @returns {Array}
+     * Extract dependency areas without expanding large ranges.
+     * @param {string|Object} formulaOrAst - Formula string without equals or parsed AST
+     * @param {string} [defaultSheetName] - Sheet name used by local references
+     * @returns {{sheetName:string|null,s:{r:number,c:number},e:{r:number,c:number}}[]}
      */
-    tokenize(formula) {
-        const tokens = [];
-        const len = formula.length;
-        let pos = 0;
-        let lastTokenType = null;
+    parseDependencyAreas(formulaOrAst, defaultSheetName = null) {
+        const ast = typeof formulaOrAst === 'string' ? parseFormula(formulaOrAst) : formulaOrAst;
+        const seen = new Set();
+        const areas = [];
 
-        // 预编译正则表达式
-        const DIGIT_REGEX = /[0-9]/;
-        const OPERATOR_REGEX = /[+\-*/&=<>%^]/;
-        const ALPHA_REGEX = /[A-Za-z$]/;
+        for (const refText of collectReferenceTexts(ast)) {
+            const dep = this.#dependencyAreaFromReferenceText(refText, defaultSheetName, true);
+            if (!dep) continue;
 
-        while (pos < len) {
-            const char = formula[pos];
-
-            // 跳过空白字符
-            if (char === ' ') {
-                pos++;
-                continue;
-            }
-
-            // 处理数组
-            if (char === '{') {
-                // 解析数组
-                pos++; // 跳过 '{'
-                const arrayTokens = [];
-                let elementStr = '';
-                let bracketDepth = 1;
-                let inString = false;
-                let stringChar = null;
-
-                while (pos < len && bracketDepth > 0) {
-                    const currentChar = formula[pos];
-
-                    // 处理字符串状态
-                    if ((currentChar === '"' || currentChar === "'") && formula[pos - 1] !== '\\') {
-                        if (!inString) {
-                            inString = true;
-                            stringChar = currentChar;
-                        } else if (currentChar === stringChar) {
-                            inString = false;
-                            stringChar = null;
-                        }
-                    }
-
-                    if (!inString) {
-                        if (currentChar === '{') {
-                            bracketDepth++;
-                        } else if (currentChar === '}') {
-                            bracketDepth--;
-                            if (bracketDepth === 0) {
-                                // 处理最后一个元素
-                                if (elementStr.trim()) {
-                                    const elementTokens = this.tokenize(elementStr.trim());
-                                    arrayTokens.push(...elementTokens);
-                                }
-                                pos++;
-                                break;
-                            }
-                        }
-
-                        if (currentChar === ',' && bracketDepth === 1) {
-                            if (elementStr.trim()) {
-                                const elementTokens = this.tokenize(elementStr.trim());
-                                arrayTokens.push(...elementTokens);
-                                arrayTokens.push({ type: 'ARRAY_SEPARATOR', value: ',' });
-                            }
-                            elementStr = '';
-                            pos++;
-                            continue;
-                        }
-                    }
-
-                    elementStr += currentChar;
-                    pos++;
-                }
-
-                tokens.push({ type: 'ARRAY', value: arrayTokens });
-                lastTokenType = 'ARRAY';
-                continue;
-            }
-
-            // 处理数字
-            if (DIGIT_REGEX.test(char)) {
-                let start = pos;
-                let hasDecimal = false;
-
-                while (pos < len) {
-                    const currentChar = formula[pos];
-                    if (currentChar >= '0' && currentChar <= '9') {
-                        pos++;
-                    } else if (currentChar === '.' && !hasDecimal) {
-                        hasDecimal = true;
-                        pos++;
-                    } else {
-                        break;
-                    }
-                }
-
-                const value = parseFloat(formula.slice(start, pos));
-                tokens.push({ type: 'NUMBER', value });
-                lastTokenType = 'NUMBER';
-                continue;
-            }
-
-            // 处理操作符
-            if (OPERATOR_REGEX.test(char)) {
-                let operator = char;
-
-                // 检查一元负号：只有在表达式开始、运算符后、左括号后、逗号后才是一元负号
-                if (operator === '-' && (!lastTokenType ||
-                    lastTokenType === 'OPERATOR' ||
-                    lastTokenType === 'PAREN_OPEN' ||
-                    lastTokenType === 'COMMA')) {
-                    tokens.push({ type: 'OPERATOR', value: 'NEG' });
-                } else {
-                    // 检查多字符操作符
-                    if (pos + 1 < len) {
-                        const nextChar = formula[pos + 1];
-                        if ((operator === '<' && (nextChar === '=' || nextChar === '>')) ||
-                            (operator === '>' && nextChar === '=') ||
-                            (operator === '=' && nextChar === '=')) {
-                            operator += nextChar;
-                            pos++;
-                        }
-                    }
-                    tokens.push({ type: 'OPERATOR', value: operator });
-                }
-
-                lastTokenType = 'OPERATOR';
-                pos++;
-                continue;
-            }
-
-            // 处理标识符（函数名、单元格引用、工作表引用等）
-            if (ALPHA_REGEX.test(char) || char === '\'' || (char >= '\u4e00' && char <= '\u9fa5')) {
-                let start = pos;
-                let identifier = '';
-                let inQuote = false;
-                let quoteChar = null;
-
-                // 处理以单引号开始的工作表名
-                if (formula[pos] === "'") {
-                    inQuote = true;
-                    quoteChar = "'";
-                    identifier += formula[pos];
-                    pos++;
-                }
-
-                while (pos < len) {
-                    const currentChar = formula[pos];
-
-                    if (inQuote) {
-                        identifier += currentChar;
-                        if (currentChar === quoteChar) {
-                            // 检查是否是转义的引号
-                            if (pos + 1 < len && formula[pos + 1] === quoteChar) {
-                                identifier += formula[++pos]; // 添加转义的引号
-                            } else {
-                                inQuote = false;
-                                quoteChar = null;
-                            }
-                        }
-                        pos++;
-                    } else {
-                        // 标识符字符：字母、数字、下划线、$、:、!、.、中文字符
-                        if ((currentChar >= 'A' && currentChar <= 'Z') ||
-                            (currentChar >= 'a' && currentChar <= 'z') ||
-                            (currentChar >= '0' && currentChar <= '9') ||
-                            currentChar === '_' || currentChar === '$' || currentChar === ':' ||
-                            currentChar === '!' || currentChar === '.' ||
-                            (currentChar >= '\u4e00' && currentChar <= '\u9fa5')) {
-                            identifier += currentChar;
-                            pos++;
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
-                // 分类标识符
-                const upperIdentifier = identifier.toUpperCase();
-
-                // 检查是否为布尔值
-                if (upperIdentifier === 'TRUE' || upperIdentifier === 'FALSE') {
-                    tokens.push({ type: 'BOOLEAN', value: upperIdentifier === 'TRUE' });
-                    lastTokenType = 'BOOLEAN';
-                    continue;
-                }
-
-                // 检查下一个字符是否为左括号，判断是否为函数
-                if (pos < len && formula[pos] === '(') {
-                    tokens.push({ type: 'FUNCTION', value: upperIdentifier });
-                    lastTokenType = 'FUNCTION';
-                    continue;
-                }
-
-                // 单元格引用模式（支持工作表引用）
-                const patterns = [
-                    /^'?[^']*'?![A-Z]+[0-9]+$/i,                    // 工作表引用：Sheet1!A1, '工作表1'!A1
-                    /^'?[^']*'?!\$?[A-Z]+\$?[0-9]+$/i,             // 绝对引用：Sheet1!$A$1
-                    /^'?[^']*'?!\$?[A-Z]+\$?[0-9]+:\$?[A-Z]+\$?[0-9]+$/i, // 范围引用：Sheet1!A1:B10
-                    /^[A-Z]+[0-9]+$/i,                              // 简单单元格：A1
-                    /^\$?[A-Z]+\$?[0-9]+$/i,                       // 绝对单元格：$A$1
-                    /^\$?[A-Z]+\$?[0-9]+:\$?[A-Z]+\$?[0-9]+$/i    // 范围：A1:B10
-                ];
-
-                let isCellRef = false;
-                for (const pattern of patterns) {
-                    if (pattern.test(identifier)) {
-                        tokens.push({ type: 'CELL_REF', value: identifier });
-                        lastTokenType = 'CELL_REF';
-                        isCellRef = true;
-                        break;
-                    }
-                }
-
-                if (!isCellRef) {
-                    tokens.push({ type: 'IDENTIFIER', value: identifier });
-                    lastTokenType = 'IDENTIFIER';
-                }
-
-                continue;
-            }
-
-            // 处理括号
-            if (char === '(' || char === ')') {
-                tokens.push({ type: 'PAREN', value: char });
-                // 区分左括号和右括号：右括号后面的 - 是二元减法，左括号后面的 - 是一元负号
-                lastTokenType = char === '(' ? 'PAREN_OPEN' : 'PAREN_CLOSE';
-                pos++;
-                continue;
-            }
-
-            // 处理字符串
-            if (char === '"' || char === "'") {
-                const quote = char;
-                let start = ++pos;
-                let value = '';
-
-                while (pos < len) {
-                    const currentChar = formula[pos];
-                    if (currentChar === quote) {
-                        // 检查是否是转义的引号
-                        if (pos + 1 < len && formula[pos + 1] === quote) {
-                            value += quote;
-                            pos += 2;
-                        } else {
-                            pos++; // 跳过结束引号
-                            break;
-                        }
-                    } else {
-                        value += currentChar;
-                        pos++;
-                    }
-                }
-
-                tokens.push({ type: 'STRING', value });
-                lastTokenType = 'STRING';
-                continue;
-            }
-
-            // 处理逗号
-            if (char === ',') {
-                tokens.push({ type: 'COMMA', value: ',' });
-                lastTokenType = 'COMMA';
-                pos++;
-                continue;
-            }
-
-            // 未知字符
-            throw new Error(`#VALUE! Unexpected character: ${char} at position ${pos}`);
+            const key = `${dep.sheetName ?? ''}!${dep.s.r}:${dep.s.c}:${dep.e.r}:${dep.e.c}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            areas.push(dep);
         }
 
-        return tokens;
+        return areas;
     }
 
-
-    /**
-     * Calculate tokens
-     * @param {Array} tokens - array of tokens after tokenize
-     * @returns {any}
-     */
-    evaluate(tokens) {
-        const stack = [];
-        const output = [];
-        const precedence = {
-            '+': 1,
-            '-': 1,
-            '*': 2,
-            '/': 2,
-            '%': 2,      // 模块运算与乘除同级
-            '^': 4,      // 幂运算最高
-            'NEG': 3,
-            '&': 0,
-            '=': 0,
-            '<': 0,
-            '>': 0,
-            '<=': 0,
-            '>=': 0,
-            '<>': 0
-        };
-
-        let args = [];
-
-        for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
-
-            switch (token.type) {
-                case 'NUMBER':
-                case 'STRING':
-                    output.push(token.value);
-                    break;
-                case 'ARRAY':
-                    const arrayValues = [];
-                    let arrayTokens = token.value;
-                    let elementTokens = [];
-                    for (let j = 0; j <= arrayTokens.length; j++) {
-                        if (j === arrayTokens.length || arrayTokens[j].type === 'ARRAY_SEPARATOR') {
-                            if (elementTokens.length > 0) {
-                                const elementValue = this.evaluate(elementTokens);
-                                arrayValues.push(elementValue);
-                                elementTokens = [];
-                            }
-                        } else {
-                            elementTokens.push(arrayTokens[j]);
-                        }
-                    }
-                    output.push([arrayValues]);
-                    break;
-
-                case 'CELL_REF':
-                    output.push(this.#getCells(token.value));
-                    break;
-
-                case 'IDENTIFIER':
-                    // 检查是否是定义名称
-                    const definedRef = this.SN._definedNames?.[token.value];
-                    if (definedRef) {
-                        // 定义名称存在，解析引用并获取单元格值
-                        output.push(this.#getCells(definedRef));
-                    } else {
-                        // 未找到定义名称，返回 #NAME? 错误
-                        throw new Error('#NAME?');
-                    }
-                    break;
-
-                case 'FUNCTION':
-                    stack.push(token);
-                    args.push([]);
-                    break;
-
-                case 'COMMA':
-                    while (stack.length > 0 && stack[stack.length - 1].value !== '(') {
-                        output.push(this.executeOperator(stack.pop().value, output));
-                    }
-                    args[args.length - 1].push(output.pop());
-                    break;
-
-                case 'OPERATOR':
-                    // NEG 是右结合运算符，使用严格大于比较；其他运算符使用大于等于
-                    const isRightAssoc = token.value === 'NEG';
-                    while (stack.length > 0 &&
-                        stack[stack.length - 1].type === 'OPERATOR' &&
-                        (isRightAssoc
-                            ? precedence[stack[stack.length - 1].value] > precedence[token.value]
-                            : precedence[stack[stack.length - 1].value] >= precedence[token.value])) {
-                        output.push(this.executeOperator(stack.pop().value, output));
-                    }
-                    stack.push(token);
-                    break;
-
-                case 'PAREN':
-                    if (token.value === '(') {
-                        stack.push(token);
-                    } else {
-                        while (stack.length > 0 && stack[stack.length - 1].value !== '(') {
-                            output.push(this.executeOperator(stack.pop().value, output));
-                        }
-                        stack.pop(); // 移除左括号
-
-                        // 先检查是否是函数调用
-                        if (stack.length > 0 && stack[stack.length - 1].type === 'FUNCTION') {
-                            // 只有在确认是函数调用的情况下才收集参数
-                            const prev = tokens[i - 1];
-                            if (output.length > 0 && !(prev.type === 'PAREN' && prev.value === '(')) {
-                                args[args.length - 1].push(output.pop());
-                            }
-
-                            const func = stack.pop();
-                            const functionArgs = args.pop(); // 获取当前函数的参数
-                            output.push(this.executeFunction(func.value, functionArgs));
-                        }
-                        // 如果不是函数调用，则括号内的计算结果已经在output中，不需要特殊处理
-                    }
-                    break;
-            }
+    #evaluateAst(node) {
+        switch (node.type) {
+            case 'Blank':
+                return '';
+            case 'Literal':
+                return node.value;
+            case 'Reference':
+                return this.#getCells(node.ref);
+            case 'Name':
+                return this.#resolveName(node.name);
+            case 'ArrayExpression':
+                return node.rows.map(row => row.map(item => this.#evaluateAst(item)));
+            case 'UnaryExpression':
+                return this.#applyUnaryOperator(node.operator, this.#evaluateAst(node.argument));
+            case 'PercentExpression':
+                return this.#applyPercentOperator(this.#evaluateAst(node.argument));
+            case 'ImplicitIntersectionExpression':
+                return this.#implicitIntersection(this.#evaluateAst(node.argument));
+            case 'SpillReference':
+                return this.#resolveSpillReference(node.argument);
+            case 'RangeExpression':
+                return this.#getCells(this.#rangeTextFromAst(node));
+            case 'BinaryExpression':
+                return this.#applyBinaryOperator(
+                    node.operator,
+                    this.#evaluateAst(node.left),
+                    this.#evaluateAst(node.right)
+                );
+            case 'CallExpression':
+                return this.#evaluateCallExpression(node);
+            default:
+                throw new FormulaError('#VALUE!');
         }
-
-        while (stack.length > 0) {
-            const op = stack.pop();
-            if (op.type === 'OPERATOR') {
-                output.push(this.executeOperator(op.value, output));
-            }
-        }
-
-        let result = output[output.length - 1] ?? new Error('#NAME?');
-
-        // 如果结果是单个单元格引用，提取其值
-        if (Array.isArray(result) && result.length === 1 && !Array.isArray(result[0])) {
-            const cell = result[0];
-            if (cell && typeof cell === 'object' && 'calcVal' in cell) {
-                result = cell.calcVal;
-            }
-        }
-
-        return result;
     }
 
-    /**
-     * Execution Operator (Supports Array Broadcasting)
-     * @param {string} operator - Operator
-     * @param {Array} stack - Calculation Stack
-     * @returns {any}
-     */
-    executeOperator(operator, stack) {
-        // 一元运算符
-        if (operator === 'NEG') {
-            let a = stack.pop();
-            a = this.#extractValue(a);
-            return unaryOp(a, v => -toNumber(v));
+    #evaluateCallExpression(node) {
+        const name = node.name;
+        if (name === 'IF') return this.#evaluateIf(node.args);
+        if (name === 'IFS') return this.#evaluateIfs(node.args);
+        if (name === 'IFERROR') return this.#evaluateIfError(node.args, false);
+        if (name === 'IFNA') return this.#evaluateIfError(node.args, true);
+        if (name === 'CHOOSE') return this.#evaluateChoose(node.args);
+        if (name === 'SWITCH') return this.#evaluateSwitch(node.args);
+
+        const args = node.args.map(arg => this.#evaluateAstArgument(arg));
+        return this.#captureFormulaError(() => this.executeFunction(name, args));
+    }
+
+    #evaluateAstArgument(node) {
+        return this.#captureFormulaError(() => this.#evaluateAst(node));
+    }
+
+    #evaluateIf(args) {
+        const condition = this.#captureFormulaError(() => this.#toLogical(this.#gVal(this.#evaluateAst(args[0] ?? { type: 'Blank' }))));
+        if (isErrorValue(condition)) return condition;
+        if (condition) return args.length > 1 ? this.#evaluateAstArgument(args[1]) : true;
+        return args.length > 2 ? this.#evaluateAstArgument(args[2]) : false;
+    }
+
+    #evaluateIfs(args) {
+        for (let i = 0; i + 1 < args.length; i += 2) {
+            const condition = this.#captureFormulaError(() => this.#toLogical(this.#gVal(this.#evaluateAst(args[i]))));
+            if (isErrorValue(condition)) return condition;
+            if (condition) return this.#evaluateAstArgument(args[i + 1]);
         }
-        if (operator === '%') {
-            let a = stack.pop();
-            a = this.#extractValue(a);
-            return unaryOp(a, v => toNumber(v) / 100);
+        return toFormulaError('#N/A');
+    }
+
+    #evaluateIfError(args, onlyNA) {
+        const value = this.#gVal(this.#evaluateAstArgument(args[0] ?? { type: 'Blank' }));
+        const err = firstErrorValue(value);
+        if (!err) return value;
+        if (onlyNA && errorCodeOf(err) !== '#N/A') return value;
+        return this.#evaluateAstArgument(args[1] ?? { type: 'Blank' });
+    }
+
+    #evaluateChoose(args) {
+        const index = this.#captureFormulaError(() => Math.trunc(this.#toNumber(this.#gVal(this.#evaluateAst(args[0] ?? { type: 'Blank' })))));
+        if (isErrorValue(index)) return index;
+        if (index < 1 || index >= args.length) return toFormulaError('#VALUE!');
+        return this.#evaluateAstArgument(args[index]);
+    }
+
+    #evaluateSwitch(args) {
+        if (!args.length) return toFormulaError('#VALUE!');
+
+        const expression = this.#evaluateAstArgument(args[0]);
+        const err = firstErrorValue(expression);
+        if (err) return err;
+
+        for (let i = 1; i + 1 < args.length; i += 2) {
+            const caseValue = this.#evaluateAstArgument(args[i]);
+            const caseErr = firstErrorValue(caseValue);
+            if (caseErr) return caseErr;
+            if (this.#gVal(caseValue) === this.#gVal(expression)) return this.#evaluateAstArgument(args[i + 1]);
         }
 
-        // 二元运算符
-        let b = stack.pop();
-        let a = stack.pop();
+        if (args.length % 2 === 0) return this.#evaluateAstArgument(args[args.length - 1]);
+        return toFormulaError('#N/A');
+    }
 
-        a = this.#extractValue(a);
-        b = this.#extractValue(b);
+    #applyUnaryOperator(operator, value) {
+        const actual = this.#extractValue(value);
+        if (operator === '+') return unaryOp(actual, v => this.#captureFormulaError(() => this.#toNumber(v)));
+        if (operator === '-') return unaryOp(actual, v => this.#captureFormulaError(() => -this.#toNumber(v)));
+        throw new FormulaError('#VALUE!');
+    }
 
-        // 运算函数定义
+    #applyPercentOperator(value) {
+        const actual = this.#extractValue(value);
+        return unaryOp(actual, v => this.#captureFormulaError(() => this.#toNumber(v) / 100));
+    }
+
+    #applyBinaryOperator(operator, left, right) {
+        const a = this.#extractValue(left);
+        const b = this.#extractValue(right);
+
         const operations = {
-            '+': (x, y) => toNumber(x) + toNumber(y),
-            '-': (x, y) => toNumber(x) - toNumber(y),
-            '*': (x, y) => toNumber(x) * toNumber(y),
+            '+': (x, y) => this.#toNumber(x) + this.#toNumber(y),
+            '-': (x, y) => this.#toNumber(x) - this.#toNumber(y),
+            '*': (x, y) => this.#toNumber(x) * this.#toNumber(y),
             '/': (x, y) => {
-                const bVal = toNumber(y);
-                if (bVal === 0) throw new Error("#DIV/0!");
-                return toNumber(x) / bVal;
+                const bVal = this.#toNumber(y);
+                if (bVal === 0) throw new Error('#DIV/0!');
+                return this.#toNumber(x) / bVal;
             },
-            '%': (x, y) => {
-                const bVal = toNumber(y);
-                if (bVal === 0) throw new Error("#DIV/0!");
-                return toNumber(x) % bVal;
-            },
-            '^': (x, y) => Math.pow(toNumber(x), toNumber(y)),
-            '&': (x, y) => `${x ?? ''}${y ?? ''}`,
-            // Excel 比较规则：数值用数值比较，字符串用字符串比较
-            // 如果两个值都可以转换为数字，使用数值比较
-            '=': (x, y) => {
-                const nx = Number(x), ny = Number(y);
-                if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx === ny;
-                return x == y;
-            },
-            '<': (x, y) => {
-                const nx = Number(x), ny = Number(y);
-                if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx < ny;
-                return x < y;
-            },
-            '>': (x, y) => {
-                const nx = Number(x), ny = Number(y);
-                if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx > ny;
-                return x > y;
-            },
-            '<=': (x, y) => {
-                const nx = Number(x), ny = Number(y);
-                if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx <= ny;
-                return x <= y;
-            },
-            '>=': (x, y) => {
-                const nx = Number(x), ny = Number(y);
-                if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx >= ny;
-                return x >= y;
-            },
-            '<>': (x, y) => {
-                const nx = Number(x), ny = Number(y);
-                if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx !== ny;
-                return x != y;
-            },
+            '^': (x, y) => Math.pow(this.#toNumber(x), this.#toNumber(y)),
+            '&': (x, y) => this.#toText(x) + this.#toText(y),
+            '=': (x, y) => this.#compareValues(x, y, '='),
+            '<': (x, y) => this.#compareValues(x, y, '<'),
+            '>': (x, y) => this.#compareValues(x, y, '>'),
+            '<=': (x, y) => this.#compareValues(x, y, '<='),
+            '>=': (x, y) => this.#compareValues(x, y, '>='),
+            '<>': (x, y) => this.#compareValues(x, y, '<>'),
         };
 
         const fn = operations[operator];
-        if (!fn) throw new Error("#NAME!");
+        if (!fn) throw new Error('#NAME?');
 
-        // 使用数组广播进行运算
-        return elementWise(a, b, fn);
+        return elementWise(a, b, (x, y) => this.#captureFormulaError(() => {
+            const err = firstErrorValue(x, y);
+            if (err) throw toFormulaError(err);
+            return fn(x, y);
+        }));
+    }
+
+    #implicitIntersection(value) {
+        if (!Array.isArray(value)) return this.#valueFromAny(value);
+
+        const matrix = Array.isArray(value[0]) ? value : [value];
+        const currentRow = this.currentCell?.row?.rIndex;
+        const currentCol = this.currentCell?.cIndex;
+
+        for (const row of matrix) {
+            for (const item of row) {
+                if (this.#isCellLike(item) && item.row?.rIndex === currentRow && item.cIndex === currentCol) {
+                    return this.#valueFromAny(item);
+                }
+            }
+        }
+
+        if (matrix.length === 1 && currentCol !== undefined) {
+            const sameCol = matrix[0].find(item => this.#isCellLike(item) && item.cIndex === currentCol);
+            if (sameCol) return this.#valueFromAny(sameCol);
+        }
+
+        if (matrix[0]?.length === 1 && currentRow !== undefined) {
+            const sameRow = matrix.find(row => this.#isCellLike(row[0]) && row[0].row?.rIndex === currentRow);
+            if (sameRow) return this.#valueFromAny(sameRow[0]);
+        }
+
+        if (matrix.length === 1 && matrix[0]?.length === 1) return this.#valueFromAny(matrix[0][0]);
+        return toFormulaError('#VALUE!');
+    }
+
+    #resolveSpillReference(argument) {
+        const ref = this.#referenceTextFromAst(argument);
+        if (!ref) return toFormulaError('#VALUE!');
+
+        const cells = this.#getCells(ref);
+        if (!Array.isArray(cells) || Array.isArray(cells[0]) || cells.length !== 1) return toFormulaError('#VALUE!');
+
+        const sourceCell = cells[0];
+        if (sourceCell?.isFormula && !sourceCell.isSpillSource) {
+            const _ = sourceCell.calcVal;
+        }
+        if (!sourceCell || !sourceCell.isSpillSource) return toFormulaError('#REF!');
+
+        const spillArray = sourceCell.spillArray;
+        return Array.isArray(spillArray) ? spillArray : toFormulaError('#REF!');
+    }
+
+    #finalizeFormulaResult(result) {
+        if (Array.isArray(result) && result.length === 1 && !Array.isArray(result[0]) && this.#isCellLike(result[0])) {
+            return this.#valueFromAny(result[0]);
+        }
+        return result;
+    }
+
+    #resolveName(name) {
+        const definedRef = this.SN._definedNames?.[name] ?? this.SN._definedNames?.[String(name).toUpperCase()];
+        if (!definedRef) throw new Error('#NAME?');
+        return this.#getCells(definedRef);
+    }
+
+    #rangeTextFromAst(node) {
+        const left = this.#referenceTextFromAst(node.left);
+        const right = this.#referenceTextFromAst(node.right);
+        if (!left || !right) throw new FormulaError('#VALUE!');
+
+        const leftRef = splitSheetReference(left);
+        const rightRef = splitSheetReference(right);
+        const sheetName = rightRef.sheetName ?? leftRef.sheetName;
+        return `${sheetName ? this.#quoteSheetName(sheetName) + '!' : ''}${leftRef.address}:${rightRef.address}`;
+    }
+
+    #referenceTextFromAst(node) {
+        if (node.type === 'Reference') return node.ref;
+        if (node.type === 'RangeExpression') return this.#rangeTextFromAst(node);
+        return null;
+    }
+
+    #quoteSheetName(sheetName) {
+        return /^[A-Za-z_][A-Za-z0-9_.]*$/.test(sheetName)
+            ? sheetName
+            : `'${String(sheetName).replace(/'/g, "''")}'`;
+    }
+
+    #depsFromReferenceText(refText, defaultSheetName) {
+        const area = this.#dependencyAreaFromReferenceText(refText, defaultSheetName, false);
+        if (!area) return [];
+        const deps = [];
+        for (let r = area.s.r; r <= area.e.r; r++) {
+            for (let c = area.s.c; c <= area.e.c; c++) {
+                deps.push({ sheetName: area.sheetName, r, c });
+            }
+        }
+        return deps;
+    }
+
+    #dependencyAreaFromReferenceText(refText, defaultSheetName, fullSpan) {
+        const ref = splitSheetReference(String(refText ?? ''));
+        const sheetName = ref.sheetName ?? defaultSheetName;
+        const sheet = sheetName ? this.SN.getSheet?.(sheetName) : this.SN.activeSheet;
+        if (!sheet) return null;
+
+        const address = ref.address.replace(/\$/g, '').toUpperCase();
+        const area = this.#addressToDependencyArea(address, sheet, fullSpan);
+        return { sheetName, s: area.s, e: area.e };
+    }
+
+    #addressToDependencyArea(address, sheet, fullSpan) {
+        if (fullSpan) {
+            const cell = /^([A-Z]{1,3})(\d+)$/i;
+            const cellRange = /^([A-Z]{1,3})(\d+):([A-Z]{1,3})(\d+)$/i;
+            const colRange = /^([A-Z]{1,3}):([A-Z]{1,3})$/i;
+            const rowRange = /^(\d+):(\d+)$/;
+
+            let match = address.match(cell);
+            if (match) {
+                const r = Number(match[2]) - 1;
+                const c = columnNameToIndex(match[1]);
+                return { s: { r, c }, e: { r, c } };
+            }
+
+            match = address.match(cellRange);
+            if (match) {
+                const r1 = Number(match[2]) - 1;
+                const c1 = columnNameToIndex(match[1]);
+                const r2 = Number(match[4]) - 1;
+                const c2 = columnNameToIndex(match[3]);
+                return {
+                    s: { r: Math.min(r1, r2), c: Math.min(c1, c2) },
+                    e: { r: Math.max(r1, r2), c: Math.max(c1, c2) }
+                };
+            }
+
+            match = address.match(colRange);
+            if (match) {
+                const c1 = columnNameToIndex(match[1]);
+                const c2 = columnNameToIndex(match[2]);
+                return {
+                    s: { r: 0, c: Math.min(c1, c2) },
+                    e: { r: EXCEL_MAX_ROW_INDEX, c: Math.max(c1, c2) }
+                };
+            }
+
+            match = address.match(rowRange);
+            if (match) {
+                const r1 = Number(match[1]) - 1;
+                const r2 = Number(match[2]) - 1;
+                return {
+                    s: { r: Math.min(r1, r2), c: 0 },
+                    e: { r: Math.max(r1, r2), c: EXCEL_MAX_COL_INDEX }
+                };
+            }
+        }
+
+        return sheet.rangeStrToNum(address);
     }
 
     // 从单元格或值中提取实际值（支持数组）
     #extractValue(val) {
-        if (!Array.isArray(val)) return val;
+        if (!Array.isArray(val)) return this.#valueFromAny(val);
 
         // 单元格数组 → 提取 calcVal
         if (val.length > 0 && val[0] && typeof val[0] === 'object' && 'calcVal' in val[0]) {
             // 一维单元格数组
             if (!Array.isArray(val[0])) {
-                return val.map(c => c.calcVal);
+                return val.map(c => this.#valueFromAny(c));
             }
         }
 
         // 二维单元格数组
         if (val.length > 0 && Array.isArray(val[0])) {
             return val.map(row =>
-                row.map(c => (typeof c === 'object' && c !== null && 'calcVal' in c) ? c.calcVal : c)
+                row.map(c => this.#valueFromAny(c))
             );
         }
 
-        return val;
+        return val.map(item => this.#valueFromAny(item));
+    }
+
+    #captureFormulaError(fn) {
+        try {
+            return fn();
+        } catch (error) {
+            return toFormulaError(error);
+        }
+    }
+
+    #isCellLike(value) {
+        return !!(value && typeof value === 'object' && 'calcVal' in value);
+    }
+
+    #valueFromAny(value) {
+        if (this.#isCellLike(value)) {
+            const raw = value.calcVal;
+            if ((value.type === 'error' || value._type === 'error') && isErrorCodeString(raw)) {
+                return toFormulaError(raw);
+            }
+            return this.#valueFromAny(raw);
+        }
+        if (value instanceof Error) return toFormulaError(value);
+        if (isErrorValue(value)) return toFormulaError(value);
+        return normalizeBlank(value);
+    }
+
+    #toNumber(value) {
+        return coerceNumber(this.#valueFromAny(value));
+    }
+
+    #toLogical(value) {
+        return coerceLogical(this.#valueFromAny(value));
+    }
+
+    #toText(value) {
+        return coerceText(this.#valueFromAny(value));
+    }
+
+    #compareValues(left, right, operator) {
+        const a = this.#valueFromAny(left);
+        const b = this.#valueFromAny(right);
+        throwIfError(a);
+        throwIfError(b);
+
+        let x = a;
+        let y = b;
+        if (!isBlankValue(a) && !isBlankValue(b)) {
+            const nx = Number(a);
+            const ny = Number(b);
+            if (Number.isFinite(nx) && Number.isFinite(ny)) {
+                x = nx;
+                y = ny;
+            }
+        }
+
+        switch (operator) {
+            case '=': return x == y;
+            case '<': return x < y;
+            case '>': return x > y;
+            case '<=': return x <= y;
+            case '>=': return x >= y;
+            case '<>': return x != y;
+            default: throw new FormulaError('#NAME?');
+        }
     }
 
     // 通过地址引用获取单元格
     #getCells(str) {
-        str = str.replaceAll('$', '')
-        // sheet1!A1 sheet1!A1:C3 sheet1!A:C sheet1!1:2 A1 A1:C3 A:C 1:2
-        // 判断是否跨表
-        const isCrossSheet = str.includes("!");
+        const ref = splitSheetReference(String(str).replaceAll('$', ''));
+        str = ref.address;
         let sheet = this.SN.activeSheet;
-        if (isCrossSheet) {
-            // 提取表名和地址部分
-            const [sheetName, address] = str.split("!");
-            sheet = this.SN.getSheet(sheetName);
-            str = address; // 更新为仅地址部分
-        }
-        // 判断是否为单个单元格地址（如 A1）
+        if (ref.sheetName) sheet = this.SN.getSheet(ref.sheetName);
+        if (!sheet) throw new Error('#REF!');
+
         if (!str.includes(':')) return [sheet.getCell(str)];
-        // 否则视为区域处理，区域转二位数组
         const cells = {};
         sheet.eachCells(str, (r, c) => {
             if (!cells[r]) cells[r] = [];
@@ -686,29 +538,75 @@ export default class Formula {
         });
         return Object.values(cells);
     }
+
+    #flattenValues(value) {
+        if (Array.isArray(value)) return value.flatMap(item => this.#flattenValues(item));
+        return [this.#valueFromAny(value)];
+    }
+
+    #collectNumbers(value, fromReference = false, output = []) {
+        if (Array.isArray(value)) {
+            value.forEach(item => this.#collectNumbers(item, fromReference, output));
+            return output;
+        }
+
+        const isRef = fromReference || this.#isCellLike(value);
+        const actual = this.#valueFromAny(value);
+        throwIfError(actual);
+
+        if (isBlankValue(actual)) return output;
+        if (typeof actual === 'number') output.push(actual);
+        else if (!isRef && typeof actual === 'boolean') output.push(actual ? 1 : 0);
+        else if (!isRef && typeof actual === 'string') {
+            const text = actual.trim();
+            if (text !== '') {
+                const num = Number(text);
+                if (Number.isFinite(num)) output.push(num);
+            }
+        }
+        return output;
+    }
+
+    #collectLogicals(value, fromReference = false, output = []) {
+        if (Array.isArray(value)) {
+            value.forEach(item => this.#collectLogicals(item, fromReference, output));
+            return output;
+        }
+
+        const isRef = fromReference || this.#isCellLike(value);
+        const actual = this.#valueFromAny(value);
+        throwIfError(actual);
+
+        if (isBlankValue(actual)) return output;
+        if (typeof actual === 'boolean') output.push(actual);
+        else if (typeof actual === 'number') output.push(actual !== 0);
+        else if (!isRef && typeof actual === 'string') output.push(this.#toLogical(actual));
+        return output;
+    }
+
     #gVals(stack) {
-        return stack.flatMap(x => Array.isArray(x) ? x.flat().map(c => (typeof c === 'object' && c !== null) ? c.calcVal ?? "" : c) : x);
+        return stack.flatMap(x => this.#flattenValues(x));
     }
     #gNums(stack) {
-        return stack.flatMap(x =>
-            Array.isArray(x)
-                ? x.flat().map(c =>
-                    typeof c === 'object' && c !== null
-                        ? (typeof c.calcVal === 'number' ? c.calcVal : null)
-                        : (typeof c === 'number' ? c : null)
-                )
-                : [typeof x === 'number' ? x : null]
-        );
+        const nums = [];
+        stack.forEach(value => this.#collectNumbers(value, false, nums));
+        return nums;
+    }
+    #gLogicals(stack) {
+        const values = [];
+        stack.forEach(value => this.#collectLogicals(value, false, values));
+        if (values.length === 0) throw new FormulaError('#VALUE!');
+        return values;
     }
     #gVal(val) {
         if (Array.isArray(val)) {
             if (val.length === 1 && !Array.isArray(val[0])) {
-                return val[0].calcVal;
+                return this.#valueFromAny(val[0]);
             } else { // 二维数组
-                return val.map(r => r.map(c => (typeof c === 'object' && c !== null) ? c.calcVal : c))
+                return val.map(r => Array.isArray(r) ? r.map(c => this.#valueFromAny(c)) : this.#valueFromAny(r))
             }
         }
-        return val
+        return this.#valueFromAny(val)
     }
 
     //支持返回二维数组，以实现向量化运算
@@ -1253,16 +1151,19 @@ export default class Formula {
                 return Math.sqrt(values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (values.length - 1));
             },
             IF: () => {
-                return this.#gVal(stack[0]) ? this.#gVal(stack[1]) : this.#gVal(stack[2]);
+                const condition = this.#toLogical(this.#gVal(stack[0]));
+                if (condition) return stack.length > 1 ? this.#gVal(stack[1]) : true;
+                return stack.length > 2 ? this.#gVal(stack[2]) : false;
             },
             IFS: () => {
                 for (let i = 0; i + 1 < stack.length; i += 2) {
-                    if (this.#gVal(stack[i])) return this.#gVal(stack[i + 1]);
+                    if (this.#toLogical(this.#gVal(stack[i]))) return this.#gVal(stack[i + 1]);
                 }
                 throw new Error('#N/A');
             },
-            AND: () => this.#gVals(stack).every(Boolean),
-            NOT: () => !this.#gVal(stack[0]),
+            AND: () => this.#gLogicals(stack).every(value => value),
+            NOT: () => !this.#toLogical(this.#gVal(stack[0])),
+            OR: () => this.#gLogicals(stack).some(value => value),
             SWITCH: () => {
                 const expr = this.#gVal(stack[0]);
                 for (let i = 1; i + 1 < stack.length; i += 2) {
@@ -1271,7 +1172,7 @@ export default class Formula {
                 if (stack.length % 2 === 0) return this.#gVal(stack[stack.length - 1]);
                 throw new Error('#N/A');
             },
-            XOR: () => this.#gVals(stack).filter(Boolean).length % 2 === 1,
+            XOR: () => this.#gLogicals(stack).filter(Boolean).length % 2 === 1,
             CONCATENATE: () => this.#gVals(stack).join(''),
             CONCAT: () => this.#gVals(stack).map(v => String(v ?? '')).join(''),
             LEFT: () => {
@@ -1446,7 +1347,7 @@ export default class Formula {
                             resultIndex = i;
                         }
                     }
-                    if (resultIndex === -1) return "#N/A";
+                    if (resultIndex === -1) return toFormulaError('#N/A');
                     if (resultArray) {
                         const resFlat = Array.isArray(resultArray[0])
                             ? (resultArray.length === 1 ? resultArray[0] : resultArray.map(r => r[resultArray[0].length - 1]))
@@ -1482,13 +1383,13 @@ export default class Formula {
                     }
                 }
 
-                return resultIndex === -1 ? "#N/A" : resultFlat[resultIndex];
+                return resultIndex === -1 ? toFormulaError('#N/A') : resultFlat[resultIndex];
             },
             XLOOKUP: () => {
                 const lookupValue = this.#gVal(stack[0]); // 查找值
                 const lookupArray = this.#gVal(stack[1]); // 查找数组
                 const returnArray = this.#gVal(stack[2]); // 返回数组
-                const notFound = stack.length > 3 ? this.#gVal(stack[3]) : "#N/A"; // 未找到时返回值
+                const notFound = stack.length > 3 ? this.#gVal(stack[3]) : toFormulaError('#N/A'); // 未找到时返回值
                 const matchMode = stack.length > 4 ? this.#gVal(stack[4]) : 0; // 匹配模式
                 const searchMode = stack.length > 5 ? this.#gVal(stack[5]) : 1; // 搜索模式
 
@@ -1660,7 +1561,7 @@ export default class Formula {
                 if (matchType === 0) {
                     // 精确匹配
                     const index = arr.indexOf(lookupValue);
-                    return index === -1 ? "#N/A" : index + 1;
+                    return index === -1 ? toFormulaError('#N/A') : index + 1;
                 } else if (matchType === 1) {
                     // 小于等于（数组必须升序）
                     let lastMatch = -1;
@@ -1668,7 +1569,7 @@ export default class Formula {
                         if (arr[i] <= lookupValue) lastMatch = i;
                         else break;
                     }
-                    return lastMatch === -1 ? "#N/A" : lastMatch + 1;
+                    return lastMatch === -1 ? toFormulaError('#N/A') : lastMatch + 1;
                 } else {
                     // 大于等于（数组必须降序）
                     let lastMatch = -1;
@@ -1676,7 +1577,7 @@ export default class Formula {
                         if (arr[i] >= lookupValue) lastMatch = i;
                         else break;
                     }
-                    return lastMatch === -1 ? "#N/A" : lastMatch + 1;
+                    return lastMatch === -1 ? toFormulaError('#N/A') : lastMatch + 1;
                 }
             },
 
@@ -1985,7 +1886,7 @@ export default class Formula {
             WRAPCOLS: () => {
                 const vector = this.#gVal(stack[0]);
                 const wrapCount = this.#gVal(stack[1]);
-                const padWith = stack.length > 2 ? this.#gVal(stack[2]) : "#N/A";
+                const padWith = stack.length > 2 ? this.#gVal(stack[2]) : toFormulaError('#N/A');
 
                 const arr = Array.isArray(vector) ? vector.flat() : [vector];
                 const result = [];
@@ -2006,7 +1907,7 @@ export default class Formula {
             WRAPROWS: () => {
                 const vector = this.#gVal(stack[0]);
                 const wrapCount = this.#gVal(stack[1]);
-                const padWith = stack.length > 2 ? this.#gVal(stack[2]) : "#N/A";
+                const padWith = stack.length > 2 ? this.#gVal(stack[2]) : toFormulaError('#N/A');
 
                 const arr = Array.isArray(vector) ? vector.flat() : [vector];
                 const result = [];
@@ -2112,7 +2013,7 @@ export default class Formula {
                     rowIndex = firstCol.indexOf(lookupValue);
                 }
 
-                return rowIndex === -1 ? "#N/A" : tableArray[rowIndex][colIndex];
+                return rowIndex === -1 ? toFormulaError('#N/A') : tableArray[rowIndex][colIndex];
             },
             TRIM: () => String(this.#gVal(stack[0])).replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' '),
             MIN: () => Math.min(...this.#gNums(stack)),
@@ -2170,7 +2071,7 @@ export default class Formula {
                 return stack.length;
             },
             UPPER: () => String(this.#gVal(stack[0])).toUpperCase(),
-            OR: () => this.#gVals(stack).some(Boolean),
+            OR: () => this.#gLogicals(stack).some(value => value),
             ACOS: () => Math.acos(this.#gVal(stack[0])),
             ASIN: () => Math.asin(this.#gVal(stack[0])),
             ATAN: () => Math.atan(this.#gVal(stack[0])),
@@ -2280,7 +2181,7 @@ export default class Formula {
                         for (const arr of arrays) {
                             const val = arr[i][j];
                             // true → 1, false → 0, 数字保持, 其他转数字
-                            product *= toNumber(val);
+                            product *= this.#toNumber(val);
                         }
                         sum += product;
                     }
@@ -2450,27 +2351,13 @@ export default class Formula {
                 return matrix;
             },
             IFERROR: () => {
-                try {
-                    const val = this.#gVal(stack[0]);
-                    // 检查是否为错误值
-                    if (val instanceof Error) return this.#gVal(stack[1]);
-                    if (typeof val === 'string' && val.startsWith('#')) return this.#gVal(stack[1]);
-                    return val;
-                } catch {
-                    return this.#gVal(stack[1]);
-                }
+                const value = this.#gVal(stack[0]);
+                return firstErrorValue(value) ? this.#gVal(stack[1]) : value;
             },
             IFNA: () => {
-                try {
-                    const val = this.#gVal(stack[0]);
-                    // 仅处理 #N/A 错误
-                    if (val === '#N/A' || (val instanceof Error && val.message === '#N/A')) {
-                        return this.#gVal(stack[1]);
-                    }
-                    return val;
-                } catch {
-                    return this.#gVal(stack[1]);
-                }
+                const value = this.#gVal(stack[0]);
+                const err = firstErrorValue(value);
+                return err && errorCodeOf(err) === '#N/A' ? this.#gVal(stack[1]) : value;
             },
             TRUE: () => true,
             FALSE: () => false,
@@ -2726,41 +2613,21 @@ export default class Formula {
                 return typeof value === 'string' ? value : '';
             },
             ISERROR: () => {
-                try {
-                    this.#gVal(stack[0]);
-                    return false;
-                } catch {
-                    return true;
-                }
+                return !!firstErrorValue(this.#gVal(stack[0]));
             },
             ISERR: () => {
-                const errorType = this.executeFunction('ERROR_TYPE', [stack[0]]);
-                return errorType !== 7 && errorType !== null;
+                const err = firstErrorValue(this.#gVal(stack[0]));
+                return !!err && errorCodeOf(err) !== '#N/A';
             },
             ISNA: () => {
-                return this.executeFunction('ERROR_TYPE', [stack[0]]) === 7;
+                const err = firstErrorValue(this.#gVal(stack[0]));
+                return !!err && errorCodeOf(err) === '#N/A';
             },
+            'ERROR.TYPE': () => this.executeFunction('ERROR_TYPE', stack),
             ERROR_TYPE: () => {
-                const errorTypes = {
-                    "#NULL!": 1,
-                    "#DIV/0!": 2,
-                    "#VALUE!": 3,
-                    "#REF!": 4,
-                    "#NAME?": 5,
-                    "#NUM!": 6,
-                    "#N/A": 7
-                };
-
-                const direct = this.#gVal(stack[0]);
-                if (direct instanceof Error) return errorTypes[direct.message] || null;
-                if (typeof direct === 'string' && direct.startsWith('#')) return errorTypes[direct] || null;
-
-                try {
-                    this.#gVal(stack[0]);
-                    return null;
-                } catch (e) {
-                    return errorTypes[e.message] || null;
-                }
+                const type = errorTypeNumber(firstErrorValue(this.#gVal(stack[0])));
+                if (type === null) throw new Error('#N/A');
+                return type;
             },
             ISNUMBER: () => {
                 return typeof this.#gVal(stack[0]) === 'number';
@@ -3036,10 +2903,17 @@ export default class Formula {
             }
 
         }
-        const fn = F[funcName];
+        const name = String(funcName || '').toUpperCase();
+        const fn = F[name] ?? F[name.replace(/\./g, '_')];
         if (typeof fn !== 'function') throw new Error('#NAME?');
         return fn();
     }
 
+}
+
+function columnNameToIndex(name) {
+    return String(name).toUpperCase().split('').reduce((sum, char) => {
+        return sum * 26 + char.charCodeAt(0) - 64;
+    }, 0) - 1;
 }
 

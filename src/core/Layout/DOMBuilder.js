@@ -51,7 +51,7 @@ export function createMainHTML(ns, menuRightHTML, SN = null, menuListCallback = 
                 <header class="sn-menu">
                     <div class="sn-menu-left">
                         <span class="sn-menu-logo">${getSvg('sn_brandLogo')}</span>
-                        <span class="sn-file-name">${t('workbook.defaultName')}</span>
+                        <span class="sn-file-name" role="button" tabindex="0" title="${t('workbook.renameTitle')}">${t('workbook.defaultName')}</span>
                     </div>
                     <div class="sn-menu-list">${menuTabsHTML}</div>
                     <div class="sn-menu-right">

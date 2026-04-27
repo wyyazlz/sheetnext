@@ -1,4 +1,6 @@
 
+import { isCheckboxControl } from '../Cell/cellControlXml.js';
+
 /**
  * Get a pivot table by cell index (based on location.ref)
  */
@@ -353,7 +355,7 @@ export function canvasDblclick(event) {
 
 export function baseMousedown(event) {
     finishTextBoxInlineEditing.call(this, true);
-    setTimeout(() => this.input.focus());
+    if (!event._snSkipFocus) setTimeout(() => this.input.focus());
     downBeforeFuns.splice(0).forEach(fun => fun());
     if (event.button == 2) return
     const { left, top, width, height } = this.handleLayer.getBoundingClientRect();
@@ -393,6 +395,17 @@ export function baseMousedown(event) {
     }
 
     // #region 按下的是超链接需要显示跳转按钮
+    const checkboxRect = downCell?._checkboxRect;
+    if (isCheckboxControl(downCell?.control) && checkboxRect &&
+        mouseX >= checkboxRect.x && mouseX <= checkboxRect.x + checkboxRect.w &&
+        mouseY >= checkboxRect.y && mouseY <= checkboxRect.y + checkboxRect.h) {
+        const cell = sheet.getCell(start.r, start.c);
+        sheet.activeCell = { c: cell.master?.c ?? start.c, r: cell.master?.r ?? start.r };
+        sheet.activeAreas = [];
+        if (sheet.toggleCheckbox(toggleRow, toggleCol)) this.r();
+        return;
+    }
+
     if (downCell.hyperlink) {
         const { x, y, w, h } = sheet.getCellInViewInfo(start.r, start.c);
         this.hyperlinkJumpBtn.style.top = `${this.toPhysical(y) - 2}px`
@@ -1490,6 +1503,7 @@ function getPaddingArea(cellIndex) {
 // 获取鼠标在活动边框的信息，返回鼠标样式
 function getMouseInBorder(x, y) {
     if (!this.activeSheet.protection.isSelectionVisible()) return null;
+    if (!this.activeBorderInfo?.inView) return null;
     const { x: rectX, y: rectY, w: rectW, h: rectH } = this.activeBorderInfo; // 矩形信息
     const borderWidth = 2; // 边框粗细
     const handleSize = 10; // 填充柄的大小

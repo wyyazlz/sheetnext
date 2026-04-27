@@ -64,6 +64,16 @@ export default class LazyDOM {
         `;
     }
 
+    _createContextMenuDataItemHTML(action, labelHTML, iconHTML = '', extraClass = '') {
+        const className = ['sn-rc-item', extraClass].filter(Boolean).join(' ');
+        return `
+            <div class="${className}" data-sheet-action="${action}">
+                <span class="sn-rc-item-icon${iconHTML ? '' : ' sn-rc-item-icon-empty'}">${iconHTML}</span>
+                <span class="sn-rc-item-label">${labelHTML}</span>
+            </div>
+        `;
+    }
+
     /** Sync drawing context menu item visibility. */
     syncDrawingContextMenu() {
         const menu = this.cache.get('drawing-context-menu');
@@ -73,6 +83,24 @@ export default class LazyDOM {
         const drawing = this.SN.Canvas?.activeDrawing;
         const canDownload = drawing && ['chart', 'image', 'shape'].includes(drawing.type);
         downloadItem.style.display = canDownload ? '' : 'none';
+    }
+
+    _syncSheetContextMenu(sheet) {
+        const menu = this.cache.get('sheet-context-menu');
+        if (!menu || !sheet) return;
+        const visibleCount = this.SN.sheets.filter(item => !item.hidden).length;
+        const hasHiddenSheet = this.SN.sheets.some(item => item.hidden);
+        this._setContextMenuItemDisabled(menu, 'delete', !sheet.hidden && visibleCount <= 1);
+        this._setContextMenuItemDisabled(menu, 'hide', sheet.hidden || visibleCount <= 1);
+        this._setContextMenuItemDisabled(menu, 'unhide', !hasHiddenSheet);
+        this._setContextMenuItemDisabled(menu, 'move', this.SN.sheets.length <= 1);
+    }
+
+    _setContextMenuItemDisabled(menu, action, disabled) {
+        const item = menu.querySelector(`[data-sheet-action="${action}"]`);
+        if (!item) return;
+        item.classList.toggle('sn-rc-item-disabled', !!disabled);
+        item.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     }
 
     creators = {
@@ -249,6 +277,26 @@ export default class LazyDOM {
             el.innerHTML = html;
             this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
             return el;
+        },
+
+        'sheet-context-menu': function () {
+            const t = (key, params = {}) => this.SN.t(key, params);
+            const el = document.createElement('div');
+            el.className = 'rc-box sn-scrollbar sn-sheet-rc';
+            this._bindContextMenuAutoHide(el);
+            const html = `
+                ${this._createContextMenuDataItemHTML('insert', t('contextMenu.sheet.insert'), getSvg('plus'))}
+                ${this._createContextMenuDataItemHTML('delete', t('contextMenu.sheet.delete'), getSvg('clear'), 'sn-rc-item-danger')}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuDataItemHTML('rename', t('contextMenu.sheet.rename'))}
+                ${this._createContextMenuDataItemHTML('hide', t('contextMenu.sheet.hide'))}
+                ${this._createContextMenuDataItemHTML('unhide', t('contextMenu.sheet.unhide'))}
+                ${this._createContextMenuDividerHTML()}
+                ${this._createContextMenuDataItemHTML('move', t('contextMenu.sheet.move'), getSvg('sort_moveDown'))}
+            `;
+            el.innerHTML = html;
+            (this.SN.containerDom.querySelector('.sn-main') || this.SN.containerDom).appendChild(el);
+            return el;
         }
     };
 
@@ -274,4 +322,6 @@ export default class LazyDOM {
     get cellContextMenu() { return this.get('cell-context-menu'); }
     /** @type {HTMLElement|null} */
     get drawingContextMenu() { return this.get('drawing-context-menu'); }
+    /** @type {HTMLElement|null} */
+    get sheetContextMenu() { return this.get('sheet-context-menu'); }
 }

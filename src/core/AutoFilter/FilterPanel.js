@@ -4,6 +4,7 @@
  */
 
 import getSvg from '../../assets/mainSvgs.js';
+import { _layerZIndex } from '../Layout/LayerConfig.js';
 
 export default class FilterPanel {
     /** @param {import('../Canvas/Canvas.js').default} canvas */
@@ -772,7 +773,7 @@ export default class FilterPanel {
         this._panel.style.position = 'fixed';
         this._panel.style.left = `${left}px`;
         this._panel.style.top = `${top}px`;
-        this._panel.style.zIndex = '10000';
+        this._panel.style.zIndex = String(_layerZIndex.autoFilterPanel);
         this._panel.classList.add('active');
 
         setTimeout(() => {

@@ -10,21 +10,8 @@ export function rFilterIcons(sheet) {
 
     const scopes = autoFilter?.getEnabledScopes?.();
     if (Array.isArray(scopes) && scopes.length > 0) {
-        const colPositions = new Map();
-        let colX = sheet.indexWidth;
-        for (const c of sheet.vi.colsIndex) {
-            const colWidth = sheet.getCol(c).width;
-            colPositions.set(c, { x: colX, w: colWidth });
-            colX += colWidth;
-        }
-
-        const rowPositions = new Map();
-        let rowY = sheet.headHeight;
-        for (const r of sheet.vi.rowsIndex) {
-            const rowHeight = sheet.getRow(r).height;
-            rowPositions.set(r, { y: rowY, h: rowHeight });
-            rowY += rowHeight;
-        }
+        const colPositions = new Map((sheet.vi.colLayouts || []).map(item => [item.index, { x: item.x, w: item.w }]));
+        const rowPositions = new Map((sheet.vi.rowLayouts || []).map(item => [item.index, { y: item.y, h: item.h }]));
 
         scopes.forEach(scope => {
             const range = scope.range;

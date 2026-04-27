@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-03-27
+> Generated: 2026-04-27
 
 Public callable classes detected for the generated API surface.
 
@@ -126,12 +126,15 @@ budgetSheet.getCell('A1').value = 'Month';
 budgetSheet.getCell('B1').value = 'Amount';
 ```
 
-#### `delSheet(name)`
+#### `delSheet(name): boolean | void`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | name | string | Yes | - | - |
+
+**Returns**
+- Type: `boolean | void`
 
 #### `getSheet(sheetName): Sheet | null`
 
@@ -150,6 +153,17 @@ if (sheet) {
   sheet.getCell('B2').value = 128000;
 }
 ```
+
+#### `moveSheet(sheetOrName, targetIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheetOrName | Sheet \| string | Yes | - | - |
+| targetIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
 
 #### `recalculate(currentSheetOnly = false)`
 
@@ -412,7 +426,7 @@ SN.activeSheet.eachCells('A1:C3', (r, c) => {
 #### `hyperlinkJump()`
 - Jump to hyperlink target of active cell.
 
-#### `rangeSort(sortKeys, range?)`
+#### `rangeSort(sortKeys, range?, options = {}): boolean`
 - Category: `Sort`
 
 **Parameters**
@@ -420,6 +434,11 @@ SN.activeSheet.eachCells('A1:C3', (r, c) => {
 | --- | --- | --- | --- | --- |
 | sortKeys | Array<{col:string \| number, order?:string, customOrder?:Array}> | Yes | - | - |
 | range | RangeRef | No | - | - |
+| options | {hasHeader?:boolean, caseSensitive?:boolean} | No | {} | - |
+
+**Returns**
+- Type: `boolean`
+- Sort sheet range.
 
 **Examples**
 ```js
@@ -519,14 +538,14 @@ sheet.rangeSort([
 | --- | --- | --- | --- | --- |
 | range | string \| Object \| Array<string \| Object> | Yes | - | - |
 
-#### `insertTable(arr, pos, options = {}, ops?): RangeNum`
-- Insert a table from the given position
+#### `insertTemplate(arr, pos, options = {}, ops?): RangeNum`
+- Insert a template from the given position.
 - Category: `InsertTable`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| arr | (ICellConfig \| string \| number)[][] | Yes | - | Table data array |
+| arr | (ICellConfig \| string \| number)[][] | Yes | - | Template data array |
 | pos | CellRef | Yes | - | Insert Location |
 | options | Object | No | {} | Configure Options |
 | ops | {align?:string,border?:boolean,width?:number,height?:number} | No | - | - |
@@ -565,7 +584,7 @@ const meetingTemplate = [
   [{ v: 'Remarks', h: 80 }, { mr: 2 }, '', '']
 ];
 
-sheet.insertTable(meetingTemplate, 'A1', {
+sheet.insertTemplate(meetingTemplate, 'A1', {
   border: true,
   align: 'center',
   height: 30,
@@ -633,102 +652,90 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | mode | String | No | 'default' | Mode: 'default' \|center' \|content'same' |
 | range | RangeRef | Yes | - | - |
 
-#### `addRows(r, number = 1, index, count)`
+#### `addRows(r, number = 1)`
 - Insert Row
 - Category: `RowColHandler`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| r | Number | Yes | - | Row Index to Insert Location |
-| number | Number | No | 1 | Number of rows inserted |
-| index | number | Yes | - | - |
-| count | number | Yes | - | - |
+| r | number | Yes | - | Row Index to Insert Location |
+| number | number | No | 1 | Number of rows inserted |
 
-#### `addCols(c, number = 1, index, count)`
+#### `addCols(c, number = 1)`
 - Insert Columns
 - Category: `RowColHandler`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| c | Number | Yes | - | Index of columns for inserting positions |
-| number | Number | No | 1 | Number of columns inserted |
-| index | number | Yes | - | - |
-| count | number | Yes | - | - |
+| c | number | Yes | - | Index of columns for inserting positions |
+| number | number | No | 1 | Number of columns inserted |
 
-#### `delRows(r, number = 1, start, count)`
+#### `delRows(r, number = 1)`
 - Delete Row
 - Category: `RowColHandler`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| r | Number | Yes | - | Remove Row Index at Start Location |
-| number | Number | No | 1 | Number of rows deleted |
-| start | number | Yes | - | - |
-| count | number | Yes | - | - |
+| r | number | Yes | - | Remove Row Index at Start Location |
+| number | number | No | 1 | Number of rows deleted |
 
-#### `delCols(c, number = 1, start, count)`
+#### `delCols(c, number = 1)`
 - Delete Column
 - Category: `RowColHandler`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| c | Number | Yes | - | Delete column index for starting position |
-| number | Number | No | 1 | NUMBER OF ROWS REMOVED |
-| start | number | Yes | - | - |
-| count | number | Yes | - | - |
+| c | number | Yes | - | Delete column index for starting position |
+| number | number | No | 1 | NUMBER OF ROWS REMOVED |
 
 #### `getCellInViewInfo(rowIndex, colIndex, posMerge = true, r, c): Object`
-- Fetch cell information in visible view
+- Fetch cell information in visible view.
 - Category: `ViewCalculator`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | rowIndex | Number | Yes | - | Row index |
-| colIndex | Number | Yes | - | Column Index |
+| colIndex | Number | Yes | - | Column index |
 | posMerge | Boolean | No | true | Whether to process merging cells |
 | r | number | Yes | - | - |
 | c | number | Yes | - | - |
 
 **Returns**
 - Type: `Object`
-- Objects with location and size information
 
 #### `getAreaInviewInfo(area): Object`
-- Fetch area information in visible view
+- Fetch clipped area information in visible view.
 - Category: `ViewCalculator`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| area | Object | Yes | - | Area Object |
+| area | Object | Yes | - | Area object |
 
 **Returns**
 - Type: `Object`
-- Objects with location and size information
 
 #### `getTotalHeight(): number`
-- Retrieving the total height of all rows (cache optimization)
+- Retrieving the total height of all rows.
 - Category: `ViewCalculator`
 
 **Returns**
 - Type: `number`
-- Total Height
 
 #### `getTotalWidth(): number`
-- Get the total width of all columns (cache optimization)
+- Get the total width of all columns.
 - Category: `ViewCalculator`
 
 **Returns**
 - Type: `number`
-- Total width
 
 #### `getScrollTop(rowIndex): number`
-- Get the sum of heights for all lines before the specified line
+- Get the sum of heights before the specified row.
 - Category: `ViewCalculator`
 
 **Parameters**
@@ -738,46 +745,42 @@ sheet.insertTable(meetingTemplate, 'A1', {
 
 **Returns**
 - Type: `number`
-- High Sum
 
 #### `getScrollLeft(colIndex): number`
-- Sum of widths of all columns before the specified column
+- Sum of widths before the specified column.
 - Category: `ViewCalculator`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| colIndex | number | Yes | - | Column Index |
+| colIndex | number | Yes | - | Column index |
 
 **Returns**
 - Type: `number`
-- Sum of width
 
 #### `getRowIndexByScrollTop(scrollTop): number`
-- Find line index from vertical scroll pixel position
+- Find row index from vertical scroll pixel position.
 - Category: `ViewCalculator`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| scrollTop | number | Yes | - | Scroll Pixels Position |
+| scrollTop | number | Yes | - | Scroll pixels position |
 
 **Returns**
 - Type: `number`
-- Line Index
 
 #### `getColIndexByScrollLeft(scrollLeft): number`
-- Find the corresponding column index from the horizontal scroll pixel position
+- Find column index from horizontal scroll pixel position.
 - Category: `ViewCalculator`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| scrollLeft | number | Yes | - | Scroll Pixels Position |
+| scrollLeft | number | Yes | - | Scroll pixels position |
 
 **Returns**
 - Type: `number`
-- Column Index
 
 #### `copy(area = null, isCut = false, areas?)`
 - Copy Regional Data
@@ -829,6 +832,63 @@ sheet.insertTable(meetingTemplate, 'A1', {
 #### `hasClipboardData(): boolean`
 - Check for clipboard data
 - Category: `Clipboard`
+
+**Returns**
+- Type: `boolean`
+
+#### `setCellControl(range, control)`
+- Category: `CellControl`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| range | string \| Object \| Array<string \| Object> | Yes | - | - |
+| control | Object | Yes | - | - |
+
+#### `clearCellControl(range)`
+- Category: `CellControl`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| range | string \| Object \| Array<string \| Object> | Yes | - | - |
+
+#### `toggleCheckbox(row, col): boolean`
+- Category: `CellControl`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `setCheckboxValue(range, checked)`
+- Category: `CellControl`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| range | string \| Object \| Array<string \| Object> | Yes | - | - |
+| checked | boolean | Yes | - | - |
+
+#### `deleteCheckboxControlOrValue(range)`
+- Category: `CellControl`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| range | string \| Object \| Array<string \| Object> | Yes | - | - |
+
+#### `hasCheckboxControl(range): boolean`
+- Category: `CellControl`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| range | string \| Object \| Array<string \| Object> | Yes | - | - |
 
 **Returns**
 - Type: `boolean`
@@ -887,7 +947,7 @@ sheet.insertTable(meetingTemplate, 'A1', {
 ### Get
 | Name | Type | Static | Description |
 | --- | --- | --- | --- |
-| cells | Array<Cell> | No | Get all cells in a column |
+| cells | Array<Cell> | No | Sparse cells indexed by row |
 
 ## Cell
 - Cell classes
@@ -908,6 +968,7 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | hyperlink | Object \| null | get/set | No | Hyperlink Configuration |
 | dataValidation | Object \| null | get/set | No | Data Validation Configuration |
 | protection | {locked: boolean, hidden: boolean} | get/set | No | Cell Protection Configuration |
+| control | Object \| null | get/set | No | Cell control configuration. |
 | type | string | get/set | No | Cell Type |
 | style | Object | get/set | No | Cell Styles |
 | border | Object | get/set | No | Border Style |
@@ -930,7 +991,6 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | isLocked | boolean | No | Is it locked |
 | validData | boolean | No | Data validation results |
 | isFormula | boolean | No | Is it a formula |
-| buildXml | Object | No | Build Cell XML |
 
 ## Canvas
 - Canvas Rendering and Interaction Management
@@ -949,6 +1009,7 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | handleLayer | HTMLCanvasElement | No | SN.containerDom.querySelector(".sn-handle-layer") | Operating Layer Canvas |
 | buffer | HTMLCanvasElement | No | document.createElement('canvas') | Buffer Canvas |
 | showLayerKZ | HTMLCanvasElement | No | document.createElement('canvas') | Snapshot Canvas |
+| scrollSkeletonLayer | HTMLCanvasElement | No | document.createElement('canvas') | Scroll loading skeleton layer |
 | pCanvas | HTMLCanvasElement | No | document.createElement('canvas') | Brush preview canvas |
 | pCtx | CanvasRenderingContext2D | No | this.pCanvas.getContext('2d') | Brush Preview Context |
 | activeBorderInfo | Object \| null | No | null | Current Active Border Information |
@@ -968,6 +1029,7 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | rollY | HTMLElement | No | SN.containerDom.querySelector('.sn-roll-y') | Portrait scrollbar |
 | rollYS | HTMLElement | No | SN.containerDom.querySelector('.sn-roll-y>div') | Portrait Scrollbar Slider |
 | drawingsCon | HTMLElement | No | SN.containerDom.querySelector('.sn-drawings-con') | Graphics Container |
+| middleLayer | - | No | SN.containerDom.querySelector('.sn-middle-layer') | - |
 | slicersCon | HTMLElement | No | SN.containerDom.querySelector('.sn-slicers-con') | Slicer Container |
 | maxTop | number | No | 0 | Maximum longitudinal scrolling distance |
 | maxLeft | number | No | 0 | Maximum lateral scrolling distance |
@@ -1107,6 +1169,24 @@ sheet.insertTable(meetingTemplate, 'A1', {
 
 #### `updateOverlayContainers(): void`
 - Update Overlay Container Dimensions
+
+#### `scrollByPixels(deltaX = 0, deltaY = 0, options = {})`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| deltaX | number | No | 0 | - |
+| deltaY | number | No | 0 | - |
+| options | Object | No | {} | - |
+
+#### `scrollToPixels(scrollLeft, scrollTop, options = {})`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| scrollLeft | - | Yes | - | - |
+| scrollTop | - | Yes | - | - |
+| options | Object | No | {} | - |
 
 #### `updateScrollBar(): void`
 - Update scrollbar position
@@ -1384,44 +1464,40 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | dataBar | - | Yes | - | - |
 
 #### `rFilterIcons(sheet)`
-- Render Filter Icon
 - Category: `FilterRenderer`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| sheet | Sheet | Yes | - | Sheet Objects |
+| sheet | Sheet | Yes | - | - |
 
 #### `clearFilterIconPositions()`
-- Clear filter icon position information
 - Category: `FilterRenderer`
 
 #### `getFilterIconAtPosition(x, y): {colIndex:number, scopeId:string} | null`
-- Detect if the click location is on the filter icon
 - Category: `FilterRenderer`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| x | number | Yes | - | Click on the X coordinates |
-| y | number | Yes | - | Click on the Y position |
+| x | number | Yes | - | - |
+| y | number | Yes | - | - |
 
 **Returns**
 - Type: `{colIndex:number, scopeId:string} | null`
 
 #### `drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder)`
-- Draw a single filter icon (Excel style drop-down button)
 - Category: `FilterRenderer`
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| ctx | - | Yes | - | - |
-| iconX | - | Yes | - | - |
-| iconY | - | Yes | - | - |
-| iconSize | - | Yes | - | - |
-| hasFilter | - | Yes | - | - |
-| sortOrder | - | Yes | - | - |
+| ctx | CanvasRenderingContext2D | Yes | - | - |
+| iconX | number | Yes | - | - |
+| iconY | number | Yes | - | - |
+| iconSize | number | Yes | - | - |
+| hasFilter | boolean | Yes | - | - |
+| sortOrder | string \| null | Yes | - | - |
 
 #### `rPivotTablePlaceholders(sheet)`
 - Render PivotTable Placeholder
@@ -1442,6 +1518,12 @@ sheet.insertTable(meetingTemplate, 'A1', {
 | sheet | Sheet | Yes | - | Sheet Instance |
 | x | number | Yes | - | Mouse X coordinates |
 | y | number | Yes | - | Mouse Y coordinates<br>@ returns {PivotTable \| null} Returns null if a PivotTable instance is returned within an area |
+
+### Potential Lifecycle Props
+- Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
+| Name | Static | Source Line | Example Assignment |
+| --- | --- | --- | --- |
+| SKctx | No | 354 | this.scrollSkeletonLayer.getContext('2d') |
 
 ## Layout
 - Layout & Toolbar Management
@@ -1565,6 +1647,72 @@ sheet.insertTable(meetingTemplate, 'A1', {
 
 ## Formula
 - Formula Calculator
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| SN | - | No | SN | - |
+
+### Get
+| Name | Type | Static | Description |
+| --- | --- | --- | --- |
+| lastCalcVolatile | boolean | No | Whether the last calculation was volatile |
+| lastResultIsDate | boolean | No | Whether the last calculated result is a date type |
+
+### Methods
+#### `calcFormula(formulaStr, cell): any`
+- Calculation Formula
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| formulaStr | string | Yes | - | Equation String (without Equals) |
+| cell | Cell | Yes | - | Current Cell |
+
+**Returns**
+- Type: `any`
+
+#### `parseDeps(formulaOrAst, defaultSheetName = null): {sheetName:string | null,r:number,c:number}[]`
+- Extract all dependent cell coordinates from a formula AST/string.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| formulaOrAst | string \| Object | Yes | - | Formula string without equals or parsed AST |
+| defaultSheetName | string | No | null | Sheet name used by local references |
+
+**Returns**
+- Type: `{sheetName:string | null,r:number,c:number}[]`
+
+#### `parseDependencyAreas(formulaOrAst, defaultSheetName = null): {sheetName:string | null,s:{r:number,c:number},e:{r:number,c:number}}[]`
+- Extract dependency areas without expanding large ranges.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| formulaOrAst | string \| Object | Yes | - | Formula string without equals or parsed AST |
+| defaultSheetName | string | No | null | Sheet name used by local references |
+
+**Returns**
+- Type: `{sheetName:string | null,s:{r:number,c:number},e:{r:number,c:number}}[]`
+
+#### `executeFunction(funcName, stack): any`
+- Execute Function
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| funcName | string | Yes | - | Function name |
+| stack | Array | Yes | - | Parameter Stack |
+
+**Returns**
+- Type: `any`
+
+### Potential Lifecycle Props
+- Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
+| Name | Static | Source Line | Example Assignment |
+| --- | --- | --- | --- |
+| currentCell | No | 79 | cell |
 
 ## AutoFilter
 
@@ -2558,6 +2706,31 @@ sparkline.add({
 
 **Returns**
 - Type: `Object | null`
+
+## FormulaAstParser
+
+### Methods
+#### `parse()`
+
+## FormulaError
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| name | string | No | 'FormulaError' | - |
+| code | - | No | this.message | - |
+
+## FormulaLexer
+
+### Methods
+#### `scan()`
+
+## FormulaParseError
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| name | string | No | 'FormulaParseError' | - |
 
 ## CF
 - CF conditional formatting Manager<br>Responsible for parsing, storing and managing Excel conditional formatting rules

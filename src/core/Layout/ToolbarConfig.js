@@ -243,6 +243,7 @@ export function createToolbarConfig(ns) {
                 },
                 {
                     items: [
+                        { type: 'large', icon: 'xuanxiang', labelKey: 'toolbar.insert.checkbox', action: `${ns}.Action.insertCheckbox()` },
                         { type: 'large', icon: 'component', labelKey: 'layout.auto.labelC6887918', disabled:true },
                     ]
                 },

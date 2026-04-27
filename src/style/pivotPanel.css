@@ -481,7 +481,7 @@
         bottom: 0;
         width: 85%;
         max-width: 320px;
-        z-index: 9999;
+        z-index: var(--sn-z-side-panel, 8100);
         box-shadow: -4px 0 20px rgba(0,0,0,0.15);
         transform: translateX(100%);
         transition: transform 0.3s ease;

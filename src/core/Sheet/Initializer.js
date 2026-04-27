@@ -133,8 +133,8 @@ function initRowsCols() {
 
     if (this.activeCell.r > rc - 1) rc = this.activeCell.r + 1;
     if (this.activeCell.c > cc - 1) cc = this.activeCell.c + 1;
-    if (!this.cols[cc - 1]) this.cols[cc - 1] = new Col(null, this, cc - 1);
-    if (!this.rows[rc - 1]) this.rows[rc - 1] = new Row(null, this, rc - 1);
+    this._virtualColCount = Math.max(this._virtualColCount || 0, cc);
+    this._virtualRowCount = Math.max(this._virtualRowCount || 0, rc);
 }
 
 /**
