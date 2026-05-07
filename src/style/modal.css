@@ -147,12 +147,12 @@
 }
 
 .sn-modal-btn-confirm {
-    background: #4f7cf6;
+    background: var(--sn-primary);
     color: #fff;
 }
 
 .sn-modal-btn-confirm:hover {
-    background: #3d6be5;
+    background: var(--sn-primary-hover);
 }
 
 /* 关闭动画 */
@@ -195,11 +195,11 @@
 }
 
 .sn-chart-tab:hover {
-    background: #eef2ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-chart-tab.active {
-    background: #4f7cf6;
+    background: var(--sn-primary);
     color: #fff;
 }
 
@@ -232,12 +232,12 @@
 }
 
 .sn-chart-item:hover {
-    border-color: #4f7cf6;
+    border-color: var(--sn-primary);
 }
 
 .sn-chart-item.selected {
-    border-color: #4f7cf6;
-    box-shadow: 0 0 0 2px rgba(79, 124, 246, 0.18);
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 2px var(--sn-primary-ring);
 }
 
 .sn-chart-preview {
@@ -333,7 +333,7 @@
     padding: 2px 6px;
     border-radius: 3px;
     font-family: 'Consolas', 'Monaco', monospace;
-    color: #4472C4;
+    color: var(--sn-primary);
     margin-right: 4px;
 }
 
@@ -370,9 +370,9 @@
 }
 
 .sn-numfmt-tag:hover {
-    border-color: #4f7cf6;
-    color: #4f7cf6;
-    background: #f5f8ff;
+    border-color: var(--sn-primary);
+    color: var(--sn-primary);
+    background: var(--sn-primary-soft);
 }
 
 /* Consolidate / Text to Columns dialogs */
@@ -552,8 +552,8 @@
 .sn-modal input[type="password"]:focus,
 .sn-modal input[type="search"]:focus,
 .sn-modal input:not([type]):focus {
-    border-color: #4f7cf6;
-    box-shadow: 0 0 0 2px rgba(79, 124, 246, 0.1);
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 2px var(--sn-primary-ring);
 }
 
 .sn-modal input[type="text"]:hover:not(:focus),
@@ -579,7 +579,7 @@
 }
 
 .sn-modal select:focus {
-    border-color: #4f7cf6;
+    border-color: var(--sn-primary);
 }
 
 .sn-modal select:hover:not(:focus) {
@@ -601,8 +601,8 @@
 }
 
 .sn-modal textarea:focus {
-    border-color: #4f7cf6;
-    box-shadow: 0 0 0 2px rgba(79, 124, 246, 0.1);
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 2px var(--sn-primary-ring);
 }
 
 .sn-modal textarea:hover:not(:focus) {

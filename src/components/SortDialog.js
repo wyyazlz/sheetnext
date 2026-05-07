@@ -4,6 +4,7 @@
  */
 
 import getSvg from '../assets/mainSvgs.js';
+import { applyTheme } from '../core/Theme/Theme.js';
 
 // 预设的自定义列表
 const PRESET_CUSTOM_LISTS = [
@@ -137,6 +138,7 @@ export default class SortDialog {
 
         const overlay = document.createElement('div');
         overlay.className = 'sn-modal-overlay sn-sort-dialog-overlay';
+        applyTheme(overlay, this.SN._themeColors);
         overlay.innerHTML = `
             <div class="sn-modal sn-sort-dialog">
                 <div class="sn-modal-header">

@@ -110,7 +110,7 @@ export function showProperties() {
         ? t('action.workbook.properties.fileSize', { size: (props.fileSize / 1024).toFixed(1) })
         : t('action.workbook.properties.notAvailable');
 
-    const inputStyle = 'width:100%;padding:4px 6px;border:none;border-bottom:1px solid #ddd;box-sizing:border-box;background:transparent;color:#0066cc;font-size:13px;outline:none;';
+    const inputStyle = 'width:100%;padding:4px 6px;border:none;border-bottom:1px solid #ddd;box-sizing:border-box;background:transparent;color:var(--sn-primary);font-size:13px;outline:none;';
     const readonlyStyle = 'width:100%;padding:4px 6px;border:none;box-sizing:border-box;background:transparent;color:#666;font-size:13px;';
     const rowStyle = 'display:flex;align-items:flex-start;margin-bottom:6px;min-height:24px;';
     const labelStyle = 'width:100px;flex-shrink:0;color:#666;font-size:13px;padding-top:4px;';

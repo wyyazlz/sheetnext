@@ -1,4 +1,16 @@
 :root {
+    --sn-primary: #2f6f4e;
+    --sn-primary-rgb: 47, 111, 78;
+    --sn-primary-hover: #275d42;
+    --sn-primary-active: #224f38;
+    --sn-primary-light: #709f82;
+    --sn-primary-soft: #eef7f1;
+    --sn-primary-soft-hover: #dceee3;
+    --sn-primary-border: #97bea7;
+    --sn-primary-subtle-border: #c8ded0;
+    --sn-primary-ring: rgba(47, 111, 78, 0.14);
+    --sn-primary-shadow: rgba(47, 111, 78, 0.28);
+    --sn-primary-contrast: #ffffff;
     --sn-z-canvas-show: 100;
     --sn-z-canvas-middle: 200;
     --sn-z-canvas-handle: 300;
@@ -61,7 +73,7 @@ body,textarea {
     text-align: left;
 }
 .sn-text-primary{
-    color: #36c !important;
+    color: var(--sn-primary) !important;
 }
 .sn-cur{
     cursor: pointer;
@@ -156,7 +168,7 @@ body,textarea {
 }
 
 .sn-color-item.active {
-    border: 2px solid #1a73e8;
+    border: 2px solid var(--sn-primary);
 }
 
 /* 白色块特殊边框 */

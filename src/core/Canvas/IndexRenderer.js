@@ -4,7 +4,6 @@
  */
 
 import { syncToolbarState } from '../Layout/ToolbarBuilder.js';
-import { _cgl } from './Canvas.js';
 import { getFormulaBarValue } from './helpers.js';
 
 function isCoarsePointer() {
@@ -78,6 +77,12 @@ export function rAllBtn() {
 // 只渲染行标列标（提取出来供截图模式复用）
 /** @param {Object} sheet @param {Object} lightInfo */
 export function rRowColHeaders(sheet, lightInfo) {
+    const activeHeaderAccent = this._themeColor('primary', '#2f6f4e');
+    const activeHeaderAccentSoft = this._themeColor('primaryBorder', '#97bea7');
+    const activeHeaderFill = this._themeColor('primarySoftHover', '#dceee3');
+    const activeHeaderBorder = this._themeColor('primarySubtleBorder', '#c1d8ca');
+    const activeHeaderText = this._themeColor('primaryActive', '#224f38');
+    const activeHeaderAccentSize = this.toLogical(1);
     this.rAllBtn(); // 全选按钮
 
     this.bc.textBaseline = 'middle'
@@ -100,32 +105,30 @@ export function rRowColHeaders(sheet, lightInfo) {
         this.bc.clip();
 
         // 背景
-        this.bc.fillStyle = isLight ? '#d9d9d9' : '#f0f0f0';
+        this.bc.fillStyle = isLight ? activeHeaderFill : '#f0f0f0';
         this.bc.fillRect(x, 0, nowCellWidth, sheet.headHeight);
 
         // 边框
         this.bc.beginPath();
-        this.bc.strokeStyle = '#ccc';
+        this.bc.strokeStyle = isLight ? activeHeaderBorder : '#ccc';
         const colRect = this.snapRect(x, 0, nowCellWidth, sheet.headHeight);
         this.bc.lineWidth = lineWidth;
         this.bc.strokeRect(colRect.x, colRect.y, colRect.w, colRect.h);
 
         // 高亮边
         if (isLight) {
-            this.bc.beginPath();
-            this.bc.lineWidth = 2;
-            this.bc.strokeStyle = '#36c';
-            const hp = this.halfPixel;
-            const yLine = this.snap(sheet.headHeight) + hp;
-            this.bc.moveTo(this.snap(x) + hp, yLine);
-            this.bc.lineTo(this.snap(x + nowCellWidth) + hp, yLine);
-            this.bc.stroke();
+            const accentSize = Math.min(activeHeaderAccentSize, sheet.headHeight);
+            const accentSoftSize = Math.min(activeHeaderAccentSize, Math.max(0, sheet.headHeight - accentSize));
+            this.bc.fillStyle = activeHeaderAccentSoft;
+            this.bc.fillRect(x, sheet.headHeight - accentSize - accentSoftSize, nowCellWidth, accentSoftSize);
+            this.bc.fillStyle = activeHeaderAccent;
+            this.bc.fillRect(x, sheet.headHeight - accentSize, nowCellWidth, accentSize);
         }
 
         // 文本
         this.bc.beginPath();
         this.bc.lineWidth = lineWidth;
-        this.bc.fillStyle = '#333';
+        this.bc.fillStyle = isLight ? activeHeaderText : '#333';
         this.bc.fillText(this.Utils.numToChar(c), x + nowCellWidth / 2, sheet.headHeight / 2 + 2);
         this.bc.restore();
     })
@@ -144,32 +147,30 @@ export function rRowColHeaders(sheet, lightInfo) {
         this.bc.clip();
 
         // 背景
-        this.bc.fillStyle = isLight ? '#d9d9d9' : '#f0f0f0';
+        this.bc.fillStyle = isLight ? activeHeaderFill : '#f0f0f0';
         this.bc.fillRect(0, y, sheet.indexWidth, rowHeight);
 
         // 边框
         this.bc.beginPath();
-        this.bc.strokeStyle = '#ccc';
+        this.bc.strokeStyle = isLight ? activeHeaderBorder : '#ccc';
         const rowRect = this.snapRect(0, y, sheet.indexWidth, rowHeight);
         this.bc.lineWidth = lineWidth;
         this.bc.strokeRect(rowRect.x, rowRect.y, rowRect.w, rowRect.h);
 
         // 高亮边
         if (isLight) {
-            this.bc.beginPath();
-            this.bc.lineWidth = 2;
-            this.bc.strokeStyle = '#36c';
-            const hp = this.halfPixel;
-            const xLine = this.snap(sheet.indexWidth) + hp;
-            this.bc.moveTo(xLine, this.snap(y) + hp);
-            this.bc.lineTo(xLine, this.snap(y + rowHeight) + hp);
-            this.bc.stroke();
+            const accentSize = Math.min(activeHeaderAccentSize, sheet.indexWidth);
+            const accentSoftSize = Math.min(activeHeaderAccentSize, Math.max(0, sheet.indexWidth - accentSize));
+            this.bc.fillStyle = activeHeaderAccentSoft;
+            this.bc.fillRect(sheet.indexWidth - accentSize - accentSoftSize, y, accentSoftSize, rowHeight);
+            this.bc.fillStyle = activeHeaderAccent;
+            this.bc.fillRect(sheet.indexWidth - accentSize, y, accentSize, rowHeight);
         }
 
         // 文本
         this.bc.beginPath();
         this.bc.lineWidth = lineWidth;
-        this.bc.fillStyle = '#333';
+        this.bc.fillStyle = isLight ? activeHeaderText : '#333';
         this.bc.fillText(r + 1, sheet.indexWidth / 2, y + rowHeight / 2 + 2);
         this.bc.restore();
     })
@@ -330,9 +331,9 @@ export function rPageBreaks(sheet) {
     const spanY2 = Math.min(this.viewHeight, yBottom ?? this.viewHeight);
     if (spanX2 <= spanX1 || spanY2 <= spanY1) return;
 
-    const autoStyle = { color: '#7f9bff', width: 1, dash: [this.px(6), this.px(4)] };
-    const manualStyle = { color: '#2f62ff', width: 1.2, dash: [] };
-    const borderStyle = { color: '#2f62ff', width: 1.2, dash: [] };
+    const autoStyle = { color: this._themeColor('primaryLight', '#709f82'), width: 1, dash: [this.px(6), this.px(4)] };
+    const manualStyle = { color: this._themeColor('primary', '#2f6f4e'), width: 1.2, dash: [] };
+    const borderStyle = { color: this._themeColor('primary', '#2f6f4e'), width: 1.2, dash: [] };
     const hp = this.halfPixel;
 
     const drawLine = (x1, y1, x2, y2, style) => {
@@ -412,13 +413,14 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
     const lf = lightInfo.lastFrame
     if (selectionVisible && lf && lf.inView && !(isScreenshot && hideSelectionFrame)) {
         withGridBodyClip(this, sheet, () => {
+            const primaryColor = this._themeColor('primary', '#2f6f4e');
             let { x, y, w, h } = lf
             // 渲染当前活动的单元格
             const activeCellInfo = sheet.getCellInViewInfo(sheet.activeCell.r, sheet.activeCell.c);
             if (activeCellInfo.inView && !isScreenshot) this.bc.clearRect(activeCellInfo.x + 1, activeCellInfo.y + 1, activeCellInfo.w - 2, activeCellInfo.h - 2);
             const hp = this.halfPixel;
             const rect = this.snapRect(x, y, w, h);
-            this.bc.strokeStyle = '#36c';
+            this.bc.strokeStyle = primaryColor;
             this.bc.lineWidth = 1.5;  // 使用固定 CSS 像素，保持视觉一致性
             this.bc.strokeRect(rect.x - hp, rect.y - hp, rect.w + hp * 2, rect.h + hp * 2);
             // 右下角小方块
@@ -428,7 +430,7 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
             const cy = y + h;
             const px = cx - size / 2;
             const py = cy - size / 2;
-            this.bc.fillStyle = '#36c';
+            this.bc.fillStyle = primaryColor;
             this.bc.fillRect(px, py, size, size);
             this.bc.strokeStyle = '#ffffff';
             this.bc.lineWidth = 2;  // 使用固定 CSS 像素
@@ -442,9 +444,6 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
     if (!isScreenshot) {
         this.ctx.drawImage(this.showLayerKZ, 0, 0); // 将缓冲区内容复制到显示画布上
         this.ctx.drawImage(this.buffer, 0, 0); // 将缓冲区内容复制到显示画布上
-
-        // 绘制水印
-        _cgl(this)?._drawWatermark(this.ctx, this.showLayer.width, this.showLayer.height, this.dpr);
 
         // 绘制追踪箭头
         this.renderTraceArrows(sheet);

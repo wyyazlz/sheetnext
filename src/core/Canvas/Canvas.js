@@ -13,6 +13,7 @@ import * as PivotTableRenderer from './PivotTableRenderer.js';
 import FilterPanel from '../AutoFilter/FilterPanel.js';
 import LazyDOM from '../Layout/LazyDOM.js';
 import { _layerZIndex } from '../Layout/LayerConfig.js';
+import { getThemeColor } from '../Theme/Theme.js';
 
 const INPUT_VISIBLE_Z_INDEX = String(_layerZIndex.cellEditor);
 const INPUT_HIDDEN_Z_INDEX = '-1';
@@ -494,6 +495,10 @@ export default class Canvas {
 
     get activeSheet() {
         return this.SN.activeSheet
+    }
+
+    _themeColor(token, fallback) {
+        return getThemeColor(this.SN, token, fallback);
     }
 
     /**
@@ -1018,7 +1023,7 @@ export default class Canvas {
 
     #rFreezeLine(sheet) {
         this.bc.beginPath();
-        this.bc.strokeStyle = "#36c"
+        this.bc.strokeStyle = this._themeColor('primary', '#2f6f4e');
         this.bc.lineWidth = this.px(1);
         const vi = sheet.vi
         if (vi.frozenCols.length != 0) {
@@ -1317,6 +1322,7 @@ Object.assign(Canvas.prototype, {
     rFilterIcons: FilterRenderer.rFilterIcons,
     clearFilterIconPositions: FilterRenderer.clearFilterIconPositions,
     getFilterIconAtPosition: FilterRenderer.getFilterIconAtPosition,
+    _filterThemeColors: FilterRenderer._filterThemeColors,
     drawFilterIcon: FilterRenderer.drawFilterIcon,
 
     // 透视表占位渲染
@@ -1469,8 +1475,8 @@ Canvas.prototype.renderTraceArrows = function(sheet) {
     ctx.save();
 
 
-    ctx.strokeStyle = '#4472C4';
-    ctx.fillStyle = '#4472C4';
+    ctx.strokeStyle = this._themeColor('primary', '#2f6f4e');
+    ctx.fillStyle = this._themeColor('primary', '#2f6f4e');
     ctx.lineWidth = 1.5 * scale;
     arrows.precedents.forEach(arrow => {
         this.drawTraceArrow(ctx, sheet, arrow.from, arrow.to, scale);

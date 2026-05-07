@@ -403,6 +403,14 @@ const enUS = {
         },
         "insert": {
             "content": {
+                "chart": {
+                    "assist": "Assist",
+                    "defaultItem": "Item {index}",
+                    "defaultSeries": "Data",
+                    "volume": "Volume"
+                },
+                "imageFileDescription": "Image files",
+                "imagePickerNotSupported": "This feature is not supported in current browser. Please use a newer Chrome or Edge browser.",
                 "sparkline": {
                     "locationInvalid": "Invalid insert location",
                     "locationLabel": "Insert Location",
@@ -419,6 +427,9 @@ const enUS = {
                         "winLoss": "Win/Loss"
                     },
                     "typeLabel": "Sparkline Type"
+                },
+                "textBox": {
+                    "defaultText": "Text Box"
                 }
             },
             "modal": {
@@ -459,6 +470,10 @@ const enUS = {
                 }
             },
             "toast": {
+                "downloadDrawingImageFailed": "Failed to download drawing image",
+                "downloadDrawingImageSuccess": "Drawing image downloaded",
+                "downloadDrawingImageUnsupported": "Only charts, images and shapes support image download",
+                "msg001": "The selected range has no valid data",
                 "msg002": "Please select a data range first",
                 "msg003": "Sparkline module is not initialized",
                 "pleaseEnterALinkAddress": "Please enter a link address"
@@ -956,6 +971,7 @@ const enUS = {
             "treemap": "Treemap",
             "waterfall": "Waterfall"
         },
+        "defaultTitle": "Chart Title",
         "item": {
             "area_basic": "Area",
             "area_percent": "100% Stacked Area",
@@ -994,6 +1010,16 @@ const enUS = {
             "sunburst_basic": "Sunburst",
             "treemap_basic": "Treemap",
             "waterfall_basic": "Waterfall"
+        },
+        "modal": {
+            "confirm": "Insert",
+            "title": "Insert Chart"
+        },
+        "toast": {
+            "noType": "No chart type selected",
+            "rangeEmpty": "Selected range has no data",
+            "selectRange": "Please select a data range first",
+            "unsupportedType": "Unsupported chart type: {label}"
         }
     },
     "color": {
@@ -1144,6 +1170,14 @@ const enUS = {
                     "clickToUse": "Click inside this area to use PivotTable",
                     "generateFrom": "To build a report, choose fields from",
                     "selectFields": "the PivotTable Fields list"
+                }
+            }
+        },
+        "drawing": {
+            "drawing": {
+                "toast": {
+                    "createFailedByType": "Create {label} failed: {error}",
+                    "unsupportedType": "Create drawing failed: unsupported type {type}"
                 }
             }
         },

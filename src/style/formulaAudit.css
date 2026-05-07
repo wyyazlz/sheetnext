@@ -36,11 +36,11 @@
 }
 
 .sn-error-item:hover {
-    background: #f5f7ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-error-item.active {
-    background: #e6f0ff;
+    background: var(--sn-primary-soft-hover);
 }
 
 .sn-error-ref {
@@ -108,7 +108,7 @@
 
 .sn-eval-ref {
     font-family: 'Consolas', 'Monaco', monospace;
-    color: #4472C4;
+    color: var(--sn-primary);
     font-weight: 500;
 }
 

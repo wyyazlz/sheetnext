@@ -1,3 +1,5 @@
+import { applyTheme } from '../core/Theme/Theme.js';
+
 /**
  * 查找替换定位对话框
  * 复刻 Excel 的查找、替换、定位功能
@@ -45,6 +47,7 @@ export default class FindReplaceDialog {
 
         const overlay = document.createElement('div');
         overlay.className = 'sn-modal-overlay sn-find-dialog-overlay';
+        applyTheme(overlay, this.SN._themeColors);
         const html = `
             <div class="sn-modal sn-find-dialog">
                 <div class="sn-modal-header">

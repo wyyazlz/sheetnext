@@ -75,7 +75,7 @@
 
 .sn-filter-search input:focus {
     outline: none;
-    border-color: #4f7cf6;
+    border-color: var(--sn-primary);
 }
 
 .sn-filter-actions {
@@ -87,7 +87,7 @@
 }
 
 .sn-filter-actions span {
-    color: #4f7cf6;
+    color: var(--sn-primary);
     cursor: pointer;
 }
 
@@ -188,8 +188,8 @@
 }
 
 .sn-filter-tree-toggle:hover {
-    color: #355db3;
-    background: #eef3ff;
+    color: var(--sn-primary-active);
+    background: var(--sn-primary-soft);
 }
 
 .sn-filter-tree-toggle.collapsed::before {
@@ -242,13 +242,13 @@
 }
 
 .sn-filter-footer button.primary {
-    background: #4f7cf6;
-    border-color: #4f7cf6;
+    background: var(--sn-primary);
+    border-color: var(--sn-primary);
     color: #fff;
 }
 
 .sn-filter-footer button.primary:hover {
-    background: #3d6be5;
+    background: var(--sn-primary-hover);
 }
 
 /* 筛选图标（在表头单元格中显示） */
@@ -275,7 +275,7 @@
 }
 
 .sn-filter-icon.filtered svg {
-    fill: #4f7cf6;
+    fill: var(--sn-primary);
 }
 
 /* 排序选项 */
@@ -299,12 +299,12 @@
 }
 
 .sn-filter-sort-item.active {
-    background: #e8f0fe;
-    color: #1a73e8;
+    background: var(--sn-primary-soft-hover);
+    color: var(--sn-primary);
 }
 
 .sn-filter-sort-item.active svg {
-    fill: #1a73e8;
+    fill: var(--sn-primary);
 }
 
 .sn-filter-sort-item svg {

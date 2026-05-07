@@ -752,13 +752,6 @@ function _isOpenEditionBlockedItem(item) {
     const action = typeof item.action === 'string' ? item.action : '';
 
     const blockedMenus = new Set([
-        'shapes',
-        'chartBar',
-        'chartLine',
-        'chartPie',
-        'chartArea',
-        'chartScatter',
-        'chartRadar',
         'pivotOptions',
         'pivotClear',
         'pivotSubtotals',
@@ -779,11 +772,6 @@ function _isOpenEditionBlockedItem(item) {
         '.IO.export(',
         '.IO.import(',
         'Action.importFromUrl(',
-        'Action.insertImages(',
-        'Action.insertAreaScreenshot(',
-        'Action.openChartModal(',
-        'Action.insertChart(',
-        'Action.insertTextBox(',
         '.Layout.showAIChat=',
         'Action.createPivotTable(',
         'Action.insertPivot',

@@ -1,6 +1,6 @@
 const COLORS = {
-    blue: '#4472C4',
-    lightBlue: '#5B9BD5',
+    blue: 'var(--sn-primary)',
+    lightBlue: 'var(--sn-primary-light)',
     orange: '#ED7D31',
     gray: '#A5A5A5',
     yellow: '#FFC000',

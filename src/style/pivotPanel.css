@@ -83,7 +83,7 @@
 }
 
 .sn-pivot-search-input:focus {
-    border-color: #36c;
+    border-color: var(--sn-primary);
 }
 
 .sn-pivot-search-input::placeholder {
@@ -142,7 +142,7 @@
 }
 
 .sn-pivot-field-item:hover {
-    background: #f0f4ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-pivot-field-item input[type="checkbox"] {
@@ -150,7 +150,7 @@
     height: 14px;
     margin: 0;
     cursor: pointer;
-    accent-color: #36c;
+    accent-color: var(--sn-primary);
 }
 
 .sn-pivot-field-item label {
@@ -211,17 +211,17 @@
     justify-content: space-between;
     padding: 4px 8px;
     margin-bottom: 2px;
-    background: #e8f0fe;
-    border: 1px solid #c7d9f7;
+    background: var(--sn-primary-soft-hover);
+    border: 1px solid var(--sn-primary-subtle-border);
     border-radius: 3px;
     font-size: 12px;
-    color: #1a56cc;
+    color: var(--sn-primary-active);
     cursor: move;
     transition: background 0.12s, transform 0.12s;
 }
 
 .sn-pivot-zone-item:hover {
-    background: #d4e3fc;
+    background: var(--sn-primary-subtle-border);
 }
 
 .sn-pivot-zone-item:active {
@@ -331,7 +331,7 @@
 
 .sn-pivot-update-btn {
     padding: 6px 16px;
-    background: #36c;
+    background: var(--sn-primary);
     color: #fff;
     border: none;
     border-radius: 3px;
@@ -341,7 +341,7 @@
 }
 
 .sn-pivot-update-btn:hover {
-    background: #2a52a3;
+    background: var(--sn-primary-hover);
 }
 
 .sn-pivot-update-btn:disabled {
@@ -368,16 +368,16 @@
 
 /* 拖拽中状态 */
 .sn-pivot-zone.drag-over {
-    background: #f0f7ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-pivot-zone.drag-over .sn-pivot-zone-header {
-    background: #e3efff;
-    color: #36c;
+    background: var(--sn-primary-soft-hover);
+    color: var(--sn-primary);
 }
 
 .sn-pivot-fields-list.drag-over {
-    background: #f0f7ff;
+    background: var(--sn-primary-soft);
 }
 
 /* 字段拖拽中的样式 */
@@ -434,7 +434,7 @@
 }
 
 .sn-pivot-settings-tab.active {
-    background: #4f7cf6;
+    background: var(--sn-primary);
     color: #fff;
 }
 

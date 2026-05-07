@@ -62,12 +62,12 @@
 }
 
 .sn-formula-item:hover {
-    background: #f5f7ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-formula-item.active {
-    background: #e6f0ff;
-    color: #1a4ed8;
+    background: var(--sn-primary-soft-hover);
+    color: var(--sn-primary-active);
 }
 
 .sn-formula-detail {

@@ -1367,7 +1367,7 @@ function syncTextBoxEditorPosition() {
     const textDirection = style.textDirection === 'vertical' ? 'vertical' : 'horizontal';
     const zoom = this.activeSheet?.zoom ?? 1;
     const fontSize = (style.fontSize || 11) * zoom;
-    const strokeColor = style.stroke && style.stroke !== 'none' ? style.stroke : '#6493f0';
+    const strokeColor = style.stroke && style.stroke !== 'none' ? style.stroke : this._themeColor('primaryLight', '#709f82');
     const background = style.fill && style.fill !== 'none' ? style.fill : 'transparent';
     const textAlign = mapTextAlign(style, textDirection === 'vertical');
 

@@ -77,9 +77,9 @@
 }
 
 .sn-slicer-btn.sn-active {
-    background: #e6f0ff;
-    border-color: #5a88d8;
-    color: #2f61c6;
+    background: var(--sn-primary-soft-hover);
+    border-color: var(--sn-primary-border);
+    color: var(--sn-primary-active);
 }
 
 .sn-slicer-body {

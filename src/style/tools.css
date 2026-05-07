@@ -424,8 +424,8 @@
 }
 
 .sn-tools-checkbox input[type="checkbox"]:checked {
-    background: #36c;
-    border-color: #36c;
+    background: var(--sn-primary);
+    border-color: var(--sn-primary);
 }
 
 .sn-tools-checkbox input[type="checkbox"]:checked::after {
@@ -499,13 +499,13 @@
 /* ==================== 工具栏按钮选中状态 ==================== */
 .sn-tools-item.sn-btn-selected,
 .sn-split-btn.sn-btn-selected .sn-split-btn-main {
-    background: #d0e0f0;
-    border-color: #a0c0e0;
+    background: var(--sn-primary-soft-hover);
+    border-color: var(--sn-primary-border);
 }
 
 .sn-tools-item.sn-btn-selected:hover,
 .sn-split-btn.sn-btn-selected .sn-split-btn-main:hover {
-    background: #c0d8ec;
+    background: var(--sn-primary-subtle-border);
 }
 
 /* ==================== 工具栏按钮禁用状态 ==================== */
@@ -606,7 +606,7 @@
 }
 
 .sn-tools-label-input input:focus {
-    border-color: #36c;
+    border-color: var(--sn-primary);
 }
 
 /* ==================== 高亮面板 ==================== */
@@ -637,7 +637,7 @@
 }
 
 .sn-hl-btn.sn-btn-selected {
-    border: 2px solid #36c;
+    border: 2px solid var(--sn-primary);
 }
 
 .sn-hl-off {
@@ -652,7 +652,7 @@
 /* 高亮按钮激活状态 */
 .sn-dropdown.sn-hl-active > .sn-dropdown-toggle,
 .sn-dropdown.sn-hl-active > .sn-sheets-btn {
-    background: #d0e0f0;
+    background: var(--sn-primary-soft-hover);
     border-radius: 3px;
 }
 
@@ -877,19 +877,19 @@
 }
 
 .sn-tab-overflow-menu li:hover {
-    color: var(--sn-menu-tab-hover-color, var(--sn-menu-tab-accent, #36c));
+    color: var(--sn-menu-tab-hover-color, var(--sn-menu-tab-accent, var(--sn-primary)));
 }
 
 .sn-tab-overflow-menu li.active {
-    color: var(--sn-menu-tab-active-color, var(--sn-menu-tab-accent, #36c));
+    color: var(--sn-menu-tab-active-color, var(--sn-menu-tab-accent, var(--sn-primary)));
     font-weight: 500;
 }
 
 .sn-tab-overflow-menu li.sn-contextual-tab {
-    --sn-menu-tab-color: #217346;
-    --sn-menu-tab-accent: #217346;
-    --sn-menu-tab-hover-color: #1a5c38;
-    --sn-menu-tab-active-color: #217346;
+    --sn-menu-tab-color: var(--sn-primary);
+    --sn-menu-tab-accent: var(--sn-primary);
+    --sn-menu-tab-hover-color: var(--sn-primary-hover);
+    --sn-menu-tab-active-color: var(--sn-primary);
 }
 
 @media (max-width: 900px) {

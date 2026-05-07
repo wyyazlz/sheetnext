@@ -104,7 +104,7 @@
 }
 
 .sn-sort-level.selected {
-    background: #e8f0fe;
+    background: var(--sn-primary-soft-hover);
 }
 
 .sn-sort-col-select {
@@ -290,7 +290,7 @@
 }
 
 .sn-sort-preset-select:focus {
-    border-color: #4f7cf6;
+    border-color: var(--sn-primary);
 }
 
 .sn-sort-custom-list-input {
@@ -319,7 +319,7 @@
 }
 
 .sn-sort-custom-textarea:focus {
-    border-color: #4f7cf6;
+    border-color: var(--sn-primary);
 }
 
 .sn-sort-custom-textarea:hover:not(:focus) {
@@ -337,13 +337,13 @@
 }
 
 .sn-sort-custom-apply {
-    background: #4f7cf6 !important;
-    border-color: #4f7cf6 !important;
+    background: var(--sn-primary) !important;
+    border-color: var(--sn-primary) !important;
     color: #fff !important;
 }
 
 .sn-sort-custom-apply:hover {
-    background: #3d6be5 !important;
+    background: var(--sn-primary-hover) !important;
 }
 
 /* 次序列需要相对定位以容纳弹窗 */

@@ -322,8 +322,8 @@
 }
 
 .sn-cf-databar-item:hover {
-    border-color: #4a90d9;
-    box-shadow: 0 0 0 1px #4a90d9;
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 1px var(--sn-primary);
 }
 
 .sn-cf-databar-preview {
@@ -348,8 +348,8 @@
 }
 
 .sn-cf-colorscale-item:hover {
-    border-color: #4a90d9;
-    box-shadow: 0 0 0 1px #4a90d9;
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 1px var(--sn-primary);
 }
 
 .sn-cf-colorscale-preview {
@@ -393,8 +393,8 @@
 }
 
 .sn-cf-iconset-item:hover {
-    border-color: #4a90d9;
-    box-shadow: 0 0 0 1px #4a90d9;
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 1px var(--sn-primary);
 }
 
 .sn-cf-iconset-preview {
@@ -483,12 +483,12 @@
 }
 
 .sn-cf-format-preset:hover {
-    border-color: #4a90d9;
+    border-color: var(--sn-primary);
 }
 
 .sn-cf-format-preset.active {
-    border-color: #4a90d9;
-    background: #e8f0fa;
+    border-color: var(--sn-primary);
+    background: var(--sn-primary-soft-hover);
 }
 
 /* 管理规则列表 */
@@ -631,12 +631,12 @@
 }
 
 .sn-shape-item:hover {
-    background: #e8f0fa;
-    border-color: #4a90d9;
+    background: var(--sn-primary-soft);
+    border-color: var(--sn-primary);
 }
 
 .sn-shape-item:active {
-    background: #d0e0f0;
+    background: var(--sn-primary-soft-hover);
 }
 
 /* ==================== Combobox 选中项 ==================== */
@@ -645,8 +645,8 @@
 }
 
 .sn-dropdown-menu li.sn-selected {
-    background: #f0f7ff;
-    color: #1677ff;
+    background: var(--sn-primary-soft);
+    color: var(--sn-primary);
 }
 
 .sn-dropdown-menu li.sn-selected::before {
@@ -654,7 +654,7 @@
     position: absolute;
     left: 6px;
     font-size: 10px;
-    color: #1677ff;
+    color: var(--sn-primary);
 }
 
 /* Chart dropdown */

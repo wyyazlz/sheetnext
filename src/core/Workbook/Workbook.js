@@ -18,6 +18,7 @@ import I18n from "../I18n/I18n.js"
 import { registerLocale, getLocalePack, getAllLocalePacks } from "../../locales/registry.js"
 import Enum from "../../enum/index.js"
 import { applyLocaleDefaultCellFont } from "../Cell/fontDefaults.js"
+import { applyTheme } from "../Theme/Theme.js"
 import "../../style/base.css"
 import "../../style/editor.css"
 import "../../style/tools.css"
@@ -58,6 +59,7 @@ class SheetNext {
      * @param {Object<string, Object>} [options.locales] - Extra locale packs keyed by locale code.
      * @param {function} [options.menuRight] - Callback `(defaultHTML: string) => string`. Receives the default right-menu HTML, return modified HTML.
      * @param {function} [options.menuList] - Callback `(config: Array<{key: string, labelKey?: string, text?: string, groups?: Array, contextual?: boolean, contextType?: string, trigger?: 'panel'|'action', action?: string, color?: string}>) => Array`. Receives the default toolbar panel config array, return modified array. Use `trigger: 'action'` to make a top tab run code directly without switching the toolbar panel. `color` customizes the top-tab text and accent color.
+     * @param {Object|string} [options.theme] - UI theme overrides. Passing a string is treated as `primary`; object tokens include `primary`, `primaryHover`, `primaryActive`, `primarySoft`, `primarySoftHover`, `primaryBorder`, `primarySubtleBorder`, `primaryRing`, `primaryShadow`, `primaryLight`, and `primaryContrast`.
      * @param {string} [options.AI_URL] - AI relay endpoint URL.
      * @param {string} [options.AI_TOKEN] - Optional bearer token for AI relay endpoint.
      * @example
@@ -81,6 +83,7 @@ class SheetNext {
         if (!(dom instanceof HTMLElement)) throw new Error("Please pass in the correct DOM!")
         dom.style.boxSizing = "border-box"
         dom.style.background = "#eef0f2"
+        const themeColors = applyTheme(dom, options.theme);
 
         /** @type {HTMLElement} */
         this.containerDom = dom
@@ -121,8 +124,20 @@ class SheetNext {
         this._slicerCaches = new Map()
         this._opStack = []
         this._trackChangesAlways = false
+        this._themeColors = themeColors
 
         this._loadXmlObj()
+    }
+
+    /**
+     * Apply UI theme colors to this workbook.
+     * @param {Object|string} [theme={}] - Theme overrides. A string is treated as the primary color.
+     * @returns {Object}
+     */
+    setTheme(theme = {}) {
+        this._themeColors = applyTheme(this.containerDom, theme);
+        if (this.Canvas?.activeSheet) this.Canvas.r();
+        return this._themeColors;
     }
 
     /** @type {Sheet} */
@@ -585,4 +600,4 @@ SheetNext.Enum = Enum;
 
 export default SheetNext
 
-console.log('%c SheetNext Editor 1.0', 'background:#36c;color:#fff;padding:5px 10px;font-size:12px;');
+console.log('%c SheetNext Editor 1.0', 'background:#2f6f4e;color:#fff;padding:5px 10px;font-size:12px;');

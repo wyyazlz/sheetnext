@@ -11,6 +11,12 @@ function getArrowData(sheet) {
     return sheet._traceArrows;
 }
 
+function getTracePrimaryColor(ctx) {
+    if (typeof window === 'undefined') return '#2f6f4e';
+    const root = ctx?.canvas || document.documentElement;
+    return window.getComputedStyle(root).getPropertyValue('--sn-primary').trim() || '#2f6f4e';
+}
+
 /**
  * 解析公式中的单元格引用（仅当前工作表）
  * @param {string} formula - 公式字符串
@@ -349,8 +355,9 @@ export function renderTraceArrows(ctx, sheet) {
     ctx.scale(dpr, dpr);
 
     // 绘制引用箭头（蓝色）
-    ctx.strokeStyle = '#4472C4';
-    ctx.fillStyle = '#4472C4';
+    const primaryColor = getTracePrimaryColor(ctx);
+    ctx.strokeStyle = primaryColor;
+    ctx.fillStyle = primaryColor;
     ctx.lineWidth = 1.5;
     arrows.precedents.forEach(arrow => {
         drawArrow(ctx, sheet, arrow.from, arrow.to);

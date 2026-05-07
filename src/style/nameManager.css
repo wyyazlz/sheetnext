@@ -32,8 +32,8 @@
 }
 
 .sn-nm-btn:hover:not(:disabled) {
-    border-color: #4f7cf6;
-    color: #4f7cf6;
+    border-color: var(--sn-primary);
+    color: var(--sn-primary);
 }
 
 .sn-nm-btn:disabled {
@@ -94,11 +94,11 @@
 }
 
 .sn-nm-row:hover {
-    background: #f5f7ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-nm-row.active {
-    background: #e6f0ff;
+    background: var(--sn-primary-soft-hover);
 }
 
 .sn-nm-empty {
@@ -176,11 +176,11 @@
 }
 
 .sn-uf-item:hover {
-    background: #f5f7ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-uf-item.active {
-    background: #e6f0ff;
+    background: var(--sn-primary-soft-hover);
 }
 
 .sn-uf-name {

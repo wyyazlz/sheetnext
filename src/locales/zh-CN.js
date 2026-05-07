@@ -403,6 +403,14 @@ const zhCN = {
         },
         "insert": {
             "content": {
+                "chart": {
+                    "assist": "辅助",
+                    "defaultItem": "项目 {index}",
+                    "defaultSeries": "数据",
+                    "volume": "成交量"
+                },
+                "imageFileDescription": "图片文件",
+                "imagePickerNotSupported": "当前浏览器不支持此功能，请使用较新的 Chrome 或 Edge 浏览器。",
                 "sparkline": {
                     "locationInvalid": "插入位置无效",
                     "locationLabel": "插入位置",
@@ -419,6 +427,9 @@ const zhCN = {
                         "winLoss": "盈亏"
                     },
                     "typeLabel": "迷你图类型"
+                },
+                "textBox": {
+                    "defaultText": "文本框"
                 }
             },
             "modal": {
@@ -459,6 +470,10 @@ const zhCN = {
                 }
             },
             "toast": {
+                "downloadDrawingImageFailed": "下载图形图片失败",
+                "downloadDrawingImageSuccess": "已下载图形图片",
+                "downloadDrawingImageUnsupported": "仅图表、图片和形状支持下载图片",
+                "msg001": "选中区域无有效内容",
                 "msg002": "请先选择数据区域",
                 "msg003": "迷你图模块未初始化",
                 "pleaseEnterALinkAddress": "请输入链接地址"
@@ -956,6 +971,7 @@ const zhCN = {
             "treemap": "矩形树图",
             "waterfall": "瀑布图"
         },
+        "defaultTitle": "图表标题",
         "item": {
             "area_basic": "面积图",
             "area_percent": "100% 堆积面积图",
@@ -994,6 +1010,16 @@ const zhCN = {
             "sunburst_basic": "旭日图",
             "treemap_basic": "矩形树图",
             "waterfall_basic": "瀑布图"
+        },
+        "modal": {
+            "confirm": "插入",
+            "title": "插入图表"
+        },
+        "toast": {
+            "noType": "未选择图表类型",
+            "rangeEmpty": "所选区域没有数据",
+            "selectRange": "请先选择数据区域",
+            "unsupportedType": "不支持的图表类型：{label}"
         }
     },
     "color": {
@@ -1144,6 +1170,14 @@ const zhCN = {
                     "clickToUse": "点击此区域以使用数据透视表",
                     "generateFrom": "要生成报表，请从",
                     "selectFields": "数据透视表字段列表中选择字段"
+                }
+            }
+        },
+        "drawing": {
+            "drawing": {
+                "toast": {
+                    "createFailedByType": "创建 {label} 失败：{error}",
+                    "unsupportedType": "创建绘图失败：不支持的类型 {type}"
                 }
             }
         },

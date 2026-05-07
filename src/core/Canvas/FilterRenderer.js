@@ -37,7 +37,7 @@ export function rFilterIcons(sheet) {
                     scopeId: scope.scopeId
                 });
 
-                drawFilterIcon(this.bc, iconX, iconY, iconSize, hasFilter, sortOrder);
+                drawFilterIcon(this.bc, iconX, iconY, iconSize, hasFilter, sortOrder, this._filterThemeColors());
             }
         });
     }
@@ -58,7 +58,7 @@ export function rFilterIcons(sheet) {
             return;
         }
 
-        drawFilterIcon(this.bc, iconX, iconY, iconSize, !!pivotFilter.active, null);
+        drawFilterIcon(this.bc, iconX, iconY, iconSize, !!pivotFilter.active, null, this._filterThemeColors());
         cellInfo._pivotFilterRect = { x: iconX, y: iconY, w: iconSize, h: iconSize };
     });
 }
@@ -94,14 +94,14 @@ export function getFilterIconLayout(boxX, boxY, boxW, boxH) {
     };
 }
 
-function _drawButtonFrame(ctx, iconX, iconY, iconSize, isActive) {
+function _drawButtonFrame(ctx, iconX, iconY, iconSize, isActive, colors) {
     const gradient = ctx.createLinearGradient(iconX, iconY, iconX, iconY + iconSize);
     gradient.addColorStop(0, '#ffffff');
-    gradient.addColorStop(1, isActive ? '#edf3ff' : '#f3f3f3');
+    gradient.addColorStop(1, isActive ? colors.activeFill : '#f3f3f3');
     ctx.fillStyle = gradient;
     ctx.fillRect(iconX, iconY, iconSize, iconSize);
 
-    ctx.strokeStyle = isActive ? '#8eaadb' : '#c8c8c8';
+    ctx.strokeStyle = isActive ? colors.activeBorder : '#c8c8c8';
     ctx.lineWidth = 1;
     ctx.strokeRect(iconX + 0.5, iconY + 0.5, Math.max(0, iconSize - 1), Math.max(0, iconSize - 1));
 }
@@ -161,15 +161,30 @@ function _drawSortGlyph(ctx, centerX, centerY, order, color, scale = 1) {
     ctx.fill();
 }
 
+export function _filterThemeColors() {
+    return {
+        activeFill: this._themeColor('primarySoft', '#eef7f1'),
+        activeBorder: this._themeColor('primaryBorder', '#97bea7'),
+        primary: this._themeColor('primaryActive', '#224f38'),
+        secondary: this._themeColor('primary', '#2f6f4e')
+    };
+}
+
 /** @param {CanvasRenderingContext2D} ctx @param {number} iconX @param {number} iconY @param {number} iconSize @param {boolean} hasFilter @param {string|null} sortOrder */
-export function drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder) {
+export function drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder, colors = null) {
     const isActive = !!(hasFilter || sortOrder);
     const centerX = iconX + iconSize / 2;
     const centerY = iconY + iconSize / 2;
-    const primaryColor = isActive ? '#355db3' : '#666666';
-    const secondaryColor = '#5b7fcb';
+    const themeColors = colors || {
+        activeFill: '#eef7f1',
+        activeBorder: '#97bea7',
+        primary: '#224f38',
+        secondary: '#2f6f4e'
+    };
+    const primaryColor = isActive ? themeColors.primary : '#666666';
+    const secondaryColor = themeColors.secondary;
 
-    _drawButtonFrame(ctx, iconX, iconY, iconSize, isActive);
+    _drawButtonFrame(ctx, iconX, iconY, iconSize, isActive, themeColors);
 
     if (hasFilter && sortOrder) {
         _drawFilterGlyph(ctx, centerX - iconSize * 0.16, centerY, primaryColor, 0.78);

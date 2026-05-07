@@ -63,7 +63,7 @@
 }
 
 .sn-table-style-item.selected {
-    border-color: #217346;
+    border-color: var(--sn-primary);
 }
 
 /* 样式预览 */
@@ -157,8 +157,8 @@
 
 .sn-table-styles-menu .sn-table-style-item:hover,
 .sn-cell-styles-menu .sn-cell-style-item:hover {
-    border-color: #4a90d9;
-    box-shadow: 0 0 0 1px #4a90d9;
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 1px var(--sn-primary);
 }
 
 /* ==================== 表格样式画廊 ==================== */
@@ -268,7 +268,7 @@
 .sn-btn-link {
     background: none;
     border: none;
-    color: #217346;
+    color: var(--sn-primary);
     cursor: pointer;
     font-size: 12px;
     padding: 0;

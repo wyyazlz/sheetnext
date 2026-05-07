@@ -11,7 +11,7 @@ export function formulaBarFocus() {
     this.showCellInput(false, false);
     this.opCancel.style.color = 'red'
     this.opConfirm.style.color = 'green'
-    this.opFun.style.color = 'blue'
+    this.opFun.style.color = this._themeColor('primary', '#2f6f4e')
     const inputFun = () => {
         this.input.innerText = this.formulaBar.value
     }

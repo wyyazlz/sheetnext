@@ -25,12 +25,12 @@ textarea {
 }
 
 .pc {
-    color: #36c !important;
+    color: var(--sn-primary) !important;
 }
 
 a {
     text-decoration: none;
-    color: #36c;
+    color: var(--sn-primary);
 }
 
 .sn-sheets-btn {
@@ -58,7 +58,7 @@ a {
 
 /* 导入引导 */
 .dryd {
-    border: 2px dashed #d6dcea;
+    border: 2px dashed var(--sn-primary-subtle-border);
     cursor: pointer;
     margin-bottom: 10px;
     padding: 10px 15px;
@@ -66,27 +66,27 @@ a {
     align-items: center;
     gap: 10px;
     font-size: 13px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 249, 255, 0.96) 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, var(--sn-primary-soft) 100%);
     color: #596579;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
     transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .dryd:hover {
-    border-color: #5b8cff;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(238, 244, 255, 0.98) 100%);
-    color: #1f4ed8;
+    border-color: var(--sn-primary-light);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, var(--sn-primary-soft-hover) 100%);
+    color: var(--sn-primary-active);
     box-shadow:
-        0 8px 18px rgba(70, 118, 214, 0.12),
+        0 8px 18px var(--sn-primary-ring),
         inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .dryd > span:first-child {
-    color: #3b82f6;
+    color: var(--sn-primary);
 }
 
 .dryd:hover > span:first-child {
-    color: #1d4ed8;
+    color: var(--sn-primary-active);
 }
 
 .dryd > span:last-child {
@@ -228,8 +228,8 @@ a {
 }
 
 .sn-menu-minimal-toggle-input:checked {
-    background: #36c;
-    border-color: #36c;
+    background: var(--sn-primary);
+    border-color: var(--sn-primary);
 }
 
 .sn-menu-minimal-toggle-input:checked::after {
@@ -289,7 +289,7 @@ a {
     min-width: 120px;
     height: 24px;
     padding: 0 6px;
-    border: 1px solid #107c41;
+    border: 1px solid var(--sn-primary);
     border-radius: 2px;
     background: #fff;
     color: #323130;
@@ -515,11 +515,11 @@ a {
 }
 
 .sn-area-dropdown-item:hover {
-    background: #f5f7ff;
+    background: var(--sn-primary-soft);
 }
 
 .sn-area-dropdown-item.active {
-    background: #e6f0ff;
+    background: var(--sn-primary-soft-hover);
 }
 
 .sn-area-dropdown-name {
@@ -590,7 +590,7 @@ a {
 .sn-send-btn {
     width: 30px;
     height: 30px;
-    background-color: #36c;
+    background-color: var(--sn-primary);
     border-radius: 3px;
     font-size: 16px;
     display: flex;
@@ -601,7 +601,7 @@ a {
 }
 
 .sn-send-btn:hover {
-    background-color: rgb(20, 127, 235);
+    background-color: var(--sn-primary-hover);
 }
 
 .sn-send-btn>.sn-svg {
@@ -748,7 +748,7 @@ a {
 }
 
 .info-box-my {
-    background-color: #36c;
+    background-color: var(--sn-primary);
     color: #fff;
     border: none;
     position: relative;
@@ -773,7 +773,7 @@ a {
     left: 0;
     right: 0;
     height: 60px;
-    background: linear-gradient(to bottom, rgba(51, 102, 204, 0) 0%, rgba(51, 102, 204, 0.9) 70%, rgba(51, 102, 204, 1) 100%);
+    background: linear-gradient(to bottom, rgba(var(--sn-primary-rgb), 0) 0%, rgba(var(--sn-primary-rgb), 0.9) 70%, var(--sn-primary) 100%);
     pointer-events: none;
     display: none;
 }
@@ -791,7 +791,7 @@ a {
     width: 28px;
     height: 24px;
     background-color: rgba(255, 255, 255, 0.9);
-    color: #36c;
+    color: var(--sn-primary);
     border: none;
     padding: 0;
     border-radius: 12px;
@@ -898,10 +898,10 @@ a {
     margin-left: 2px;
     border-radius: 50%;
     color: transparent;
-    background: #3b82f6;
+    background: var(--sn-primary);
     font-size: 0;
     line-height: 0;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08), 0 0 5px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 2px var(--sn-primary-ring), 0 0 5px var(--sn-primary-shadow);
     transform: scale(0.6);
     transform-origin: center;
     animation: starGlow 1.5s ease-in-out infinite;
@@ -930,12 +930,12 @@ a {
     0%, 100% {
         opacity: 1;
         transform: scale(0.6);
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08), 0 0 5px rgba(59, 130, 246, 0.6);
+        box-shadow: 0 0 0 2px var(--sn-primary-ring), 0 0 5px var(--sn-primary-shadow);
     }
     50% {
         opacity: 0.9;
         transform: scale(1);
-        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1), 0 0 7px rgba(96, 165, 250, 0.7);
+        box-shadow: 0 0 0 3px var(--sn-primary-ring), 0 0 7px var(--sn-primary-shadow);
     }
 }
 
@@ -1093,8 +1093,8 @@ a {
 /* Ask 询问区域 */
 .ai-ask-dialog {
     padding: 10px;
-    background: #f0f7ff;
-    border: 1px solid #bfdbfe;
+    background: var(--sn-primary-soft);
+    border: 1px solid var(--sn-primary-subtle-border);
     border-radius: var(--radius);
 }
 
@@ -1117,9 +1117,9 @@ a {
 }
 
 .ask-option:hover {
-    background: #2563eb;
+    background: var(--sn-primary);
     color: #fff;
-    border-color: #2563eb;
+    border-color: var(--sn-primary);
 }
 
 .ask-input-wrap {
@@ -1137,12 +1137,12 @@ a {
 }
 
 .ask-input:focus {
-    border-color: #36c;
+    border-color: var(--sn-primary);
 }
 
 .ask-submit {
     padding: 8px 16px;
-    background: #36c;
+    background: var(--sn-primary);
     color: #fff;
     border: none;
     border-radius: var(--radius);
@@ -1152,7 +1152,7 @@ a {
 }
 
 .ask-submit:hover {
-    background: #2851a3;
+    background: var(--sn-primary-hover);
 }
 
 .ask-answered {
@@ -1194,7 +1194,7 @@ a {
     width: 6px;
     height: 1em;
     margin-left: 3px;
-    background: #36c;
+    background: var(--sn-primary);
     border-radius: 1px;
     vertical-align: -2px;
     animation: sn-ai-stream-caret 1s steps(2, start) infinite;
@@ -1250,7 +1250,7 @@ a {
 .ai-response-content .md-ta-left { text-align: left; }
 .ai-response-content .md-ta-center { text-align: center; }
 .ai-response-content .md-ta-right { text-align: right; }
-.ai-response-content a { color: #2563eb; text-decoration: underline; }
+.ai-response-content a { color: var(--sn-primary); text-decoration: underline; }
 
 /* 对话时间 */
 .ai-chat-container .chat-time {
@@ -1367,7 +1367,7 @@ a {
 /* 滚动位置提示 */
 .sn-scroll-tip {
     position: absolute;
-    background-color: rgba(51, 102, 204, 0.95);
+    background-color: rgba(var(--sn-primary-rgb), 0.95);
     color: #fff;
     padding: 8px 16px;
     border-radius: 6px;
@@ -1445,7 +1445,7 @@ a {
 
 .sn-sheet-scroll button:hover {
     background: #f7f7f7;
-    color: #107c41;
+    color: var(--sn-primary);
 }
 
 .sn-sheet-scroll button:active {
@@ -1454,10 +1454,10 @@ a {
 
 .sn-sheet-scroll button.sheet-sel {
     background: #fff !important;
-    color: #107c41 !important;
+    color: var(--sn-primary) !important;
     font-weight: 600;
     border-color: #d2d0ce;
-    border-bottom-color: #107c41;
+    border-bottom-color: var(--sn-primary);
 }
 
 .sn-sheet-scroll button.sn-sheet-renaming {
@@ -1568,7 +1568,7 @@ a {
 
 .sn-color-confirm-btn:hover {
     background-color: #f5f5f5;
-    border-color: #36c;
+    border-color: var(--sn-primary);
 }
 
 
@@ -1602,17 +1602,17 @@ a {
     transform: translateX(-50%) scaleX(0);
     width: 70%;
     height: 2px;
-    background: var(--sn-menu-tab-accent, #36c);
+    background: var(--sn-menu-tab-accent, var(--sn-primary));
     border-radius: 1px;
     transition: transform 0.25s ease;
 }
 
 .sn-menu-tab:hover {
-    color: var(--sn-menu-tab-hover-color, var(--sn-menu-tab-accent, #36c));
+    color: var(--sn-menu-tab-hover-color, var(--sn-menu-tab-accent, var(--sn-primary)));
 }
 
 .sn-menu-tab.active {
-    color: var(--sn-menu-tab-active-color, var(--sn-menu-tab-accent, #36c));
+    color: var(--sn-menu-tab-active-color, var(--sn-menu-tab-accent, var(--sn-primary)));
 }
 
 .sn-menu-tab.active::after {
@@ -1621,18 +1621,18 @@ a {
 
 /* 上下文选项卡（如表设计）使用绿色区分 */
 .sn-menu-tab.sn-contextual-tab {
-    --sn-menu-tab-color: #217346;
-    --sn-menu-tab-accent: #217346;
+    --sn-menu-tab-color: var(--sn-primary);
+    --sn-menu-tab-accent: var(--sn-primary);
     --sn-menu-tab-hover-color: #1a5c38;
-    --sn-menu-tab-active-color: #217346;
+    --sn-menu-tab-active-color: var(--sn-primary);
 }
 
 .sn-menu-tab.sn-contextual-tab:hover {
-    color: var(--sn-menu-tab-hover-color, #1a5c38);
+    color: var(--sn-menu-tab-hover-color, var(--sn-primary-hover));
 }
 
 .sn-menu-tab.sn-contextual-tab.active {
-    color: var(--sn-menu-tab-active-color, #217346);
+    color: var(--sn-menu-tab-active-color, var(--sn-primary));
 }
 
 .head-btn {
@@ -1674,7 +1674,7 @@ a {
     position: absolute;
     text-align: left;
     background-color: #fff;
-    outline: 2px solid rgb(100, 147, 240);
+    outline: 2px solid var(--sn-primary-light);
     box-sizing: border-box;
     box-shadow: 0 2px 6px #666;
     padding: 0 2px;
@@ -1685,7 +1685,7 @@ a {
     position: absolute;
     box-sizing: border-box;
     border: 1px solid #8a8a8a;
-    outline: 1px solid #6493f0;
+    outline: 1px solid var(--sn-primary-light);
     padding: 4px;
     margin: 0;
     background-color: transparent;
@@ -1748,7 +1748,7 @@ a {
 
 .sn-hyperlink-jump-btn {
     padding: 4px 6px;
-    background-color: #36c;
+    background-color: var(--sn-primary);
     color: #fff;
 }
 
@@ -1851,7 +1851,7 @@ a {
 }
 
 .rc-box .sn-rc-item:hover .sn-rc-item-icon {
-    color: #36c;
+    color: var(--sn-primary);
 }
 
 .rc-box .sn-rc-item-danger {
@@ -1888,8 +1888,8 @@ a {
 
 .rc-box .sn-rc-item input:focus {
     outline: none;
-    border-color: #36c;
-    box-shadow: 0 0 0 2px rgba(51, 102, 204, 0.12);
+    border-color: var(--sn-primary);
+    box-shadow: 0 0 0 2px var(--sn-primary-ring);
 }
 
 .sn-loading-div {
@@ -1898,12 +1898,12 @@ a {
     transform: translateY(-50%);
     width: 100%;
     text-align: center;
-    color: #36c;
+    color: var(--sn-primary);
     z-index: var(--sn-z-canvas-floating, 450);
 }
 
 .sn-drag-line {
-    background-color: #36c;
+    background-color: var(--sn-primary);
     position: absolute;
     cursor: pointer;
     left: 0;
@@ -1925,9 +1925,9 @@ a {
 }
 
 .toast-item {
-    background: #36c;
+    background: var(--sn-primary);
     color: #fff;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35), 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 24px var(--sn-primary-shadow), 0 4px 12px rgba(0, 0, 0, 0.1);
     border-radius: 5px;
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
@@ -2072,8 +2072,8 @@ font-size: 16px !important;
     font-size: 13px;
     color: #444;
     padding: 6px 10px;
-    background: #f8faff;
-    border: 1px solid #e5e9ff;
+    background: var(--sn-primary-soft);
+    border: 1px solid var(--sn-primary-subtle-border);
     cursor: pointer;
     transition: .2s;
     box-sizing: border-box;
@@ -2103,8 +2103,8 @@ font-size: 16px !important;
 
 .sn-chat-examples li:hover {
     background: #fff;
-    color: #1a73e8;
-    border: 1px solid #1a73e8;
+    color: var(--sn-primary);
+    border: 1px solid var(--sn-primary);
 }
 
 .wap-hidden {

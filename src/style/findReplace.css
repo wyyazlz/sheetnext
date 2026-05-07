@@ -29,8 +29,8 @@
 }
 
 .sn-find-tab.active {
-    color: #4f7cf6;
-    border-bottom-color: #4f7cf6;
+    color: var(--sn-primary);
+    border-bottom-color: var(--sn-primary);
     font-weight: 500;
 }
 
@@ -201,7 +201,7 @@
 }
 
 .sn-find-result-item.active {
-    background: #e8f0fe;
+    background: var(--sn-primary-soft-hover);
 }
 
 .sn-find-result-item span {

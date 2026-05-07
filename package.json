@@ -1,6 +1,6 @@
 {
   "name": "sheetnext",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "A pure front-end spreadsheet component with Excel-like capabilities, built-in native AI workflows, and flexible LLM integration for data operations.",
   "homepage": "https://www.sheetnext.com",
   "repository": {
@@ -50,6 +50,7 @@
     "ai spreadsheet"
   ],
   "dependencies": {
+    "echarts": "^6.0.0",
     "fast-xml-parser": "^5.3.0"
   },
   "devDependencies": {
