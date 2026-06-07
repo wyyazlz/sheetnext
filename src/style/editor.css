@@ -325,6 +325,14 @@ a {
 
 /* snChat */
 .sn-chat {
+    --sn-ai-accent: #333;
+    --sn-ai-accent-hover: #222;
+    --sn-ai-soft: #f5f6f8;
+    --sn-ai-soft-hover: #eceff3;
+    --sn-ai-border: #d8dde5;
+    --sn-ai-ring: rgba(51, 51, 51, 0.12);
+    --sn-ai-shadow: rgba(51, 51, 51, 0.18);
+    --sn-ai-rgb: 51, 51, 51;
     margin-right: 3.5px;
     overflow-y: auto;
     max-height: 100%;
@@ -333,6 +341,30 @@ a {
     padding-right: 3.5px;
     width: 420px;
     display: none;
+}
+
+.sn-chat .dryd,
+.sn-chat-window .dryd {
+    border-color: var(--sn-ai-border);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, var(--sn-ai-soft) 100%);
+    color: #374151;
+}
+
+.sn-chat .dryd:hover,
+.sn-chat-window .dryd:hover {
+    border-color: var(--sn-ai-accent);
+    background: linear-gradient(180deg, #fff 0%, var(--sn-ai-soft-hover) 100%);
+    color: var(--sn-ai-accent);
+    box-shadow:
+        0 8px 18px var(--sn-ai-ring),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.sn-chat .dryd > span:first-child,
+.sn-chat-window .dryd > span:first-child,
+.sn-chat .dryd:hover > span:first-child,
+.sn-chat-window .dryd:hover > span:first-child {
+    color: var(--sn-ai-accent);
 }
 
 .sn-chat-mask {
@@ -748,7 +780,7 @@ a {
 }
 
 .info-box-my {
-    background-color: var(--sn-primary);
+    background-color: var(--sn-ai-accent, var(--sn-primary));
     color: #fff;
     border: none;
     position: relative;
@@ -773,7 +805,7 @@ a {
     left: 0;
     right: 0;
     height: 60px;
-    background: linear-gradient(to bottom, rgba(var(--sn-primary-rgb), 0) 0%, rgba(var(--sn-primary-rgb), 0.9) 70%, var(--sn-primary) 100%);
+    background: linear-gradient(to bottom, rgba(var(--sn-ai-rgb, var(--sn-primary-rgb)), 0) 0%, rgba(var(--sn-ai-rgb, var(--sn-primary-rgb)), 0.9) 70%, var(--sn-ai-accent, var(--sn-primary)) 100%);
     pointer-events: none;
     display: none;
 }
@@ -791,7 +823,7 @@ a {
     width: 28px;
     height: 24px;
     background-color: rgba(255, 255, 255, 0.9);
-    color: var(--sn-primary);
+    color: var(--sn-ai-accent, var(--sn-primary));
     border: none;
     padding: 0;
     border-radius: 12px;
@@ -898,10 +930,10 @@ a {
     margin-left: 2px;
     border-radius: 50%;
     color: transparent;
-    background: var(--sn-primary);
+    background: var(--sn-ai-accent, var(--sn-primary));
     font-size: 0;
     line-height: 0;
-    box-shadow: 0 0 0 2px var(--sn-primary-ring), 0 0 5px var(--sn-primary-shadow);
+    box-shadow: 0 0 0 2px var(--sn-ai-ring, var(--sn-primary-ring)), 0 0 5px var(--sn-ai-shadow, var(--sn-primary-shadow));
     transform: scale(0.6);
     transform-origin: center;
     animation: starGlow 1.5s ease-in-out infinite;
@@ -930,12 +962,12 @@ a {
     0%, 100% {
         opacity: 1;
         transform: scale(0.6);
-        box-shadow: 0 0 0 2px var(--sn-primary-ring), 0 0 5px var(--sn-primary-shadow);
+        box-shadow: 0 0 0 2px var(--sn-ai-ring, var(--sn-primary-ring)), 0 0 5px var(--sn-ai-shadow, var(--sn-primary-shadow));
     }
     50% {
         opacity: 0.9;
         transform: scale(1);
-        box-shadow: 0 0 0 3px var(--sn-primary-ring), 0 0 7px var(--sn-primary-shadow);
+        box-shadow: 0 0 0 3px var(--sn-ai-ring, var(--sn-primary-ring)), 0 0 7px var(--sn-ai-shadow, var(--sn-primary-shadow));
     }
 }
 
@@ -1093,8 +1125,8 @@ a {
 /* Ask 询问区域 */
 .ai-ask-dialog {
     padding: 10px;
-    background: var(--sn-primary-soft);
-    border: 1px solid var(--sn-primary-subtle-border);
+    background: var(--sn-ai-soft, var(--sn-primary-soft));
+    border: 1px solid var(--sn-ai-border, var(--sn-primary-subtle-border));
     border-radius: var(--radius);
 }
 
@@ -1117,9 +1149,9 @@ a {
 }
 
 .ask-option:hover {
-    background: var(--sn-primary);
+    background: var(--sn-ai-accent, var(--sn-primary));
     color: #fff;
-    border-color: var(--sn-primary);
+    border-color: var(--sn-ai-accent, var(--sn-primary));
 }
 
 .ask-input-wrap {
@@ -1137,12 +1169,12 @@ a {
 }
 
 .ask-input:focus {
-    border-color: var(--sn-primary);
+    border-color: var(--sn-ai-accent, var(--sn-primary));
 }
 
 .ask-submit {
     padding: 8px 16px;
-    background: var(--sn-primary);
+    background: var(--sn-ai-accent, var(--sn-primary));
     color: #fff;
     border: none;
     border-radius: var(--radius);
@@ -1152,7 +1184,7 @@ a {
 }
 
 .ask-submit:hover {
-    background: var(--sn-primary-hover);
+    background: var(--sn-ai-accent-hover, var(--sn-primary-hover));
 }
 
 .ask-answered {
@@ -1194,7 +1226,7 @@ a {
     width: 6px;
     height: 1em;
     margin-left: 3px;
-    background: var(--sn-primary);
+    background: var(--sn-ai-accent, var(--sn-primary));
     border-radius: 1px;
     vertical-align: -2px;
     animation: sn-ai-stream-caret 1s steps(2, start) infinite;
@@ -1250,7 +1282,7 @@ a {
 .ai-response-content .md-ta-left { text-align: left; }
 .ai-response-content .md-ta-center { text-align: center; }
 .ai-response-content .md-ta-right { text-align: right; }
-.ai-response-content a { color: var(--sn-primary); text-decoration: underline; }
+.ai-response-content a { color: var(--sn-ai-accent, var(--sn-primary)); text-decoration: underline; }
 
 /* 对话时间 */
 .ai-chat-container .chat-time {
@@ -1902,6 +1934,80 @@ a {
     z-index: var(--sn-z-canvas-floating, 450);
 }
 
+.sn-xlsx-progress-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: var(--sn-z-modal, 9000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+}
+
+.sn-xlsx-progress-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sn-xlsx-progress-panel {
+    width: min(380px, calc(100% - 32px));
+    padding: 18px 20px 16px;
+    background: #fff;
+    border: 1px solid #e6e9ef;
+    border-radius: 8px;
+    box-shadow: 0 14px 34px rgba(20, 30, 48, 0.16);
+}
+
+.sn-xlsx-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.sn-xlsx-progress-title {
+    min-width: 0;
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.sn-xlsx-progress-percent {
+    flex-shrink: 0;
+    color: var(--sn-primary);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.sn-xlsx-progress-track {
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    background: #edf1f5;
+    border-radius: 4px;
+}
+
+.sn-xlsx-progress-bar {
+    width: 0;
+    height: 100%;
+    background: var(--sn-primary);
+    border-radius: 4px;
+    transition: width 0.18s ease;
+}
+
+.sn-xlsx-progress-status {
+    margin-top: 10px;
+    color: #667085;
+    font-size: 12px;
+    line-height: 18px;
+}
+
 .sn-drag-line {
     background-color: var(--sn-primary);
     position: absolute;
@@ -1997,6 +2103,17 @@ a {
     cursor: move;
 }
 
+.sn-chat-window {
+    --sn-ai-accent: #333;
+    --sn-ai-accent-hover: #222;
+    --sn-ai-soft: #f5f6f8;
+    --sn-ai-soft-hover: #eceff3;
+    --sn-ai-border: #d8dde5;
+    --sn-ai-ring: rgba(51, 51, 51, 0.12);
+    --sn-ai-shadow: rgba(51, 51, 51, 0.18);
+    --sn-ai-rgb: 51, 51, 51;
+}
+
 .sn-chat-head {
     height: 36px;
     padding-left: 10px;
@@ -2072,8 +2189,8 @@ font-size: 16px !important;
     font-size: 13px;
     color: #444;
     padding: 6px 10px;
-    background: var(--sn-primary-soft);
-    border: 1px solid var(--sn-primary-subtle-border);
+    background: var(--sn-ai-soft, var(--sn-primary-soft));
+    border: 1px solid var(--sn-ai-border, var(--sn-primary-subtle-border));
     cursor: pointer;
     transition: .2s;
     box-sizing: border-box;
@@ -2103,8 +2220,8 @@ font-size: 16px !important;
 
 .sn-chat-examples li:hover {
     background: #fff;
-    color: var(--sn-primary);
-    border: 1px solid var(--sn-primary);
+    color: var(--sn-ai-accent, var(--sn-primary));
+    border: 1px solid var(--sn-ai-accent, var(--sn-primary));
 }
 
 .wap-hidden {

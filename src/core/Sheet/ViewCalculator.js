@@ -12,9 +12,137 @@ function _clamp(value, min, max) {
     return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
+function _lowerBound(values, target) {
+    let low = 0;
+    let high = values.length;
+    while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (values[mid] < target) low = mid + 1;
+        else high = mid;
+    }
+    return low;
+}
+
+function _getAxisMetrics(sheet, axis) {
+    const isRow = axis === 'row';
+    const cacheKey = isRow ? '_rowAxisMetricsCache' : '_colAxisMetricsCache';
+    const version = isRow ? (sheet._rowMetricVersion || 0) : (sheet._colMetricVersion || 0);
+    const count = Math.max(0, isRow ? sheet.rowCount : sheet.colCount);
+    const defaultSize = Math.max(0, isRow ? sheet.defaultRowHeight : sheet.defaultColWidth);
+    const items = isRow ? sheet.rows : sheet.cols;
+    const cache = sheet[cacheKey];
+    const pendingRowState = isRow ? sheet._pendingXlsxRowStateMap : null;
+    const pendingStateSize = pendingRowState?.size || 0;
+
+    if (cache &&
+        cache.count === count &&
+        cache.defaultSize === defaultSize &&
+        cache.itemsLength === items.length &&
+        cache.pendingStateSize === pendingStateSize &&
+        cache.version === version) {
+        return cache;
+    }
+
+    const indexes = [];
+    const prefix = [0];
+    let deltaTotal = 0;
+    const scanCount = Math.min(items.length, count);
+
+    for (let index = 0; index < scanCount; index++) {
+        const item = items[index];
+        if (!item) continue;
+
+        const rawSize = item.hidden ? 0 : (isRow ? item.height : item.width);
+        const size = Number.isFinite(rawSize) ? Math.max(0, rawSize) : defaultSize;
+        const delta = size - defaultSize;
+        if (Math.abs(delta) < 0.01) continue;
+
+        indexes.push(index);
+        deltaTotal += delta;
+        prefix.push(deltaTotal);
+    }
+
+    if (pendingRowState?.size) {
+        for (const [index, state] of pendingRowState) {
+            if (index < 0 || index >= count || items[index]) continue;
+            const rawSize = state.hidden || state.filterHidden ? 0 : state.height;
+            const size = Number.isFinite(rawSize) ? Math.max(0, rawSize) : defaultSize;
+            const delta = size - defaultSize;
+            if (Math.abs(delta) < 0.01) continue;
+            const insertAt = _lowerBound(indexes, index);
+            indexes.splice(insertAt, 0, index);
+            deltaTotal += delta;
+            prefix.splice(insertAt + 1, 0, 0);
+        }
+
+        let pendingTotal = 0;
+        for (let i = 0; i < indexes.length; i++) {
+            const index = indexes[i];
+            const item = items[index];
+            const state = !item ? pendingRowState.get(index) : null;
+            const rawSize = state
+                ? (state.hidden || state.filterHidden ? 0 : state.height)
+                : (item?.hidden ? 0 : (isRow ? item?.height : item?.width));
+            const size = Number.isFinite(rawSize) ? Math.max(0, rawSize) : defaultSize;
+            pendingTotal += size - defaultSize;
+            prefix[i + 1] = pendingTotal;
+        }
+        deltaTotal = pendingTotal;
+    }
+
+    const metrics = {
+        count,
+        defaultSize,
+        itemsLength: items.length,
+        pendingStateSize,
+        version,
+        indexes,
+        prefix,
+        total: Math.max(0, count * defaultSize + deltaTotal)
+    };
+
+    sheet[cacheKey] = metrics;
+    if (isRow) sheet._totalHeightCache = metrics.total;
+    else sheet._totalWidthCache = metrics.total;
+    return metrics;
+}
+
+function _getAxisOffset(metrics, index) {
+    const limit = Math.max(0, Math.min(index, metrics.count));
+    const customCount = _lowerBound(metrics.indexes, limit);
+    return Math.max(0, limit * metrics.defaultSize + metrics.prefix[customCount]);
+}
+
+function _getAxisIndexByOffset(metrics, offset) {
+    if (metrics.count <= 0) return 0;
+
+    const target = _clamp(offset, 0, Math.max(0, metrics.total - 1));
+    if (metrics.indexes.length === 0 && metrics.defaultSize > 0) {
+        return Math.max(0, Math.min(Math.floor(target / metrics.defaultSize), metrics.count - 1));
+    }
+
+    let low = 0;
+    let high = metrics.count - 1;
+    let result = high;
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (_getAxisOffset(metrics, mid + 1) > target) {
+            result = mid;
+            high = mid - 1;
+        } else {
+            low = mid + 1;
+        }
+    }
+    return Math.max(0, Math.min(result, metrics.count - 1));
+}
+
 function _rowSize(sheet, index) {
     const row = sheet.rows[index];
-    if (!row) return sheet.defaultRowHeight;
+    if (!row) {
+        const pendingState = sheet._getPendingXlsxRowState?.(index);
+        if (!pendingState) return sheet.defaultRowHeight;
+        return pendingState.hidden || pendingState.filterHidden ? 0 : pendingState.height;
+    }
     return row.hidden ? 0 : row.height;
 }
 
@@ -26,6 +154,10 @@ function _colSize(sheet, index) {
 
 function _isRowVisible(sheet, index) {
     const row = sheet.rows[index];
+    if (!row) {
+        const pendingState = sheet._getPendingXlsxRowState?.(index);
+        return !(pendingState?.hidden || pendingState?.filterHidden);
+    }
     return !row || !row.hidden;
 }
 
@@ -489,14 +621,7 @@ export function _findNextShowCol(c, number) {
  * @returns {Number}
  */
 export function getTotalHeight() {
-    if (this._totalHeightCache !== undefined) return this._totalHeightCache;
-    let total = this.rowCount * this.defaultRowHeight;
-    this.rows.forEach((row, index) => {
-        if (!row || index >= this.rowCount) return;
-        total += (row.hidden ? 0 : row.height) - this.defaultRowHeight;
-    });
-    this._totalHeightCache = Math.max(0, total);
-    return this._totalHeightCache;
+    return _getAxisMetrics(this, 'row').total;
 }
 
 /**
@@ -504,14 +629,7 @@ export function getTotalHeight() {
  * @returns {Number}
  */
 export function getTotalWidth() {
-    if (this._totalWidthCache !== undefined) return this._totalWidthCache;
-    let total = this.colCount * this.defaultColWidth;
-    this.cols.forEach((col, index) => {
-        if (!col || index >= this.colCount) return;
-        total += (col.hidden ? 0 : col.width) - this.defaultColWidth;
-    });
-    this._totalWidthCache = Math.max(0, total);
-    return this._totalWidthCache;
+    return _getAxisMetrics(this, 'col').total;
 }
 
 /**
@@ -520,6 +638,10 @@ export function getTotalWidth() {
 export function _clearSizeCache() {
     this._totalHeightCache = undefined;
     this._totalWidthCache = undefined;
+    this._rowAxisMetricsCache = null;
+    this._colAxisMetricsCache = null;
+    this._rowMetricVersion = (this._rowMetricVersion || 0) + 1;
+    this._colMetricVersion = (this._colMetricVersion || 0) + 1;
 }
 
 /**
@@ -528,13 +650,7 @@ export function _clearSizeCache() {
  * @returns {Number}
  */
 export function getScrollTop(rowIndex) {
-    const limit = Math.max(0, Math.min(rowIndex, this.rowCount));
-    let total = limit * this.defaultRowHeight;
-    this.rows.forEach((row, index) => {
-        if (!row || index >= limit) return;
-        total += (row.hidden ? 0 : row.height) - this.defaultRowHeight;
-    });
-    return Math.max(0, total);
+    return _getAxisOffset(_getAxisMetrics(this, 'row'), rowIndex);
 }
 
 /**
@@ -543,13 +659,7 @@ export function getScrollTop(rowIndex) {
  * @returns {Number}
  */
 export function getScrollLeft(colIndex) {
-    const limit = Math.max(0, Math.min(colIndex, this.colCount));
-    let total = limit * this.defaultColWidth;
-    this.cols.forEach((col, index) => {
-        if (!col || index >= limit) return;
-        total += (col.hidden ? 0 : col.width) - this.defaultColWidth;
-    });
-    return Math.max(0, total);
+    return _getAxisOffset(_getAxisMetrics(this, 'col'), colIndex);
 }
 
 /**
@@ -559,19 +669,7 @@ export function getScrollLeft(colIndex) {
  */
 export function getRowIndexByScrollTop(scrollTop) {
     if (this.rowCount <= 0) return 0;
-    const target = _clamp(scrollTop, 0, Math.max(0, getTotalHeight.call(this) - 1));
-    let low = 0;
-    let high = this.rowCount - 1;
-    let result = high;
-    while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        if (getScrollTop.call(this, mid + 1) > target) {
-            result = mid;
-            high = mid - 1;
-        } else {
-            low = mid + 1;
-        }
-    }
+    let result = _getAxisIndexByOffset(_getAxisMetrics(this, 'row'), scrollTop);
     while (result < this.rowCount - 1 && !_isRowVisible(this, result)) result++;
     return Math.max(0, Math.min(result, this.rowCount - 1));
 }
@@ -583,19 +681,7 @@ export function getRowIndexByScrollTop(scrollTop) {
  */
 export function getColIndexByScrollLeft(scrollLeft) {
     if (this.colCount <= 0) return 0;
-    const target = _clamp(scrollLeft, 0, Math.max(0, getTotalWidth.call(this) - 1));
-    let low = 0;
-    let high = this.colCount - 1;
-    let result = high;
-    while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        if (getScrollLeft.call(this, mid + 1) > target) {
-            result = mid;
-            high = mid - 1;
-        } else {
-            low = mid + 1;
-        }
-    }
+    let result = _getAxisIndexByOffset(_getAxisMetrics(this, 'col'), scrollLeft);
     while (result < this.colCount - 1 && !_isColVisible(this, result)) result++;
     return Math.max(0, Math.min(result, this.colCount - 1));
 }

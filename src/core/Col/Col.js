@@ -113,14 +113,20 @@ export default class Col {
     // ========== 内部属性（自动清缓存，不触发 UndoRedo）==========
     get _width() { return this.#width; }
     set _width(v) {
+        if (this.#width === v) return;
         this.#width = v;
         this.sheet._totalWidthCache = undefined;
+        this.sheet._colAxisMetricsCache = null;
+        this.sheet._colMetricVersion = (this.sheet._colMetricVersion || 0) + 1;
     }
 
     get _hidden() { return this.#hidden; }
     set _hidden(v) {
+        if (this.#hidden === v) return;
         this.#hidden = v;
         this.sheet._totalWidthCache = undefined;
+        this.sheet._colAxisMetricsCache = null;
+        this.sheet._colMetricVersion = (this.sheet._colMetricVersion || 0) + 1;
     }
 
     get _outlineLevel() { return this.#outlineLevel; }

@@ -236,6 +236,10 @@ function _resetSheetForImport(sheet) {
     sheet._styledRows = new Set();
     sheet._styledCols = new Set();
     sheet._rowVisibilityVersion = 0;
+    sheet._rowMetricVersion = 0;
+    sheet._colMetricVersion = 0;
+    sheet._rowAxisMetricsCache = null;
+    sheet._colAxisMetricsCache = null;
     sheet._totalWidthCache = undefined;
     sheet._totalHeightCache = undefined;
     sheet._virtualRowCount = 0;
@@ -314,6 +318,7 @@ function _applyDecodedCellTemplate(cell, template) {
     cell._showVal = undefined;
     cell._fmtResult = undefined;
     cell._spillRange = null;
+    cell._spillArray = null;
     cell._spillParent = null;
     cell._spillOffset = null;
     cell._isVolatile = false;
@@ -727,6 +732,7 @@ export async function getData() {
 
     for (const sheet of SN.sheets) {
         sheet._init();
+        await sheet._flushPendingXlsxRowsAsync?.({ batchSize: 2000 });
 
         const sheetData = {
             name: sheet.name,

@@ -245,6 +245,48 @@ export default class DependencyGraph {
         }
     }
 
+    _updateDependenciesFromFormula(sheetName, r, c, formulaStr) {
+        const fromKey = this.cellKey(sheetName, r, c);
+        this.removeDependency(fromKey);
+        if (!formulaStr) return;
+
+        try {
+            const areas = this.SN.Formula.parseDependencyAreas(formulaStr, sheetName);
+            for (const dep of areas) {
+                const depSheetName = dep.sheetName || sheetName;
+                if (dep.s.r === dep.e.r && dep.s.c === dep.e.c) {
+                    this.addDependency(fromKey, this.cellKey(depSheetName, dep.s.r, dep.s.c));
+                } else {
+                    this.addRangeDependency(fromKey, depSheetName, dep);
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to parse dependencies for ${fromKey}:`, error);
+        }
+    }
+
+    _rebuildPendingFormulaDependencies(sheet) {
+        const formulas = Array.isArray(sheet?._pendingXlsxRowMeta?.formulas)
+            ? sheet._pendingXlsxRowMeta.formulas
+            : [];
+        if (formulas.length === 0) return;
+
+        const sheetName = sheet.name;
+        formulas.forEach(item => {
+            const r = Math.max(0, Number(item?.r) || 0);
+            const c = Math.max(0, Number(item?.c) || 0);
+            if (sheet.rows?.[r]) return;
+            let formula = item?.f || '';
+            if (!formula && item?.si !== undefined) {
+                const shared = this.SN._sharedFormula?.[item.si];
+                if (shared?.f) {
+                    formula = this.SN.Utils.getFillFormula(shared.f, shared.m.r, shared.m.c, r, c);
+                }
+            }
+            this._updateDependenciesFromFormula(sheetName, r, c, formula);
+        });
+    }
+
     /**
      * get affected cells (recursively get all dependency chains)
      * @param {string} cellKey - changed cell keys
@@ -453,6 +495,8 @@ Trigger update when
         }
 
         // 重新扫描所有单元格
+        this._rebuildPendingFormulaDependencies(sheet);
+
         for (let r = 0; r < sheet.rowCount; r++) {
             const row = sheet.rows[r];
             if (!row) continue;

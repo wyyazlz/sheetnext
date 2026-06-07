@@ -95,6 +95,10 @@ export default class Sheet {
         this._styledRows = new Set();
         this._styledCols = new Set();
         this._rowVisibilityVersion = 0;
+        this._rowMetricVersion = 0;
+        this._colMetricVersion = 0;
+        this._rowAxisMetricsCache = null;
+        this._colAxisMetricsCache = null;
         this._frozenCols = 0;
         this._frozenRows = 0;
         this._freezeStartRow = 0;
@@ -103,6 +107,11 @@ export default class Sheet {
         this._virtualColCount = 0;
         this._maxVirtualRowCount = 1048576;
         this._maxVirtualColCount = 16384;
+        this._pendingXlsxRows = null;
+        this._pendingXlsxRowMap = null;
+        this._pendingXlsxRowIndexes = null;
+        this._pendingXlsxRowMeta = null;
+        this._pendingXlsxRowStateMap = null;
         this._zoom = 1;
         this._idCount = 0;
     }
@@ -301,6 +310,8 @@ export default class Sheet {
         const prev = this._defaultColWidth;
         this._defaultColWidth = next;
         this._totalWidthCache = undefined;
+        this._colAxisMetricsCache = null;
+        this._colMetricVersion = (this._colMetricVersion || 0) + 1;
         this.cols.forEach(col => {
             if (col && col._width === prev) col._width = next;
         });
@@ -318,6 +329,8 @@ export default class Sheet {
         const prev = this._defaultRowHeight;
         this._defaultRowHeight = next;
         this._totalHeightCache = undefined;
+        this._rowAxisMetricsCache = null;
+        this._rowMetricVersion = (this._rowMetricVersion || 0) + 1;
         this.rows.forEach(row => {
             if (row && row._height === prev) row._height = next;
         });
@@ -439,6 +452,144 @@ export default class Sheet {
         return Math.max(this.cols.length, this._virtualColCount || 0)
     }
 
+    _setPendingXlsxRows(rows, meta = null) {
+        const list = Array.isArray(rows) ? rows : [];
+        const rowMap = new Map();
+        const indexes = [];
+        const stateMap = new Map();
+        let maxRow = Math.max(-1, Number(meta?.rowCount) - 1 || -1);
+        let maxCol = Math.max(-1, Number(meta?.colCount) - 1 || -1);
+        const shouldScanCells = !Number.isFinite(Number(meta?.colCount));
+
+        list.forEach((row, fallbackIndex) => {
+            const rIndex = Math.max(0, (Number.parseInt(row?.['_$r'], 10) || (fallbackIndex + 1)) - 1);
+            rowMap.set(rIndex, row);
+            indexes.push(rIndex);
+            maxRow = Math.max(maxRow, rIndex);
+
+            if (shouldScanCells) {
+                const cells = Array.isArray(row?.c) ? row.c : (row?.c ? [row.c] : []);
+                cells.forEach(cell => {
+                    const ref = cell?.['_$r'];
+                    const match = typeof ref === 'string' ? ref.match(/[A-Z]+/i) : null;
+                    if (!match) return;
+                    maxCol = Math.max(maxCol, this.Utils.charToNum(match[0]));
+                });
+            }
+        });
+
+        (Array.isArray(meta?.customRows) ? meta.customRows : []).forEach(item => {
+            const r = Math.max(0, Number(item?.r) || 0);
+            const height = Number(item?.ht);
+            const styleIndex = item?.styleIndex;
+            stateMap.set(r, {
+                height: Number.isFinite(height) && height > 0 ? Math.round(height * 1.333) : this.defaultRowHeight,
+                hidden: !!item?.hidden,
+                outlineLevel: Math.max(0, Math.min(7, Math.floor(Number(item?.outlineLevel) || 0))),
+                collapsed: !!item?.collapsed,
+                rowStyle: styleIndex !== undefined && item?.customFormat
+                    ? this.SN.Xml._xGetStyle(styleIndex)
+                    : null
+            });
+        });
+
+        (Array.isArray(meta?.sharedFormulas) ? meta.sharedFormulas : []).forEach(item => {
+            if (item?.si === undefined || !item.f) return;
+            this.SN._sharedFormula[item.si] = {
+                m: { r: item.r, c: item.c },
+                f: item.f
+            };
+        });
+
+        this._pendingXlsxRows = list;
+        this._pendingXlsxRowMap = rowMap;
+        this._pendingXlsxRowIndexes = indexes;
+        this._pendingXlsxRowMeta = meta || null;
+        this._pendingXlsxRowStateMap = stateMap.size > 0 ? stateMap : null;
+        this._virtualRowCount = Math.max(this._virtualRowCount || 0, maxRow + 1, Number(meta?.rowCount) || 0);
+        this._virtualColCount = Math.max(this._virtualColCount || 0, maxCol + 1, Number(meta?.colCount) || 0);
+    }
+
+    _getPendingXlsxRowState(r) {
+        return this._pendingXlsxRowStateMap?.get(r) || null;
+    }
+
+    _ensurePendingXlsxRowState(r) {
+        if (!this._pendingXlsxRowStateMap) this._pendingXlsxRowStateMap = new Map();
+        let state = this._pendingXlsxRowStateMap.get(r);
+        if (!state) {
+            state = {
+                height: this.defaultRowHeight,
+                hidden: false,
+                filterHidden: false,
+                outlineLevel: 0,
+                collapsed: false,
+                rowStyle: null
+            };
+            this._pendingXlsxRowStateMap.set(r, state);
+        }
+        return state;
+    }
+
+    _applyPendingXlsxRowState(row, r) {
+        const state = this._pendingXlsxRowStateMap?.get(r);
+        if (!row || !state) return row;
+        if (Number.isFinite(state.height) && state.height > 0) row._height = state.height;
+        row._hidden = !!state.hidden;
+        row._filterHidden = !!state.filterHidden;
+        row._outlineLevel = state.outlineLevel || 0;
+        row._collapsed = !!state.collapsed;
+        if (state.rowStyle) row._rowStyle = state.rowStyle;
+        this._pendingXlsxRowStateMap.delete(r);
+        if (this._pendingXlsxRowStateMap.size === 0) this._pendingXlsxRowStateMap = null;
+        return row;
+    }
+
+    _materializePendingRow(r) {
+        const rowMap = this._pendingXlsxRowMap;
+        if (!rowMap?.has(r)) return null;
+        const rowXml = rowMap.get(r);
+        const row = new Row(rowXml, this, r);
+        this.rows[r] = this._applyPendingXlsxRowState(row, r);
+        rowMap.delete(r);
+        if (rowMap.size === 0) {
+            this._pendingXlsxRows = null;
+            this._pendingXlsxRowMap = null;
+            this._pendingXlsxRowIndexes = null;
+        }
+        return this.rows[r];
+    }
+
+    _flushPendingXlsxRows() {
+        if (!this._pendingXlsxRowMap || this._pendingXlsxRowMap.size === 0) return;
+        const indexes = this._pendingXlsxRowIndexes?.length
+            ? [...this._pendingXlsxRowIndexes]
+            : [...this._pendingXlsxRowMap.keys()];
+        indexes.sort((a, b) => a - b);
+        indexes.forEach(r => {
+            if (!this.rows[r]) this._materializePendingRow(r);
+        });
+    }
+
+    async _flushPendingXlsxRowsAsync(options = {}) {
+        if (!this._pendingXlsxRowMap || this._pendingXlsxRowMap.size === 0) return;
+        const batchSize = Math.max(100, Number(options.batchSize) || 1500);
+        const indexes = this._pendingXlsxRowIndexes?.length
+            ? [...this._pendingXlsxRowIndexes]
+            : [...this._pendingXlsxRowMap.keys()];
+        indexes.sort((a, b) => a - b);
+
+        for (let i = 0; i < indexes.length; i++) {
+            const r = indexes[i];
+            if (!this.rows[r]) this._materializePendingRow(r);
+            if ((i + 1) % batchSize === 0) {
+                options.onProgress?.({ current: i + 1, total: indexes.length, sheet: this });
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+        }
+        options.onProgress?.({ current: indexes.length, total: indexes.length, sheet: this });
+    }
+
     _extendVirtualRows(count = 200) {
         const current = this.rowCount;
         const next = Math.min(this._maxVirtualRowCount, current + Math.max(1, count));
@@ -491,7 +642,9 @@ export default class Sheet {
 
     /** @param {number} r @returns {Row} */
     getRow(r) {
+        if (!this.rows[r]) this._materializePendingRow(r);
         if (!this.rows[r]) this.rows[r] = new Row(null, this, r);
+        this._applyPendingXlsxRowState(this.rows[r], r);
         this.rows[r].rIndex = r
         return this.rows[r];
     }

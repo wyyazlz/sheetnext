@@ -12,6 +12,7 @@ export const chartXmlToEChartOption = (obj, SN) => {
     const plotArea = chart['c:plotArea'];
     const legendXml = chart['c:legend'];
     const titleXml = chart['c:title'];
+    const isPivotChart = !!obj['c:pivotSource'];
 
     const baseOption = {
         title: getTitle(titleXml, SN),
@@ -62,24 +63,21 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 let xArr = []
                 const xRef = safeGet(ser, ['c:xVal', 'c:numRef', 'c:f']) || safeGet(ser, ['c:xVal', 'c:strRef', 'c:f']);
                 if (xRef) {
-                    xArr = rangeStrToCellRefs(xRef, SN)
-                    const xData = safeGet(ser, ['c:xVal', 'c:numLit', 'c:pt']) || safeGet(ser, ['c:xVal', 'c:strLit', 'c:pt']);
-                    if (xData) xArr = xData.map(pt => pt['c:v'])
+                    const xData = isPivotChart ? getCachedPoints(safeGet(ser, ['c:xVal', 'c:numRef']) || safeGet(ser, ['c:xVal', 'c:strRef'])) : [];
+                    xArr = xData.length ? xData : rangeStrToCellRefs(xRef, SN)
                 }
                 let yArr = []
                 const yRef = safeGet(ser, ['c:yVal', 'c:numRef', 'c:f']) || safeGet(ser, ['c:yVal', 'c:strRef', 'c:f']);
                 if (yRef) {
-                    yArr = rangeStrToCellRefs(yRef, SN)
-                    const yData = safeGet(ser, ['c:yVal', 'c:numLit', 'c:pt']) || safeGet(ser, ['c:yVal', 'c:strLit', 'c:pt']);
-                    if (yData) yArr = yData.map(pt => pt['c:v'])
+                    const yData = isPivotChart ? getCachedPoints(safeGet(ser, ['c:yVal', 'c:numRef']) || safeGet(ser, ['c:yVal', 'c:strRef'])) : [];
+                    yArr = yData.length ? yData : rangeStrToCellRefs(yRef, SN)
                 }
                 if (type === 'bubble') {
                     let sizeArr = []
                     const sizeRef = safeGet(ser, ['c:bubbleSize', 'c:numRef', 'c:f']);
                     if (sizeRef) {
-                        sizeArr = rangeStrToCellRefs(sizeRef, SN)
-                        const sizeData = safeGet(ser, ['c:bubbleSize', 'c:numLit', 'c:pt']);
-                        if (sizeData) sizeArr = sizeData.map(pt => pt['c:v'])
+                        const sizeData = isPivotChart ? getCachedPoints(safeGet(ser, ['c:bubbleSize', 'c:numRef'])) : [];
+                        sizeArr = sizeData.length ? sizeData : rangeStrToCellRefs(sizeRef, SN)
                     }
                     dataRefOrData = xArr.map((x, i) => [x, yArr[i], sizeArr[i]]);
                 } else {
@@ -91,16 +89,24 @@ export const chartXmlToEChartOption = (obj, SN) => {
             case 'pie': {
                 let values = []
                 let names = []
-                const valueRef = safeGet(ser, ['c:val', 'c:numRef', 'c:f']);
-                if (valueRef) {
+                const valueRefNode = safeGet(ser, ['c:val', 'c:numRef']);
+                const valueRef = valueRefNode?.['c:f'];
+                const valueCache = isPivotChart ? getCachedPoints(valueRefNode) : [];
+                if (valueCache.length) {
+                    values = valueCache;
+                } else if (valueRef) {
                     values = rangeStrToCellRefs(valueRef, SN)
                 } else {
                     const valArr = safeGet(ser, ['c:val', 'c:numLit', 'c:pt']);
                     if (valArr) values = valArr.map(item => item['c:v'])
                 }
 
-                const nameRef = safeGet(ser, ['c:cat', 'c:strRef', 'c:f']);
-                if (nameRef) {
+                const nameRefNode = safeGet(ser, ['c:cat', 'c:strRef']) || safeGet(ser, ['c:cat', 'c:numRef']);
+                const nameRef = nameRefNode?.['c:f'];
+                const nameCache = isPivotChart ? getCachedPoints(nameRefNode) : [];
+                if (nameCache.length) {
+                    names = nameCache;
+                } else if (nameRef) {
                     names = rangeStrToCellRefs(nameRef, SN)
                 } else {
                     const nameArr = safeGet(ser, ['c:cat', 'c:strLit', 'c:pt']) || safeGet(ser, ['c:cat', 'c:numLit', 'c:pt']);
@@ -124,7 +130,13 @@ export const chartXmlToEChartOption = (obj, SN) => {
             }
 
             case 'radar': {
-                const valRef = safeGet(ser, ['c:val', 'c:numRef', 'c:f']);
+                const valRefNode = safeGet(ser, ['c:val', 'c:numRef']);
+                const valRef = valRefNode?.['c:f'];
+                const valCache = isPivotChart ? getCachedPoints(valRefNode) : [];
+                if (valCache.length) {
+                    dataRefOrData = [{ value: valCache }];
+                    break;
+                }
                 if (valRef) {
                     dataRefOrData = [{ value: valRef }];
                     break;
@@ -135,7 +147,13 @@ export const chartXmlToEChartOption = (obj, SN) => {
             }
 
             default: {
-                const valRef = safeGet(ser, ['c:val', 'c:numRef', 'c:f']);
+                const valRefNode = safeGet(ser, ['c:val', 'c:numRef']);
+                const valRef = valRefNode?.['c:f'];
+                const valCache = isPivotChart ? getCachedPoints(valRefNode) : [];
+                if (valCache.length) {
+                    dataRefOrData = valCache;
+                    break;
+                }
                 if (valRef) {
                     dataRefOrData = valRef;
                     break;
@@ -146,7 +164,7 @@ export const chartXmlToEChartOption = (obj, SN) => {
         }
 
         return {
-            name: safeGet(ser, ['c:tx', 'c:strRef', 'c:f']) ?? safeGet(ser, ['c:tx', 'c:v']) ?? `\u7cfb\u5217${index + 1}`,
+            name: getSeriesName(ser, index, isPivotChart),
             type: type === 'bubble' ? 'scatter' : type,
             data: dataRefOrData,
             ...extra
@@ -294,10 +312,10 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 const axisIds = sureArray(chartGroup?.['c:axId']).map(item => String(item?._$val ?? ''));
                 const categoryAxisObj = catAxes[catAxisIdMap.get(axisIds.find(id => catAxisIdMap.has(id))) ?? 0];
                 const valueAxisObj = valAxes[valAxisIdMap.get(axisIds.find(id => valAxisIdMap.has(id))) ?? 0];
-                let qz = safeGet(arr[0], ['c:cat', 'c:strRef', 'c:f']) ?? safeGet(arr[0], ['c:cat', 'c:strLit', 'c:pt']) ?? [];
+                let qz = getCategoryData(arr[0], isPivotChart);
                 if (typeof qz == 'string') {
                     qz = rangeStrToCellRefs(qz, SN);
-                } else {
+                } else if (Array.isArray(qz) && qz[0]?.['c:v'] !== undefined) {
                     qz = qz.map(pt => pt['c:v']);
                 }
                 baseOption.radar = buildRadarCoordinateOption(qz, categoryAxisObj, valueAxisObj, SN);
@@ -336,7 +354,7 @@ export const chartXmlToEChartOption = (obj, SN) => {
             if (key === 'c:barChart') {
                 const dir = chartGroup?.['c:barDir']?._$val;
                 const isHorizontal = dir === 'bar';
-                applyCategoryData(xAxisIndex, extractCategories(arr[0]));
+                applyCategoryData(xAxisIndex, extractCategories(arr[0], isPivotChart));
                 arr.forEach((ser) => {
                     const seriesObj = buildSeries(
                         ser,
@@ -356,7 +374,7 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 return;
             }
 
-            applyCategoryData(xAxisIndex, extractCategories(arr[0]));
+            applyCategoryData(xAxisIndex, extractCategories(arr[0], isPivotChart));
             arr.forEach((ser) => {
                 const marker = ser?.['c:marker'];
                 const symbol = marker?.['c:symbol']?._$val;
@@ -439,6 +457,10 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 delete baseOption.yAxis.data;
             }
         }
+    }
+
+    if (isPivotChart) {
+        applyPivotChartPresentation(baseOption, obj, plotArea, SN);
     }
 
     const ml = safeGet(plotArea, ['c:layout', 'c:manualLayout']);
@@ -1008,6 +1030,7 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
     }
 
     if (!option.legend?.bottom && !option.legend?.top) option.legend = { bottom: 10, ...option.legend } // Default legend to the bottom.
+    normalizeLegendAnchors(option.legend);
 
     // Apply xAxis defaults.
     if (option.xAxis) {
@@ -1038,6 +1061,7 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
     option.silent = true
 
     option = mergeTemplate(optionTem, option)
+    normalizeLegendAnchors(option.legend);
     const axisLayout = applyAxisOffsets(option);
 
     const type = {}
@@ -1173,10 +1197,10 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
     });
     // Grid only affects axis-based charts.
     option.grid = {
-        top: getGridOffsetValue(option.legend.top, 30, axisLayout.defaultTop),
-        bottom: getGridOffsetValue(option.legend.bottom, 30, axisLayout.defaultBottom),
+        top: getGridOffsetValue(option.legend.top, 30, axisLayout.defaultTop, 'top'),
+        bottom: getGridOffsetValue(option.legend.bottom, 30, axisLayout.defaultBottom, 'bottom'),
         left: axisLayout.defaultLeft,
-        right: axisLayout.defaultRight,
+        right: option.legend?.__excelSide && option.legend?.right != null ? 70 : axisLayout.defaultRight,
         containLabel: true,
         ...option.grid
     };
@@ -1199,6 +1223,21 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
     }
 
     return option
+}
+
+function normalizeLegendAnchors(legend = {}) {
+    if (legend.right != null) {
+        delete legend.left;
+    }
+    if (legend.left === 'left') {
+        delete legend.right;
+    }
+    if (legend.top === 'middle') {
+        delete legend.bottom;
+    }
+    if (legend.bottom != null) {
+        delete legend.top;
+    }
 }
 // Merge data into a template object recursively.
 function mergeTemplate(template, data) {
@@ -1239,11 +1278,13 @@ const getLegend = (legendObj, SN = null) => {
             legendOption.left = 'left';
             legendOption.top = 'middle';
             legendOption.orient = 'vertical';
+            legendOption.__excelSide = true;
             break;
         case 'r':
             legendOption.right = 'right';
             legendOption.top = 'middle';
             legendOption.orient = 'vertical';
+            legendOption.__excelSide = true;
             break;
         default:
             legendOption.bottom = 10;
@@ -1259,11 +1300,13 @@ const getLegend = (legendObj, SN = null) => {
             legendOption.left = `${xVal * 100}%`;
             // Remove the opposite anchor to avoid conflicts.
             delete legendOption.right;
+            delete legendOption.__excelSide;
         }
         if (yVal != null) {
             legendOption.top = `${yVal * 100}%`;
             // Remove the opposite anchor to avoid conflicts.
             delete legendOption.bottom;
+            delete legendOption.__excelSide;
         }
     }
 
@@ -1673,10 +1716,47 @@ function applyAxisOffsets(option) {
     return { defaultLeft, defaultRight, defaultTop, defaultBottom };
 }
 
-function getGridOffsetValue(baseValue, delta, fallback) {
+function getGridOffsetValue(baseValue, delta, fallback, axis = 'top') {
     if (typeof baseValue === 'number' && Number.isFinite(baseValue)) return baseValue + delta;
+    if (baseValue === 'middle') return fallback;
+    if (axis === 'top' && baseValue === 'top') return fallback + delta;
+    if (axis === 'bottom' && baseValue === 'bottom') return fallback + delta;
     if (typeof baseValue === 'string' && baseValue.trim()) return baseValue;
     return fallback;
+}
+
+function applyPivotChartPresentation(option, chartSpace, plotArea, SN = null) {
+    const dataFieldName = getPivotChartDataFieldName(plotArea);
+    if (!option.title?.text && chartSpace?.['c:chart']?.['c:autoTitleDeleted']?._$val !== '1') {
+        option.title = {
+            ...(option.title || {}),
+            show: true,
+            text: dataFieldName || (SN?.t ? SN.t('chart.defaultTitle') : 'Chart Title')
+        };
+    }
+    if (dataFieldName) {
+        option.series?.forEach(series => {
+            if (!series.name || isRefWithSheet(series.name)) series.name = dataFieldName;
+        });
+        option.legend = {
+            ...(option.legend || {}),
+            show: option.legend?.show !== false,
+            data: option.legend?.data || [dataFieldName]
+        };
+    }
+}
+
+function getPivotChartDataFieldName(plotArea) {
+    const chartGroups = [
+        ...sureArray(plotArea?.['c:barChart']),
+        ...sureArray(plotArea?.['c:lineChart']),
+        ...sureArray(plotArea?.['c:areaChart']),
+        ...sureArray(plotArea?.['c:pieChart']),
+        ...sureArray(plotArea?.['c:doughnutChart'])
+    ];
+    const firstSeries = chartGroups.flatMap(group => sureArray(group?.['c:ser'])).find(Boolean);
+    const cached = getCachedPoints(safeGet(firstSeries, ['c:tx', 'c:strRef']))[0];
+    return cached || '';
 }
 
 function hasRadarDataLabel(series) {
@@ -1925,12 +2005,46 @@ const extractSeriesName = (ser) => {
     return nameData ?? '';
 };
 
+function getSeriesName(ser, index, useCache = false) {
+    const cached = useCache ? getCachedPoints(safeGet(ser, ['c:tx', 'c:strRef']))[0] : '';
+    return cached
+        || safeGet(ser, ['c:tx', 'c:strRef', 'c:f'])
+        || safeGet(ser, ['c:tx', 'c:v'])
+        || `\u7cfb\u5217${index + 1}`;
+}
+
+function getPtValue(point) {
+    if (point == null) return '';
+    if (typeof point !== 'object') return point;
+    return point['c:v'] ?? '';
+}
+
+function getCachedPoints(refNode) {
+    const points = safeGet(refNode, ['c:strCache', 'c:pt'])
+        || safeGet(refNode, ['c:numCache', 'c:pt'])
+        || safeGet(refNode, ['c:strLit', 'c:pt'])
+        || safeGet(refNode, ['c:numLit', 'c:pt']);
+    return sureArray(points).map(getPtValue);
+}
+
+function getCategoryData(ser, useCache = false) {
+    const refNode = safeGet(ser, ['c:cat', 'c:strRef']) || safeGet(ser, ['c:cat', 'c:numRef']);
+    const cached = useCache ? getCachedPoints(refNode) : [];
+    if (cached.length > 0) return cached;
+
+    const catRef = refNode?.['c:f'];
+    if (catRef) return catRef;
+
+    return safeGet(ser, ['c:cat', 'c:strLit', 'c:pt'])
+        || safeGet(ser, ['c:cat', 'c:numLit', 'c:pt'])
+        || [];
+}
+
 // Extract category values.
-const extractCategories = (ser) => {
-    const catRef = safeGet(ser, ['c:cat', 'c:strRef', 'c:f']);
-    if (catRef) return catRef // Return the address when a ref exists.
-    const catData = safeGet(ser, ['c:cat', 'c:strLit', 'c:pt'])
-    if (Array.isArray(catData)) return catData.map(p => p['c:v']); // Return inline literal values when present.
+const extractCategories = (ser, useCache = false) => {
+    const catData = getCategoryData(ser, useCache);
+    if (typeof catData === 'string') return catData // Return the address when a ref exists.
+    if (Array.isArray(catData)) return catData.map(getPtValue); // Return inline literal values when present.
     return [] // No category data.
 };
 

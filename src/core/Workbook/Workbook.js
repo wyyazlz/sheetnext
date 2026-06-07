@@ -413,6 +413,8 @@ class SheetNext {
     }
 
     _loadXmlObj() {
+        this._sharedFormula = {};
+        this.DependencyGraph?.clear?.();
         this.Xml.obj = new Proxy(this.Xml.obj, {
             get: (target, property) => {
                 if (target[property]?._data && (property.endsWith('.xml') || property.endsWith('.rels'))) {

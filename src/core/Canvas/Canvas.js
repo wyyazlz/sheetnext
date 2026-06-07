@@ -211,6 +211,7 @@ export default class Canvas {
         this._scrollInertiaLastTime = 0;
         this._scrollInertiaVelocityX = 0;
         this._scrollInertiaVelocityY = 0;
+        this._scrollBarSizeCache = null;
         this._lastTouchTap = null;
         this._touchSelectionInfo = null;
         this._touchSelectionToastAt = 0;
@@ -348,6 +349,7 @@ export default class Canvas {
 
         this._width = null
         this._height = null
+        this._scrollBarSizeCache = null
 
         this.ctx = this.showLayer.getContext('2d');
         this.ctxKZ = this.showLayerKZ.getContext('2d'); // 快照1
@@ -585,6 +587,7 @@ export default class Canvas {
         this.bc.translate(-0.5 / scale, -0.5 / scale);
         this._width = null;
         this._height = null;
+        this._scrollBarSizeCache = null;
         if (this.activeSheet) {
             this.updateScrollBarSize();
             this.updateOverlayContainers();
@@ -636,6 +639,18 @@ export default class Canvas {
         const viewW = Math.max(1, this.viewWidth - sheet.indexWidth - frozenW);
         const totalH = sheet.getTotalHeight();
         const totalW = sheet.getTotalWidth();
+        const cache = this._scrollBarSizeCache;
+
+        if (cache &&
+            cache.sheet === sheet &&
+            cache.viewH === viewH &&
+            cache.viewW === viewW &&
+            cache.totalH === totalH &&
+            cache.totalW === totalW &&
+            cache.frozenH === frozenH &&
+            cache.frozenW === frozenW) {
+            return;
+        }
 
         const trackH = this.rollY.offsetHeight;
         const trackW = this.rollX.offsetWidth;
@@ -652,6 +667,15 @@ export default class Canvas {
 
         this.maxTop = trackH - scrollBarH;
         this.maxLeft = trackW - scrollBarW;
+        this._scrollBarSizeCache = {
+            sheet,
+            viewH,
+            viewW,
+            totalH,
+            totalW,
+            frozenH,
+            frozenW
+        };
     }
 
 

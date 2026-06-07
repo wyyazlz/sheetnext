@@ -1,4 +1,4 @@
-import { parseSlicerKey, formatSlicerValue } from './helpers.js';
+import { buildSlicerKey, parseSlicerKey, formatSlicerValue } from './helpers.js';
 import SlicerCache from './SlicerCache.js';
 import SlicerItem from './SlicerItem.js';
 
@@ -159,6 +159,99 @@ function resolveFieldIndex(table, cacheMeta, slicerNode) {
     return rawColumn > 0 ? rawColumn - 1 : 0;
 }
 
+function findPivotTableByName(SN, name) {
+    if (!name) return null;
+    for (const sheet of (SN.sheets || [])) {
+        const pivotTable = sheet.PivotTable?.get?.(name);
+        if (pivotTable) return pivotTable;
+    }
+    return null;
+}
+
+function getAllPivotTables(SN) {
+    const result = [];
+    (SN.sheets || []).forEach(sheet => {
+        sheet.PivotTable?.getAll?.().forEach(pivotTable => result.push(pivotTable));
+    });
+    return result;
+}
+
+function resolvePivotTableFromCache(SN, cacheDef) {
+    const pivotRefs = ensureArray(cacheDef?.pivotTables?.pivotTable);
+    for (const pivotRef of pivotRefs) {
+        const pivotTable = findPivotTableByName(SN, pivotRef?._$name);
+        if (pivotTable) return pivotTable;
+    }
+
+    const pivotTables = getAllPivotTables(SN);
+    return pivotTables.length === 1 ? pivotTables[0] : null;
+}
+
+function resolvePivotFieldIndex(pivotTable, sourceName) {
+    const name = String(sourceName || '').trim();
+    if (!pivotTable || !name) return 0;
+
+    const cacheFields = pivotTable.cache?.fields || [];
+    const cacheIndex = cacheFields.findIndex(field => field?.name === name);
+    if (cacheIndex >= 0) return cacheIndex;
+
+    const pivotIndex = pivotTable.pivotFields?.findIndex?.(field => field?.name === name);
+    return pivotIndex >= 0 ? pivotIndex : 0;
+}
+
+function buildPivotSlicerCacheItems(pivotTable, fieldIndex, cacheDef) {
+    const sharedItems = pivotTable?.cache?.fields?.[fieldIndex]?.sharedItems?.values || [];
+    const itemNodes = ensureArray(cacheDef?.data?.tabular?.items?.i);
+    const sourceNodes = itemNodes.length > 0
+        ? itemNodes
+        : sharedItems.map((_, index) => ({ _$x: String(index) }));
+
+    const items = [];
+    const itemMap = new Map();
+    const selectedKeys = [];
+    let hasSelectedState = false;
+
+    sourceNodes.forEach(node => {
+        const sharedIndex = toNumber(node?._$x, NaN);
+        if (!Number.isFinite(sharedIndex)) return;
+
+        const sharedItem = sharedItems[sharedIndex];
+        const value = sharedItem?.value ?? null;
+        const key = buildSlicerKey(value);
+        if (itemMap.has(key)) return;
+
+        const item = {
+            key,
+            value,
+            text: pivotTable?._getItemDisplayValue?.(fieldIndex, sharedIndex) ?? formatSlicerValue(value),
+            sharedIndex,
+            count: 0
+        };
+
+        itemMap.set(key, item);
+        items.push(item);
+
+        if (node?._$s === '1') {
+            hasSelectedState = true;
+            selectedKeys.push(key);
+        }
+    });
+
+    return {
+        items,
+        itemMap,
+        selectedKeys: hasSelectedState ? selectedKeys : []
+    };
+}
+
+function applyParsedCacheItems(cache, cacheMeta) {
+    if (!cache || !cacheMeta?.items) return;
+    cache.items = cacheMeta.items;
+    cache._itemMap = cacheMeta.itemMap || new Map(cache.items.map(item => [item.key, item]));
+    cache._dirty = false;
+    cache._version = 1;
+}
+
 function ensureStandardCache(sheet, cacheMeta, slicerNode) {
     const SN = sheet.SN;
     if (!SN._slicerCaches) SN._slicerCaches = new Map();
@@ -167,7 +260,24 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
     if (Number.isFinite(cacheId) && SN._slicerCaches.has(cacheId)) {
         const existing = SN._slicerCaches.get(cacheId);
         if (cacheMeta?.cacheName && !existing._excelCacheName) existing._excelCacheName = cacheMeta.cacheName;
+        applyParsedCacheItems(existing, cacheMeta);
         return existing;
+    }
+
+    if (cacheMeta?.sourceType === 'pivot') {
+        const cache = new SlicerCache(SN, {
+            cacheId,
+            sourceType: 'pivot',
+            sourceSheet: cacheMeta.sourceSheet || sheet.name,
+            sourceName: cacheMeta.sourceName || null,
+            sourceId: cacheMeta.sourceId || null,
+            fieldIndex: Number.isFinite(cacheMeta.fieldIndex) ? cacheMeta.fieldIndex : 0,
+            fieldName: cacheMeta.fieldName || slicerNode?._$name || ''
+        });
+        cache._excelCacheName = cacheMeta.cacheName || null;
+        applyParsedCacheItems(cache, cacheMeta);
+        SN._slicerCaches.set(cache.cacheId, cache);
+        return cache;
     }
 
     const table = resolveTableById(sheet, Number(cacheMeta?.tableId));
@@ -187,6 +297,7 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
         fieldName
     });
     cache._excelCacheName = cacheMeta?.cacheName || null;
+    applyParsedCacheItems(cache, cacheMeta);
 
     SN._slicerCaches.set(cache.cacheId, cache);
     return cache;
@@ -198,9 +309,10 @@ function parseStandardSlicerCachesMeta(SN, _Xml) {
     const cacheRidList = [];
 
     extNodes.forEach(ext => {
-        const slicerCachesNode = ext?.['x15:slicerCaches'];
+        const slicerCachesNode = ext?.['x14:slicerCaches'] || ext?.['x15:slicerCaches'];
         if (!slicerCachesNode) return;
-        ensureArray(slicerCachesNode?.['x14:slicerCache']).forEach(cacheRef => {
+        const cacheRefs = slicerCachesNode?.['x14:slicerCache'] || slicerCachesNode?.['x15:slicerCache'];
+        ensureArray(cacheRefs).forEach(cacheRef => {
             const rid = cacheRef?.['_$r:id'];
             if (rid) cacheRidList.push(rid);
         });
@@ -228,12 +340,42 @@ function parseStandardSlicerCachesMeta(SN, _Xml) {
         }
 
         const cacheName = cacheDef?._$name || cacheDef?._$sourceName || rid;
-        SN._excelSlicerCacheMeta.set(cacheName, {
-            cacheId: nextCacheId++,
-            cacheName,
+        const tableMeta = tableSlicerCache ? {
+            sourceType: 'table',
             sourceName: cacheDef?._$sourceName || '',
             tableId: toNumber(tableSlicerCache?._$tableId, NaN),
             column: toNumber(tableSlicerCache?._$column, NaN)
+        } : null;
+
+        const pivotTable = tableMeta ? null : resolvePivotTableFromCache(SN, cacheDef);
+        const fieldIndex = pivotTable ? resolvePivotFieldIndex(pivotTable, cacheDef?._$sourceName) : 0;
+        const pivotItems = pivotTable ? buildPivotSlicerCacheItems(pivotTable, fieldIndex, cacheDef) : null;
+        const pivotMeta = pivotTable ? {
+            sourceType: 'pivot',
+            sourceSheet: pivotTable.sheet?.name || '',
+            sourceName: pivotTable.name,
+            sourceId: pivotTable.name,
+            fieldIndex,
+            fieldName: pivotTable.cache?.fields?.[fieldIndex]?.name || cacheDef?._$sourceName || '',
+            items: pivotItems?.items || [],
+            itemMap: pivotItems?.itemMap || new Map(),
+            selectedKeys: pivotItems?.selectedKeys || []
+        } : {
+            sourceType: 'pivot',
+            sourceSheet: '',
+            sourceName: '',
+            sourceId: '',
+            fieldIndex: 0,
+            fieldName: cacheDef?._$sourceName || '',
+            items: [],
+            itemMap: new Map(),
+            selectedKeys: []
+        };
+
+        SN._excelSlicerCacheMeta.set(cacheName, {
+            cacheId: nextCacheId++,
+            cacheName,
+            ...(tableMeta || pivotMeta)
         });
     });
 }
@@ -317,9 +459,10 @@ function parseStandardSheetSlicers(sheet, _Xml) {
     const slicerRidList = [];
 
     wsExtNodes.forEach(ext => {
-        const slicerList = ext?.['x14:slicerList'];
+        const slicerList = ext?.['x14:slicerList'] || ext?.['x15:slicerList'];
         if (!slicerList) return;
-        ensureArray(slicerList?.['x14:slicer']).forEach(node => {
+        const slicerNodes = slicerList?.['x14:slicer'] || slicerList?.['x15:slicer'];
+        ensureArray(slicerNodes).forEach(node => {
             const rid = node?.['_$r:id'];
             if (rid) slicerRidList.push(rid);
         });
@@ -378,10 +521,14 @@ function parseStandardSheetSlicers(sheet, _Xml) {
                 showHeader: slicerNode?._$showCaption !== '0',
                 multiSelect: false,
                 styleName: slicerNode?._$style || 'SlicerStyleLight1',
+                selectedKeys: cacheMeta?.selectedKeys || [],
                 drawing
             });
 
             sheet.Slicer._addParsed(slicer);
+            if (slicer.selectedKeys.size > 0) {
+                slicer.applyFilter();
+            }
         });
     });
 }

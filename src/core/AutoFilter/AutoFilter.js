@@ -187,23 +187,41 @@ export default class AutoFilter {
         const prevHiddenRows = this._allHiddenRows;
         const hiddenRowsAdded = [];
         const hiddenRowsRemoved = [];
+        let pendingRowStateChanged = false;
 
         prevHiddenRows.forEach(r => {
             if (!nextHiddenRows.has(r)) {
                 const row = this.sheet.rows[r];
-                if (row) row._filterHidden = false;
+                if (row) {
+                    row._filterHidden = false;
+                } else {
+                    const state = this.sheet._getPendingXlsxRowState?.(r);
+                    if (state?.filterHidden) {
+                        state.filterHidden = false;
+                        pendingRowStateChanged = true;
+                    }
+                }
                 hiddenRowsRemoved.push(r);
             }
         });
 
         nextHiddenRows.forEach(r => {
             if (!prevHiddenRows.has(r)) {
-                const row = this.sheet.getRow(r);
-                row._filterHidden = true;
+                const row = this.sheet.rows[r];
+                if (row) {
+                    row._filterHidden = true;
+                } else {
+                    const state = this.sheet._ensurePendingXlsxRowState?.(r);
+                    if (state && !state.filterHidden) {
+                        state.filterHidden = true;
+                        pendingRowStateChanged = true;
+                    }
+                }
                 hiddenRowsAdded.push(r);
             }
         });
 
+        if (pendingRowStateChanged) this.sheet._clearSizeCache?.();
         this._allHiddenRows = nextHiddenRows;
         return { hiddenRowsAdded, hiddenRowsRemoved };
     }
@@ -635,7 +653,7 @@ export default class AutoFilter {
             });
         }
 
-        if (scope.columns.size > 0) {
+        if (scope.columns.size > 0 && options.restoreHiddenRowsFromSheet !== true) {
             this._applyFilters(scopeId, {
                 silent: options.silent === true,
                 emitEvents: false,
@@ -1380,14 +1398,24 @@ export default class AutoFilter {
         scope.hiddenRows = new Set();
 
         if (options.restoreHiddenRowsFromSheet === true && scope.columns.size > 0) {
+            let pendingRowStateChanged = false;
             for (let r = scope.range.s.r + 1; r <= scope.range.e.r; r++) {
                 const row = this.sheet.rows[r];
                 if (row && row._hidden) {
                     // 导入时将 XML hidden 行视为筛选隐藏，避免与手动隐藏混淆
                     row._hidden = false;
                     scope.hiddenRows.add(r);
+                } else if (!row) {
+                    const state = this.sheet._getPendingXlsxRowState?.(r);
+                    if (state?.hidden) {
+                        state.hidden = false;
+                        state.filterHidden = true;
+                        scope.hiddenRows.add(r);
+                        pendingRowStateChanged = true;
+                    }
                 }
             }
+            if (pendingRowStateChanged) this.sheet._clearSizeCache?.();
         }
 
         this._syncCombinedHiddenRows();

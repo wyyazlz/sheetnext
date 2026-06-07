@@ -119,11 +119,20 @@ function initRowsCols() {
     });
 
     // 初始化行
-    (this._xmlObj?.sheetData?.row ?? []).forEach(row => {
-        const rIndex = parseInt(row['_$r']) - 1;
-        if (rIndex == -1) console.log(rIndex)
-        this.rows[rIndex] = new Row(row, this, rIndex);
-    });
+    const sheetFile = this.SN.Xml._getSheetFileName(this.rId);
+    const sheetKey = sheetFile ? `xl/worksheets/${sheetFile}` : null;
+    const pendingRows = sheetKey ? this.SN.Xml._sheetDataRowsByPath?.[sheetKey] : null;
+    const pendingMeta = sheetKey ? this.SN.Xml._sheetDataRowMetaByPath?.[sheetKey] : null;
+    if (pendingRows) {
+        this._setPendingXlsxRows(pendingRows, pendingMeta);
+    } else {
+        const rows = this._xmlObj?.sheetData?.row ?? [];
+        (Array.isArray(rows) ? rows : [rows]).forEach(row => {
+            const rIndex = parseInt(row['_$r']) - 1;
+            if (rIndex == -1) console.log(rIndex)
+            this.rows[rIndex] = new Row(row, this, rIndex);
+        });
+    }
 
     const sheetView = this.views[0] || {};
     const selection = _getActiveSelection(sheetView);

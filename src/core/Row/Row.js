@@ -126,8 +126,11 @@ export default class Row {
     // ========== 内部属性（自动清缓存，不触发 UndoRedo）==========
     get _height() { return this.#height; }
     set _height(v) {
+        if (this.#height === v) return;
         this.#height = v;
         this.sheet._totalHeightCache = undefined;
+        this.sheet._rowAxisMetricsCache = null;
+        this.sheet._rowMetricVersion = (this.sheet._rowMetricVersion || 0) + 1;
     }
 
     get _hidden() { return this.#hidden; }
@@ -135,6 +138,8 @@ export default class Row {
         if (this.#hidden === v) return;
         this.#hidden = v;
         this.sheet._totalHeightCache = undefined;
+        this.sheet._rowAxisMetricsCache = null;
+        this.sheet._rowMetricVersion = (this.sheet._rowMetricVersion || 0) + 1;
         this.sheet._rowVisibilityVersion = (this.sheet._rowVisibilityVersion || 0) + 1;
     }
 
@@ -144,6 +149,8 @@ export default class Row {
         if (this.#filterHidden === next) return;
         this.#filterHidden = next;
         this.sheet._totalHeightCache = undefined;
+        this.sheet._rowAxisMetricsCache = null;
+        this.sheet._rowMetricVersion = (this.sheet._rowMetricVersion || 0) + 1;
         this.sheet._rowVisibilityVersion = (this.sheet._rowVisibilityVersion || 0) + 1;
     }
 
