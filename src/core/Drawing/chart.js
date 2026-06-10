@@ -17,7 +17,8 @@ export const chartXmlToEChartOption = (obj, SN) => {
     const baseOption = {
         title: getTitle(titleXml, SN),
         legend: getLegend(legendXml, SN),
-        series: []
+        series: [],
+        ...(isPivotChart ? { __pivotChart: true } : {})
     };
     const chartAreaStyle = getShapeStyleOption(obj?.['c:spPr'], SN);
     const plotAreaStyle = getShapeStyleOption(plotArea?.['c:spPr'], SN);
@@ -63,21 +64,27 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 let xArr = []
                 const xRef = safeGet(ser, ['c:xVal', 'c:numRef', 'c:f']) || safeGet(ser, ['c:xVal', 'c:strRef', 'c:f']);
                 if (xRef) {
-                    const xData = isPivotChart ? getCachedPoints(safeGet(ser, ['c:xVal', 'c:numRef']) || safeGet(ser, ['c:xVal', 'c:strRef'])) : [];
-                    xArr = xData.length ? xData : rangeStrToCellRefs(xRef, SN)
+                    xArr = rangeStrToCellRefs(xRef, SN)
+                    if (isPivotChart && xArr.length === 0) {
+                        xArr = getCachedPoints(safeGet(ser, ['c:xVal', 'c:numRef']) || safeGet(ser, ['c:xVal', 'c:strRef']));
+                    }
                 }
                 let yArr = []
                 const yRef = safeGet(ser, ['c:yVal', 'c:numRef', 'c:f']) || safeGet(ser, ['c:yVal', 'c:strRef', 'c:f']);
                 if (yRef) {
-                    const yData = isPivotChart ? getCachedPoints(safeGet(ser, ['c:yVal', 'c:numRef']) || safeGet(ser, ['c:yVal', 'c:strRef'])) : [];
-                    yArr = yData.length ? yData : rangeStrToCellRefs(yRef, SN)
+                    yArr = rangeStrToCellRefs(yRef, SN)
+                    if (isPivotChart && yArr.length === 0) {
+                        yArr = getCachedPoints(safeGet(ser, ['c:yVal', 'c:numRef']) || safeGet(ser, ['c:yVal', 'c:strRef']));
+                    }
                 }
                 if (type === 'bubble') {
                     let sizeArr = []
                     const sizeRef = safeGet(ser, ['c:bubbleSize', 'c:numRef', 'c:f']);
                     if (sizeRef) {
-                        const sizeData = isPivotChart ? getCachedPoints(safeGet(ser, ['c:bubbleSize', 'c:numRef'])) : [];
-                        sizeArr = sizeData.length ? sizeData : rangeStrToCellRefs(sizeRef, SN)
+                        sizeArr = rangeStrToCellRefs(sizeRef, SN)
+                        if (isPivotChart && sizeArr.length === 0) {
+                            sizeArr = getCachedPoints(safeGet(ser, ['c:bubbleSize', 'c:numRef']));
+                        }
                     }
                     dataRefOrData = xArr.map((x, i) => [x, yArr[i], sizeArr[i]]);
                 } else {
@@ -92,10 +99,10 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 const valueRefNode = safeGet(ser, ['c:val', 'c:numRef']);
                 const valueRef = valueRefNode?.['c:f'];
                 const valueCache = isPivotChart ? getCachedPoints(valueRefNode) : [];
-                if (valueCache.length) {
-                    values = valueCache;
-                } else if (valueRef) {
+                if (valueRef) {
                     values = rangeStrToCellRefs(valueRef, SN)
+                } else if (valueCache.length) {
+                    values = valueCache;
                 } else {
                     const valArr = safeGet(ser, ['c:val', 'c:numLit', 'c:pt']);
                     if (valArr) values = valArr.map(item => item['c:v'])
@@ -104,10 +111,10 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 const nameRefNode = safeGet(ser, ['c:cat', 'c:strRef']) || safeGet(ser, ['c:cat', 'c:numRef']);
                 const nameRef = nameRefNode?.['c:f'];
                 const nameCache = isPivotChart ? getCachedPoints(nameRefNode) : [];
-                if (nameCache.length) {
-                    names = nameCache;
-                } else if (nameRef) {
+                if (nameRef) {
                     names = rangeStrToCellRefs(nameRef, SN)
+                } else if (nameCache.length) {
+                    names = nameCache;
                 } else {
                     const nameArr = safeGet(ser, ['c:cat', 'c:strLit', 'c:pt']) || safeGet(ser, ['c:cat', 'c:numLit', 'c:pt']);
                     if (nameArr) names = nameArr.map(item => item['c:v'])
@@ -133,12 +140,12 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 const valRefNode = safeGet(ser, ['c:val', 'c:numRef']);
                 const valRef = valRefNode?.['c:f'];
                 const valCache = isPivotChart ? getCachedPoints(valRefNode) : [];
-                if (valCache.length) {
-                    dataRefOrData = [{ value: valCache }];
-                    break;
-                }
                 if (valRef) {
                     dataRefOrData = [{ value: valRef }];
+                    break;
+                }
+                if (valCache.length) {
+                    dataRefOrData = [{ value: valCache }];
                     break;
                 }
                 const valArr = safeGet(ser, ['c:val', 'c:numLit', 'c:pt']);
@@ -150,12 +157,12 @@ export const chartXmlToEChartOption = (obj, SN) => {
                 const valRefNode = safeGet(ser, ['c:val', 'c:numRef']);
                 const valRef = valRefNode?.['c:f'];
                 const valCache = isPivotChart ? getCachedPoints(valRefNode) : [];
-                if (valCache.length) {
-                    dataRefOrData = valCache;
-                    break;
-                }
                 if (valRef) {
                     dataRefOrData = valRef;
+                    break;
+                }
+                if (valCache.length) {
+                    dataRefOrData = valCache;
                     break;
                 }
                 const valArr = safeGet(ser, ['c:val', 'c:numLit', 'c:pt']);
@@ -205,7 +212,10 @@ export const chartXmlToEChartOption = (obj, SN) => {
     };
 
     const hasScatterLike = !!plotArea['c:scatterChart'] || !!plotArea['c:bubbleChart'];
-    const hasCategoryLike = !!plotArea['c:lineChart'] || !!plotArea['c:barChart'] || !!plotArea['c:areaChart'] || !!plotArea['c:radarChart'];
+    const hasCategoryLike = !!plotArea['c:lineChart'] || !!plotArea['c:line3DChart'] ||
+        !!plotArea['c:barChart'] || !!plotArea['c:bar3DChart'] ||
+        !!plotArea['c:areaChart'] || !!plotArea['c:area3DChart'] ||
+        !!plotArea['c:radarChart'];
 
     if (hasScatterLike && !hasCategoryLike) {
         const valAxes = sureArray(plotArea['c:valAx']);
@@ -299,7 +309,15 @@ export const chartXmlToEChartOption = (obj, SN) => {
 
         const orderedCategoryGroups = [];
         Object.keys(plotArea).forEach((key) => {
-            if (!['c:lineChart', 'c:areaChart', 'c:barChart', 'c:radarChart'].includes(key)) return;
+            if (![
+                'c:lineChart',
+                'c:line3DChart',
+                'c:areaChart',
+                'c:area3DChart',
+                'c:barChart',
+                'c:bar3DChart',
+                'c:radarChart'
+            ].includes(key)) return;
             sureArray(plotArea[key]).forEach((chartGroup) => {
                 orderedCategoryGroups.push({ key, chartGroup });
             });
@@ -351,7 +369,7 @@ export const chartXmlToEChartOption = (obj, SN) => {
             const groupLabelNode = chartGroup?.['c:dLbls'];
             if (grouping === 'percentStacked') baseOption.__percent = true;
 
-            if (key === 'c:barChart') {
+            if (key === 'c:barChart' || key === 'c:bar3DChart') {
                 const dir = chartGroup?.['c:barDir']?._$val;
                 const isHorizontal = dir === 'bar';
                 applyCategoryData(xAxisIndex, extractCategories(arr[0], isPivotChart));
@@ -388,7 +406,7 @@ export const chartXmlToEChartOption = (obj, SN) => {
                     'line',
                     baseOption.series.length,
                     buildSeriesStyleExtra(ser, 'line', {
-                        ...(key === 'c:areaChart' ? { areaStyle: {} } : {}),
+                        ...(key === 'c:areaChart' || key === 'c:area3DChart' ? { areaStyle: {} } : {}),
                         ...(grouping === 'stacked' || grouping === 'percentStacked' ? { stack: 'total' } : {}),
                         showSymbol,
                         ...(symbolType ? { symbol: symbolType } : {}),
@@ -401,8 +419,8 @@ export const chartXmlToEChartOption = (obj, SN) => {
             });
         });
 
-        if (plotArea['c:pieChart']) {
-            const chartNode = plotArea['c:pieChart'];
+        if (plotArea['c:pieChart'] || plotArea['c:pie3DChart']) {
+            const chartNode = plotArea['c:pieChart'] || plotArea['c:pie3DChart'];
             const ser = sureArray(chartNode['c:ser'])[0];
             if (ser) {
                 const startAngle = Number(chartNode?.['c:firstSliceAng']?._$val);
@@ -435,11 +453,17 @@ export const chartXmlToEChartOption = (obj, SN) => {
             }
         }
 
-        const hasHorizontalBar = sureArray(plotArea['c:barChart']).some(chartGroup => chartGroup?.['c:barDir']?._$val === 'bar');
-        const hasVerticalCategoryChart = !!plotArea['c:lineChart'] || !!plotArea['c:areaChart'] || !!plotArea['c:radarChart'] ||
-            sureArray(plotArea['c:barChart']).some(chartGroup => chartGroup?.['c:barDir']?._$val !== 'bar');
-        const hasCartesianCategoryChart = !!plotArea['c:lineChart'] || !!plotArea['c:areaChart'] ||
-            sureArray(plotArea['c:barChart']).some(chartGroup => chartGroup?.['c:barDir']?._$val !== 'bar');
+        const barGroups = [
+            ...sureArray(plotArea['c:barChart']),
+            ...sureArray(plotArea['c:bar3DChart'])
+        ];
+        const hasHorizontalBar = barGroups.some(chartGroup => chartGroup?.['c:barDir']?._$val === 'bar');
+        const hasVerticalCategoryChart = !!plotArea['c:lineChart'] || !!plotArea['c:line3DChart'] ||
+            !!plotArea['c:areaChart'] || !!plotArea['c:area3DChart'] || !!plotArea['c:radarChart'] ||
+            barGroups.some(chartGroup => chartGroup?.['c:barDir']?._$val !== 'bar');
+        const hasCartesianCategoryChart = !!plotArea['c:lineChart'] || !!plotArea['c:line3DChart'] ||
+            !!plotArea['c:areaChart'] || !!plotArea['c:area3DChart'] ||
+            barGroups.some(chartGroup => chartGroup?.['c:barDir']?._$val !== 'bar');
         const isRadarOnlyChart = !!plotArea['c:radarChart'] && !hasHorizontalBar && !hasCartesianCategoryChart;
 
         if ((catAxisOptions.length > 0 || valAxisOptions.length > 0) && !isRadarOnlyChart) {
@@ -703,6 +727,8 @@ export const refOptionParse = (option, SN) => {
         return value;
     });
 
+    trimPivotChartRefData(ops);
+
     // Re-normalize percent-stacked series after ref values are expanded.
     if (ops.__percent && Array.isArray(ops.series)) {
         const dataSeries = ops.series.filter(s => Array.isArray(s.data) && s.data.length > 0);
@@ -755,8 +781,14 @@ export const refOptionParse = (option, SN) => {
         applySeriesLabelFormatter(s);
     });
 
+    if (ops.__percent) {
+        applyPercentStackedAxis(ops.xAxis);
+        applyPercentStackedAxis(ops.yAxis);
+    }
     applyAxisFormatters(ops.xAxis);
     applyAxisFormatters(ops.yAxis);
+    applyCategoryAxisLabelVisibility(ops.xAxis);
+    applyCategoryAxisLabelVisibility(ops.yAxis);
 
     // Use a shared radar min/max so every indicator keeps the same scale.
     if (ops.series?.some(s => s.type === 'radar') && ops.radar?.indicator) {
@@ -1062,6 +1094,8 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
 
     option = mergeTemplate(optionTem, option)
     normalizeLegendAnchors(option.legend);
+    applyCategoryAxisLabelVisibility(option.xAxis);
+    applyCategoryAxisLabelVisibility(option.yAxis);
     const axisLayout = applyAxisOffsets(option);
 
     const type = {}
@@ -1195,16 +1229,6 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
             };
         }
     });
-    // Grid only affects axis-based charts.
-    option.grid = {
-        top: getGridOffsetValue(option.legend.top, 30, axisLayout.defaultTop, 'top'),
-        bottom: getGridOffsetValue(option.legend.bottom, 30, axisLayout.defaultBottom, 'bottom'),
-        left: axisLayout.defaultLeft,
-        right: option.legend?.__excelSide && option.legend?.right != null ? 70 : axisLayout.defaultRight,
-        containLabel: true,
-        ...option.grid
-    };
-
     // Match legend icon size to the chart type.
     const legendIconSize = {
         line: { width: 25, height: 3 },
@@ -1222,7 +1246,81 @@ export const chartOptionApplyTemplate = (option, SN = null) => {
         option.legend.itemHeight = legendIconSize.bar.height;
     }
 
+    const legendSideReserve = getLegendSideReserve(option);
+
+    // Grid only affects axis-based charts.
+    const gridTop = getDefaultGridTop(option, axisLayout.defaultTop);
+    option.grid = {
+        top: getGridOffsetValue(option.legend.top, 30, gridTop, 'top'),
+        bottom: getGridOffsetValue(option.legend.bottom, 30, axisLayout.defaultBottom, 'bottom'),
+        left: option.legend?.__excelSide && option.legend?.left === 'left'
+            ? Math.max(axisLayout.defaultLeft, legendSideReserve)
+            : axisLayout.defaultLeft,
+        right: option.legend?.__excelSide && option.legend?.right != null
+            ? Math.max(axisLayout.defaultRight, legendSideReserve)
+            : axisLayout.defaultRight,
+        containLabel: true,
+        ...option.grid
+    };
+
     return option
+}
+
+function getDefaultGridTop(option, fallback) {
+    const hasTitle = option?.title?.show !== false && String(option?.title?.text ?? '').trim() !== '';
+    const hasTopLegend = option?.legend?.show !== false && option?.legend?.top != null && option.legend.top !== 'middle';
+    if (hasTitle || hasTopLegend) return fallback;
+    return Math.max(28, fallback - 18);
+}
+
+function getLegendSideReserve(option) {
+    const legend = option?.legend;
+    if (!legend || legend.show === false || !legend.__excelSide) return 0;
+    if (legend.right == null && legend.left !== 'left') return 0;
+
+    const labels = getLegendLabels(option);
+    const fontSize = Number(legend.textStyle?.fontSize) || 14;
+    const itemWidth = Number(legend.itemWidth) || 8;
+    const itemGap = Number(legend.itemGap) || 10;
+    const maxTextWidth = Math.max(0, ...labels.map(label => measureLegendText(label, fontSize)));
+    const reserve = itemWidth + itemGap + maxTextWidth + getLegendHorizontalPadding(legend.padding) + 14;
+    return Math.min(240, Math.max(80, Math.ceil(reserve)));
+}
+
+function getLegendLabels(option) {
+    const data = option?.legend?.data;
+    if (Array.isArray(data) && data.length > 0) {
+        return data.map(item => typeof item === 'object' ? item?.name : item).filter(item => item != null && item !== '').map(String);
+    }
+
+    const labels = [];
+    (option?.series || []).forEach((series) => {
+        const name = series?.name;
+        if (name == null || name === '') return;
+        const label = String(name);
+        if (!labels.includes(label)) labels.push(label);
+    });
+    return labels;
+}
+
+function measureLegendText(text, fontSize) {
+    let units = 0;
+    for (const char of String(text)) {
+        const code = char.codePointAt(0);
+        if (code > 0x2e80) units += 0.85;
+        else if (/[A-Z0-9]/.test(char)) units += 0.65;
+        else if (/[a-z]/.test(char)) units += 0.55;
+        else units += 0.45;
+    }
+    return Math.ceil(units * fontSize);
+}
+
+function getLegendHorizontalPadding(padding) {
+    if (typeof padding === 'number' && Number.isFinite(padding)) return padding * 2;
+    if (!Array.isArray(padding)) return 16;
+    if (padding.length >= 4) return (Number(padding[1]) || 0) + (Number(padding[3]) || 0);
+    if (padding.length >= 2) return (Number(padding[1]) || 0) * 2;
+    return (Number(padding[0]) || 0) * 2;
 }
 
 function normalizeLegendAnchors(legend = {}) {
@@ -1657,12 +1755,19 @@ function getAxisScaleOption(axisObj) {
     return option;
 }
 
-function formatChartAxisValue(value, formatCode) {
+function hasPercentFormat(formatCode) {
+    return typeof formatCode === 'string' && formatCode.includes('%');
+}
+
+function formatChartAxisValue(value, formatCode, options = {}) {
     if (value == null || value === '') return '';
     if (typeof formatCode !== 'string' || !formatCode || formatCode === 'General') return String(value);
     const numericValue = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(numericValue)) return String(value);
-    const formatted = numFmtFun(numericValue, formatCode);
+    const formatValue = options.percentBase && hasPercentFormat(formatCode)
+        ? numericValue / options.percentBase
+        : numericValue;
+    const formatted = numFmtFun(formatValue, formatCode);
     return typeof formatted === 'string' ? formatted : String(formatted ?? '');
 }
 
@@ -1671,12 +1776,120 @@ function normalizeAxisOptionList(axisOption) {
     return axisOption ? [axisOption] : [];
 }
 
+function applyCategoryAxisLabelVisibility(axisOption) {
+    normalizeAxisOptionList(axisOption).forEach((axis) => {
+        if (!axis || axis.type !== 'category') return;
+        axis.axisLabel = axis.axisLabel || {};
+        if (axis.axisLabel.show === false) return;
+
+        if (axis.axisLabel.interval == null) {
+            axis.axisLabel.interval = 0;
+        }
+        if (axis.axisLabel.rotate == null && shouldRotateCategoryAxisLabels(axis)) {
+            axis.axisLabel.rotate = 30;
+        }
+    });
+}
+
+function shouldRotateCategoryAxisLabels(axis) {
+    const data = Array.isArray(axis.data) ? axis.data : [];
+    if (data.length === 0) return false;
+    if (data.length >= 8) return true;
+
+    const maxLength = Math.max(0, ...data.map(value => getCategoryAxisLabelLength(value)));
+    return data.length >= 5 && maxLength >= 4;
+}
+
+function getCategoryAxisLabelLength(value) {
+    if (value == null) return 0;
+    const text = typeof value === 'object' ? (value.name ?? value.value ?? '') : value;
+    return Array.from(String(text)).reduce((total, char) => {
+        const code = char.codePointAt(0);
+        return total + (code > 0x2e80 ? 2 : 1);
+    }, 0);
+}
+
+function isBlankChartValue(value) {
+    if (Array.isArray(value)) return value.every(isBlankChartValue);
+    if (value && typeof value === 'object') return isBlankChartValue(value.value);
+    return value === null || value === undefined || value === '' || (typeof value === 'number' && Number.isNaN(value));
+}
+
+function trimPivotChartRefData(option) {
+    if (!option?.__pivotChart || !Array.isArray(option.series)) return;
+
+    option.series.forEach((series) => {
+        if (series?.type !== 'pie' || !Array.isArray(series.data)) return;
+        let end = series.data.length;
+        while (end > 0) {
+            const item = series.data[end - 1];
+            if (!isBlankChartValue(item?.name) || !isBlankChartValue(item?.value)) break;
+            end--;
+        }
+        if (end < series.data.length) series.data = series.data.slice(0, end);
+    });
+
+    const trimAxis = (axisOption, axisType) => {
+        normalizeAxisOptionList(axisOption).forEach((axis, axisIndex) => {
+            if (!axis || axis.type !== 'category' || !Array.isArray(axis.data)) return;
+            const linkedSeries = option.series.filter(series => {
+                if (!Array.isArray(series?.data)) return false;
+                const seriesAxisIndex = axisType === 'x'
+                    ? Number(series.xAxisIndex ?? 0)
+                    : Number(series.yAxisIndex ?? 0);
+                return seriesAxisIndex === axisIndex;
+            });
+            if (linkedSeries.length === 0) return;
+
+            let end = axis.data.length;
+            while (end > 0) {
+                const index = end - 1;
+                const hasSeriesValue = linkedSeries.some(series => !isBlankChartValue(series.data[index]));
+                if (!isBlankChartValue(axis.data[index]) || hasSeriesValue) break;
+                end--;
+            }
+            if (end === axis.data.length) return;
+
+            axis.data = axis.data.slice(0, end);
+            linkedSeries.forEach(series => {
+                series.data = series.data.slice(0, end);
+            });
+        });
+    };
+
+    trimAxis(option.xAxis, 'x');
+    trimAxis(option.yAxis, 'y');
+}
+
+function applyPercentStackedAxis(axisOption) {
+    normalizeAxisOptionList(axisOption).forEach((axis) => {
+        if (!axis || axis.type !== 'value') return;
+
+        const min = Number(axis.min);
+        const max = Number(axis.max);
+        const interval = Number(axis.interval);
+        if (Number.isFinite(min) && Math.abs(min) <= 1) axis.min = min * 100;
+        else if (axis.min == null) axis.min = 0;
+        if (Number.isFinite(max) && Math.abs(max) <= 1) axis.max = max * 100;
+        else if (axis.max == null) axis.max = 100;
+        if (Number.isFinite(interval) && interval > 0 && interval <= 1) axis.interval = interval * 100;
+        else if (axis.interval == null && axis.min === 0 && axis.max === 100) axis.interval = 20;
+
+        axis.__excelPercentBase = 100;
+        if (!axis.__excelFormatCode || axis.__excelFormatCode === 'General') {
+            axis.__excelFormatCode = '0%';
+        }
+    });
+}
+
 function applyAxisFormatters(axisOption) {
     normalizeAxisOptionList(axisOption).forEach((axis) => {
         const formatCode = axis?.__excelFormatCode;
         if (typeof formatCode !== 'string' || !formatCode || formatCode === 'General') return;
         axis.axisLabel = axis.axisLabel || {};
-        axis.axisLabel.formatter = (value) => formatChartAxisValue(value, formatCode);
+        axis.axisLabel.formatter = (value) => formatChartAxisValue(value, formatCode, {
+            percentBase: axis.__excelPercentBase
+        });
     });
 }
 
@@ -1727,31 +1940,36 @@ function getGridOffsetValue(baseValue, delta, fallback, axis = 'top') {
 
 function applyPivotChartPresentation(option, chartSpace, plotArea, SN = null) {
     const dataFieldName = getPivotChartDataFieldName(plotArea);
-    if (!option.title?.text && chartSpace?.['c:chart']?.['c:autoTitleDeleted']?._$val !== '1') {
-        option.title = {
-            ...(option.title || {}),
-            show: true,
-            text: dataFieldName || (SN?.t ? SN.t('chart.defaultTitle') : 'Chart Title')
-        };
-    }
     if (dataFieldName) {
-        option.series?.forEach(series => {
-            if (!series.name || isRefWithSheet(series.name)) series.name = dataFieldName;
-        });
-        option.legend = {
-            ...(option.legend || {}),
-            show: option.legend?.show !== false,
-            data: option.legend?.data || [dataFieldName]
-        };
+        const visibleSeries = option.series?.filter(series => series?.name) || [];
+        if (visibleSeries.length <= 1) {
+            option.series?.forEach(series => {
+                if (!series.name || isRefWithSheet(series.name)) series.name = dataFieldName;
+            });
+            option.legend = {
+                ...(option.legend || {}),
+                show: option.legend?.show !== false,
+                data: option.legend?.data || [dataFieldName]
+            };
+        } else {
+            option.legend = {
+                ...(option.legend || {}),
+                show: option.legend?.show !== false
+            };
+        }
     }
 }
 
 function getPivotChartDataFieldName(plotArea) {
     const chartGroups = [
         ...sureArray(plotArea?.['c:barChart']),
+        ...sureArray(plotArea?.['c:bar3DChart']),
         ...sureArray(plotArea?.['c:lineChart']),
+        ...sureArray(plotArea?.['c:line3DChart']),
         ...sureArray(plotArea?.['c:areaChart']),
+        ...sureArray(plotArea?.['c:area3DChart']),
         ...sureArray(plotArea?.['c:pieChart']),
+        ...sureArray(plotArea?.['c:pie3DChart']),
         ...sureArray(plotArea?.['c:doughnutChart'])
     ];
     const firstSeries = chartGroups.flatMap(group => sureArray(group?.['c:ser'])).find(Boolean);
@@ -1827,7 +2045,7 @@ function buildAxisTitleOption(axisObj, SN = null) {
     return result;
 }
 
-function getAxisFontSize(axisObj, fallback = 12) {
+function getAxisFontSize(axisObj, fallback = 11) {
     const size = Number(safeGet(axisObj, ['c:txPr', 'a:p', 'a:pPr', 'a:defRPr', '_$sz']));
     if (!Number.isFinite(size) || size <= 0) return fallback;
     return Math.round((size / 75) * 100) / 100;
@@ -1842,7 +2060,7 @@ function isAxisHidden(axisObj) {
 }
 
 function buildCategoryAxisOption(axisObj, SN = null, fallbackPosition = 'bottom') {
-    const axisLabel = { fontSize: getAxisFontSize(axisObj, 12) };
+    const axisLabel = { fontSize: getAxisFontSize(axisObj, 11) };
     const color = getAxisLabelColor(axisObj, SN);
     const hidden = isAxisHidden(axisObj);
     const transparentLabel = isTransparentColor(safeGet(axisObj, ['c:txPr', 'a:p', 'a:pPr', 'a:defRPr', 'a:solidFill']));
@@ -1879,7 +2097,7 @@ function buildCategoryAxisOption(axisObj, SN = null, fallbackPosition = 'bottom'
 }
 
 function buildValueAxisOption(axisObj, SN = null, fallbackPosition = 'left') {
-    const axisLabel = { fontSize: getAxisFontSize(axisObj, 12) };
+    const axisLabel = { fontSize: getAxisFontSize(axisObj, 11) };
     const color = getAxisLabelColor(axisObj, SN);
     const hidden = isAxisHidden(axisObj);
     const transparentLabel = isTransparentColor(safeGet(axisObj, ['c:txPr', 'a:p', 'a:pPr', 'a:defRPr', 'a:solidFill']));
@@ -2029,11 +2247,11 @@ function getCachedPoints(refNode) {
 
 function getCategoryData(ser, useCache = false) {
     const refNode = safeGet(ser, ['c:cat', 'c:strRef']) || safeGet(ser, ['c:cat', 'c:numRef']);
-    const cached = useCache ? getCachedPoints(refNode) : [];
-    if (cached.length > 0) return cached;
-
     const catRef = refNode?.['c:f'];
     if (catRef) return catRef;
+
+    const cached = useCache ? getCachedPoints(refNode) : [];
+    if (cached.length > 0) return cached;
 
     return safeGet(ser, ['c:cat', 'c:strLit', 'c:pt'])
         || safeGet(ser, ['c:cat', 'c:numLit', 'c:pt'])

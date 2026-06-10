@@ -407,7 +407,8 @@ function _serializePivotCache(cache) {
         refreshedDate: cache.refreshedDate ?? null,
         createdVersion: Number(cache.createdVersion || 7),
         refreshedVersion: Number(cache.refreshedVersion || 8),
-        refreshOnLoad: !!cache.refreshOnLoad
+        refreshOnLoad: !!cache.refreshOnLoad,
+        externalConnectionId: cache._externalConnectionId ?? null
     };
 }
 
@@ -428,7 +429,8 @@ function _restorePivotCaches(SN, pivotCachesData) {
             refreshedDate: cacheData.refreshedDate ?? null,
             createdVersion: _safeInt(cacheData.createdVersion, 7),
             refreshedVersion: _safeInt(cacheData.refreshedVersion, 8),
-            refreshOnLoad: !!cacheData.refreshOnLoad
+            refreshOnLoad: !!cacheData.refreshOnLoad,
+            externalConnectionId: cacheData.externalConnectionId ?? null
         });
 
         cache.fields = _deserializeDynamicValue(cacheData.fields || []);
@@ -451,6 +453,9 @@ function _serializeSlicerCache(cache) {
         sourceId: cache.sourceId ?? null,
         fieldIndex: cache.fieldIndex,
         fieldName: cache.fieldName,
+        excelCacheName: cache._excelCacheName ?? null,
+        excelUid: cache._excelUid ?? null,
+        pivotTables: Array.isArray(cache._pivotTables) ? _clone(cache._pivotTables) : [],
         items: _serializeDynamicValue(items)
     };
 }
@@ -469,8 +474,11 @@ function _restoreSlicerCaches(SN, slicerCachesData) {
             sourceName: cacheData.sourceName ?? null,
             sourceId: cacheData.sourceId ?? null,
             fieldIndex: _safeInt(cacheData.fieldIndex, 0),
-            fieldName: cacheData.fieldName || ''
+            fieldName: cacheData.fieldName || '',
+            pivotTables: Array.isArray(cacheData.pivotTables) ? cacheData.pivotTables : []
         });
+        cache._excelCacheName = cacheData.excelCacheName ?? null;
+        cache._excelUid = cacheData.excelUid ?? null;
 
         const items = _deserializeDynamicValue(cacheData.items || []);
         if (Array.isArray(items) && items.length > 0) {

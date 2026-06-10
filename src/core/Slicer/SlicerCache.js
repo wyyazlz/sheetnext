@@ -19,10 +19,34 @@ export default class SlicerCache {
         this.fieldName = options.fieldName ?? '';
         /** @type {Array<Object>} */
         this.items = [];
+        this._pivotTables = this._normalizePivotTables(options);
         this._SN = SN;
         this._itemMap = new Map();
         this._version = 0;
         this._dirty = true;
+    }
+
+    _normalizePivotTables(options = {}) {
+        const targets = Array.isArray(options.pivotTables) ? options.pivotTables : [];
+        const normalized = targets
+            .map(target => ({
+                sourceSheet: target?.sourceSheet ?? null,
+                sourceName: target?.sourceName ?? null,
+                sourceId: target?.sourceId ?? target?.sourceName ?? null,
+                fieldIndex: Number.isFinite(target?.fieldIndex) ? target.fieldIndex : this.fieldIndex
+            }))
+            .filter(target => target.sourceSheet && target.sourceName);
+
+        if (normalized.length > 0) return normalized;
+        if (options.sourceType === 'pivot' && options.sourceSheet && options.sourceName) {
+            return [{
+                sourceSheet: options.sourceSheet,
+                sourceName: options.sourceName,
+                sourceId: options.sourceId ?? options.sourceName,
+                fieldIndex: this.fieldIndex
+            }];
+        }
+        return [];
     }
 
     _generateCacheId(SN = this._SN) {
@@ -74,9 +98,32 @@ export default class SlicerCache {
     }
 
     getSourcePivotTable() {
-        const sheet = this.getSourceSheet();
-        if (!sheet?.PivotTable || !this.sourceName) return null;
-        return sheet.PivotTable.get(this.sourceName) || null;
+        return this._getSourcePivotTables()[0]?.pivotTable || null;
+    }
+
+    _getSourcePivotTargets() {
+        const targets = this._pivotTables.length > 0
+            ? this._pivotTables
+            : (this.sourceSheet && this.sourceName ? [{
+                sourceSheet: this.sourceSheet,
+                sourceName: this.sourceName,
+                sourceId: this.sourceId,
+                fieldIndex: this.fieldIndex
+            }] : []);
+
+        return targets.map(target => {
+            const sheet = this._SN.getSheet(target.sourceSheet);
+            const pivotTable = sheet?.PivotTable?.get(target.sourceName) || null;
+            return {
+                ...target,
+                fieldIndex: Number.isFinite(target.fieldIndex) ? target.fieldIndex : this.fieldIndex,
+                pivotTable
+            };
+        }).filter(target => target.pivotTable);
+    }
+
+    _getSourcePivotTables() {
+        return this._getSourcePivotTargets();
     }
 
     refresh() {

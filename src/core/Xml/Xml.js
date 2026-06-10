@@ -6,6 +6,106 @@ import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import { BUILTIN_NUMFMTS } from '../Cell/constants.js';
 import { getCellControlForStyle } from '../Cell/cellControlXml.js';
 
+const PIVOT_CACHE_DEFINITION_ENTRY_RE = /(?:^|\/)pivotCache\/pivotCacheDefinition\d+\.xml$/i;
+const PIVOT_CACHE_RECORDS_ENTRY_RE = /(?:^|\/)pivotCache\/pivotCacheRecords\d+\.xml$/i;
+
+function decodeXmlText(value) {
+    return String(value ?? '')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+}
+
+function getXmlAttrValue(attrText, name) {
+    const match = String(attrText ?? '').match(new RegExp(`\\b${name}=([\"'])([\\s\\S]*?)\\1`, 'i'));
+    return match ? decodeXmlText(match[2]) : undefined;
+}
+
+function extractPivotCacheSharedItemOrders(xmlText) {
+    const result = [];
+    const cacheFieldRe = /<cacheField\b[^>]*(?:\/>|>[\s\S]*?<\/cacheField>)/gi;
+    let fieldMatch;
+
+    while ((fieldMatch = cacheFieldRe.exec(xmlText)) !== null) {
+        const fieldXml = fieldMatch[0];
+        const sharedMatch = fieldXml.match(/<sharedItems\b[^>]*\/>|<sharedItems\b[^>]*>([\s\S]*?)<\/sharedItems>/i);
+        if (!sharedMatch || sharedMatch[1] === undefined) {
+            result.push(null);
+            continue;
+        }
+
+        const items = [];
+        const itemRe = /<(s|n|d|b|m)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/gi;
+        let itemMatch;
+        while ((itemMatch = itemRe.exec(sharedMatch[1])) !== null) {
+            const type = itemMatch[1];
+            const rawValue = getXmlAttrValue(itemMatch[2], 'v') ?? decodeXmlText(itemMatch[3] ?? '');
+            items.push({
+                type,
+                item: type === 'm' ? {} : { "_$v": rawValue }
+            });
+        }
+        result.push(items);
+    }
+
+    return result;
+}
+
+function extractPivotItemSequence(xmlFragment) {
+    const items = [];
+    const itemRe = /<(s|n|d|b|m|x)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/gi;
+    let itemMatch;
+
+    while ((itemMatch = itemRe.exec(xmlFragment)) !== null) {
+        const type = itemMatch[1];
+        const rawValue = getXmlAttrValue(itemMatch[2], 'v') ?? decodeXmlText(itemMatch[3] ?? '');
+        items.push({
+            type,
+            item: type === 'm' ? {} : { "_$v": rawValue }
+        });
+    }
+
+    return items;
+}
+
+function applyPivotCacheSharedItemOrders(parsed, xmlText) {
+    const cacheFields = parsed?.pivotCacheDefinition?.cacheFields?.cacheField;
+    if (!cacheFields) return;
+
+    const fields = Array.isArray(cacheFields) ? cacheFields : [cacheFields];
+    const sharedOrders = extractPivotCacheSharedItemOrders(xmlText);
+    fields.forEach((field, index) => {
+        const orderedItems = sharedOrders[index];
+        if (!field?.sharedItems || !Array.isArray(orderedItems) || orderedItems.length === 0) return;
+        field.sharedItems.__snMixedItems = orderedItems;
+    });
+}
+
+function applyPivotCacheRecordOrders(parsed, xmlText) {
+    const recordsNode = parsed?.pivotCacheRecords?.r;
+    if (!recordsNode) return;
+
+    const records = Array.isArray(recordsNode) ? recordsNode : [recordsNode];
+    const recordRe = /<r\b[^>]*(?:\/>|>([\s\S]*?)<\/r>)/gi;
+    let recordIndex = 0;
+    let recordMatch;
+
+    while ((recordMatch = recordRe.exec(xmlText)) !== null && recordIndex < records.length) {
+        const innerXml = recordMatch[1] ?? '';
+        const orderedItems = extractPivotItemSequence(innerXml);
+        if (records[recordIndex] && typeof records[recordIndex] === 'object') {
+            records[recordIndex].__snItems = orderedItems;
+        } else if (Array.isArray(recordsNode)) {
+            recordsNode[recordIndex] = { __snItems: orderedItems };
+        } else {
+            parsed.pivotCacheRecords.r = { __snItems: orderedItems };
+        }
+        recordIndex++;
+    }
+}
+
 // ==================== Xml 类 ====================
 
 /**
@@ -83,6 +183,16 @@ export default class Xml {
         ignoreAttributes: false,
         suppressEmptyNode: true
     });
+
+    static parseXmlText(text, entryName = '') {
+        const parsed = Xml.parser.parse(text);
+        if (PIVOT_CACHE_DEFINITION_ENTRY_RE.test(String(entryName))) {
+            applyPivotCacheSharedItemOrders(parsed, text);
+        } else if (PIVOT_CACHE_RECORDS_ENTRY_RE.test(String(entryName))) {
+            applyPivotCacheRecordOrders(parsed, text);
+        }
+        return parsed;
+    }
 
     /**
      * @param {Object} SN - SheetNext Main Instance

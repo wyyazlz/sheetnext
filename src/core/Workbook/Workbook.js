@@ -418,7 +418,7 @@ class SheetNext {
         this.Xml.obj = new Proxy(this.Xml.obj, {
             get: (target, property) => {
                 if (target[property]?._data && (property.endsWith('.xml') || property.endsWith('.rels'))) {
-                    return target[property] = Xml.parser.parse(target[property].asText());
+                    return target[property] = Xml.parseXmlText(target[property].asText(), property);
                 } else {
                     return target[property];
                 }

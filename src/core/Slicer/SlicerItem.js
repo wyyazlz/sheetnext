@@ -1,4 +1,5 @@
 import getSvg from '../../assets/mainSvgs.js';
+import { buildSlicerKey } from './helpers.js';
 
 const DEFAULT_MIN_WIDTH = 140;
 const DEFAULT_MIN_HEIGHT = 160;
@@ -388,7 +389,7 @@ export default class SlicerItem {
 
         items.forEach(item => {
             const key = item.dataset.key;
-            const selected = selectedKeys.has(key);
+            const selected = !hasFilter || selectedKeys.has(key);
             item.classList.toggle('sn-selected', selected);
             item.classList.toggle('sn-unselected', hasFilter && !selected);
         });
@@ -426,39 +427,36 @@ export default class SlicerItem {
 
     _applyPivotFilter() {
         const cache = this.cache;
-        const pivotTable = cache?.getSourcePivotTable();
-        if (!pivotTable) return;
+        const targets = cache?._getSourcePivotTables?.() || [];
+        if (targets.length === 0) return;
 
-        const fieldIndex = cache.fieldIndex;
-        const field = pivotTable.pivotFields?.[fieldIndex];
-        if (!field) return;
+        const selectedKeys = new Set(this.selectedKeys);
 
-        const sharedItems = pivotTable.cache?.fields?.[fieldIndex]?.sharedItems?.values ?? [];
+        targets.forEach(({ pivotTable, fieldIndex }) => {
+            pivotTable._ensureFieldItems?.(fieldIndex);
+            const field = pivotTable.pivotFields?.[fieldIndex];
+            if (!field) return;
 
-        if (this.selectedKeys.size === 0 || this.selectedKeys.size === sharedItems.length) {
-            pivotTable.clearFieldFilter(fieldIndex);
+            const sharedItems = pivotTable.cache?.fields?.[fieldIndex]?.sharedItems?.values ?? [];
+
+            if (this.selectedKeys.size === 0 || this.selectedKeys.size === sharedItems.length) {
+                pivotTable.clearFieldFilter(fieldIndex);
+                pivotTable.calculate();
+                pivotTable.render();
+                return;
+            }
+
+            const hiddenMap = {};
+            field.items.forEach((item, itemIndex) => {
+                if (item.t && item.t !== 'default' && item.t !== 'blank') return;
+                const sharedIndex = item.x;
+                const sharedItem = sharedItems[sharedIndex];
+                hiddenMap[itemIndex] = !selectedKeys.has(buildSlicerKey(sharedItem?.value ?? null));
+            });
+
+            pivotTable.setItemsHidden(fieldIndex, hiddenMap);
             pivotTable.calculate();
             pivotTable.render();
-            return;
-        }
-
-        const selectedShared = new Set();
-        this.selectedKeys.forEach(key => {
-            const item = cache.getItemMap().get(key);
-            if (item && Number.isFinite(item.sharedIndex)) {
-                selectedShared.add(item.sharedIndex);
-            }
         });
-
-        const hiddenMap = {};
-        field.items.forEach((item, itemIndex) => {
-            if (item.t && item.t !== 'default' && item.t !== 'blank') return;
-            const sharedIndex = item.x;
-            hiddenMap[itemIndex] = !selectedShared.has(sharedIndex);
-        });
-
-        pivotTable.setItemsHidden(fieldIndex, hiddenMap);
-        pivotTable.calculate();
-        pivotTable.render();
     }
 }

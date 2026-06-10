@@ -36,6 +36,23 @@ function parseCacheItems(cacheNode) {
     return items;
 }
 
+function parseCustomPivotTargets(node, fallback = {}) {
+    const targets = [];
+    const pivotNodes = ensureArray(node?.['sn:pivotTables']?.['sn:pivotTable']);
+    pivotNodes.forEach(item => {
+        const sourceSheet = item?._$sheet || fallback.sourceSheet || '';
+        const sourceName = item?._$name || fallback.sourceName || '';
+        if (!sourceSheet || !sourceName) return;
+        targets.push({
+            sourceSheet,
+            sourceName,
+            sourceId: sourceName,
+            fieldIndex: toNumber(item?._$fieldIndex, fallback.fieldIndex ?? 0)
+        });
+    });
+    return targets;
+}
+
 function resolveGraphicFrame(anchor, utils) {
     if (anchor?.['xdr:graphicFrame']) return anchor['xdr:graphicFrame'];
     const alt = anchor?.['mc:AlternateContent'];
@@ -187,6 +204,21 @@ function resolvePivotTableFromCache(SN, cacheDef) {
     return pivotTables.length === 1 ? pivotTables[0] : null;
 }
 
+function resolvePivotTablesFromCache(SN, cacheDef) {
+    const pivotRefs = ensureArray(cacheDef?.pivotTables?.pivotTable);
+    const result = [];
+
+    pivotRefs.forEach(pivotRef => {
+        const pivotTable = findPivotTableByName(SN, pivotRef?._$name);
+        if (pivotTable && !result.includes(pivotTable)) result.push(pivotTable);
+    });
+
+    if (result.length > 0) return result;
+
+    const pivotTables = getAllPivotTables(SN);
+    return pivotTables.length === 1 ? pivotTables : [];
+}
+
 function resolvePivotFieldIndex(pivotTable, sourceName) {
     const name = String(sourceName || '').trim();
     if (!pivotTable || !name) return 0;
@@ -260,6 +292,7 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
     if (Number.isFinite(cacheId) && SN._slicerCaches.has(cacheId)) {
         const existing = SN._slicerCaches.get(cacheId);
         if (cacheMeta?.cacheName && !existing._excelCacheName) existing._excelCacheName = cacheMeta.cacheName;
+        if (cacheMeta?.uid && !existing._excelUid) existing._excelUid = cacheMeta.uid;
         applyParsedCacheItems(existing, cacheMeta);
         return existing;
     }
@@ -272,9 +305,11 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
             sourceName: cacheMeta.sourceName || null,
             sourceId: cacheMeta.sourceId || null,
             fieldIndex: Number.isFinite(cacheMeta.fieldIndex) ? cacheMeta.fieldIndex : 0,
-            fieldName: cacheMeta.fieldName || slicerNode?._$name || ''
+            fieldName: cacheMeta.fieldName || slicerNode?._$name || '',
+            pivotTables: cacheMeta.pivotTables || []
         });
         cache._excelCacheName = cacheMeta.cacheName || null;
+        cache._excelUid = cacheMeta.uid || null;
         applyParsedCacheItems(cache, cacheMeta);
         SN._slicerCaches.set(cache.cacheId, cache);
         return cache;
@@ -297,6 +332,7 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
         fieldName
     });
     cache._excelCacheName = cacheMeta?.cacheName || null;
+    cache._excelUid = cacheMeta?.uid || null;
     applyParsedCacheItems(cache, cacheMeta);
 
     SN._slicerCaches.set(cache.cacheId, cache);
@@ -347,8 +383,15 @@ function parseStandardSlicerCachesMeta(SN, _Xml) {
             column: toNumber(tableSlicerCache?._$column, NaN)
         } : null;
 
-        const pivotTable = tableMeta ? null : resolvePivotTableFromCache(SN, cacheDef);
+        const pivotTables = tableMeta ? [] : resolvePivotTablesFromCache(SN, cacheDef);
+        const pivotTable = pivotTables[0] || null;
         const fieldIndex = pivotTable ? resolvePivotFieldIndex(pivotTable, cacheDef?._$sourceName) : 0;
+        const pivotTargets = pivotTables.map(item => ({
+            sourceSheet: item.sheet?.name || '',
+            sourceName: item.name,
+            sourceId: item.name,
+            fieldIndex: resolvePivotFieldIndex(item, cacheDef?._$sourceName)
+        }));
         const pivotItems = pivotTable ? buildPivotSlicerCacheItems(pivotTable, fieldIndex, cacheDef) : null;
         const pivotMeta = pivotTable ? {
             sourceType: 'pivot',
@@ -357,6 +400,7 @@ function parseStandardSlicerCachesMeta(SN, _Xml) {
             sourceId: pivotTable.name,
             fieldIndex,
             fieldName: pivotTable.cache?.fields?.[fieldIndex]?.name || cacheDef?._$sourceName || '',
+            pivotTables: pivotTargets,
             items: pivotItems?.items || [],
             itemMap: pivotItems?.itemMap || new Map(),
             selectedKeys: pivotItems?.selectedKeys || []
@@ -367,6 +411,7 @@ function parseStandardSlicerCachesMeta(SN, _Xml) {
             sourceId: '',
             fieldIndex: 0,
             fieldName: cacheDef?._$sourceName || '',
+            pivotTables: [],
             items: [],
             itemMap: new Map(),
             selectedKeys: []
@@ -375,6 +420,7 @@ function parseStandardSlicerCachesMeta(SN, _Xml) {
         SN._excelSlicerCacheMeta.set(cacheName, {
             cacheId: nextCacheId++,
             cacheName,
+            uid: cacheDef?._$xr10_uid ?? cacheDef?._$xr10Uid ?? cacheDef?.['_$xr10:uid'] ?? null,
             ...(tableMeta || pivotMeta)
         });
     });
@@ -543,13 +589,17 @@ export function parseSlicerCaches(SN, _Xml) {
     if (root) {
         const cacheNodes = ensureArray(root['sn:caches']?.['sn:cache']);
         cacheNodes.forEach(node => {
+            const sourceSheet = node?._$sheet;
+            const sourceName = node?._$name;
+            const fieldIndex = Number(node?._$fieldIndex ?? 0);
             const cache = new SlicerCache(SN, {
                 cacheId: Number(node?._$id),
                 sourceType: node?._$type,
-                sourceSheet: node?._$sheet,
-                sourceName: node?._$name,
-                fieldIndex: Number(node?._$fieldIndex ?? 0),
-                fieldName: node?._$fieldName ?? ''
+                sourceSheet,
+                sourceName,
+                fieldIndex,
+                fieldName: node?._$fieldName ?? '',
+                pivotTables: parseCustomPivotTargets(node, { sourceSheet, sourceName, fieldIndex })
             });
 
             const items = parseCacheItems(node);

@@ -906,6 +906,10 @@ function isPercentAxis(axis) {
     return max === 100 || max === '100';
 }
 
+function isPercentStackedChart(chartOption, valueAxis) {
+    return chartOption?.__percent === true || isPercentAxis(valueAxis);
+}
+
 function normalizeAxisCollection(axisOption, fallback = {}) {
     const list = Array.isArray(axisOption)
         ? axisOption
@@ -1766,7 +1770,7 @@ export function getChartXmlDetail(SN, d) {
             const isStack = s.stack == 'total';
             const binding = getCategoryAxisBinding(s, barDir);
             const valueAxis = binding.valueAxis;
-            const isPercent = isStack && isPercentAxis(valueAxis);
+            const isPercent = isStack && isPercentStackedChart(chartOption, valueAxis);
             const group = getChartGroup(
                 'c:barChart',
                 `${binding.categoryIndex}|${binding.valueIndex}|${barDir}|${isStack ? 1 : 0}|${isPercent ? 1 : 0}`,
@@ -1786,7 +1790,7 @@ export function getChartXmlDetail(SN, d) {
         } else if (s.type == 'line') {
             const chartType = s.areaStyle ? 'c:areaChart' : 'c:lineChart';
             const binding = getCategoryAxisBinding(s, (xAxis.type || 'category') === 'category' ? 'col' : 'bar');
-            const isPercent = s.stack && isPercentAxis(binding.valueAxis);
+            const isPercent = s.stack && isPercentStackedChart(chartOption, binding.valueAxis);
             const grouping = s.stack ? (isPercent ? 'percentStacked' : 'stacked') : 'standard';
             const group = getChartGroup(
                 chartType,
