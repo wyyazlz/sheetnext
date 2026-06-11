@@ -1782,13 +1782,27 @@ function applyCategoryAxisLabelVisibility(axisOption) {
         axis.axisLabel = axis.axisLabel || {};
         if (axis.axisLabel.show === false) return;
 
+        axis.axisLabel.hideOverlap = axis.axisLabel.hideOverlap !== false;
+
+        const denseLabels = shouldStaggerCategoryAxisLabels(axis);
         if (axis.axisLabel.interval == null) {
-            axis.axisLabel.interval = 0;
+            axis.axisLabel.interval = denseLabels ? 'auto' : 0;
         }
         if (axis.axisLabel.rotate == null && shouldRotateCategoryAxisLabels(axis)) {
-            axis.axisLabel.rotate = 30;
+            axis.axisLabel.rotate = denseLabels ? 45 : 30;
         }
     });
+}
+
+function shouldStaggerCategoryAxisLabels(axis) {
+    const data = Array.isArray(axis.data) ? axis.data : [];
+    if (data.length <= 1) return false;
+
+    const lengths = data.map(value => getCategoryAxisLabelLength(value));
+    const maxLength = Math.max(0, ...lengths);
+    const avgLength = lengths.reduce((sum, length) => sum + length, 0) / lengths.length;
+
+    return data.length >= 12 || (data.length >= 8 && avgLength >= 3.5) || (data.length >= 5 && maxLength >= 7);
 }
 
 function shouldRotateCategoryAxisLabels(axis) {

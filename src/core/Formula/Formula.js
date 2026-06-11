@@ -75,15 +75,23 @@ export default class Formula {
      * @returns {any}
      */
     calcFormula(formulaStr, cell) {
+        const previousCell = this.currentCell;
+        let isVolatile = false;
         try {
             this.currentCell = cell;
             this._lastResultIsDate = false; // 重置日期类型标记
             const ast = parseFormula(formulaStr);
-            this._lastCalcVolatile = hasVolatileFunctionInAst(ast);
-            return this.#finalizeFormulaResult(this.#evaluateAst(ast));
+            isVolatile = hasVolatileFunctionInAst(ast);
+            this._lastCalcVolatile = isVolatile;
+            const result = this.#finalizeFormulaResult(this.#evaluateAst(ast));
+            this._lastCalcVolatile = isVolatile;
+            return result;
         } catch (error) {
+            this._lastCalcVolatile = isVolatile;
             if (error?.message?.includes('循环')) this.SN.Utils.toast(error?.message);
             return toFormulaError(error);
+        } finally {
+            this.currentCell = previousCell;
         }
     }
 
@@ -526,7 +534,7 @@ export default class Formula {
     #getCells(str) {
         const ref = splitSheetReference(String(str).replaceAll('$', ''));
         str = ref.address;
-        let sheet = this.SN.activeSheet;
+        let sheet = this.currentCell?.row?.sheet || this.SN.activeSheet;
         if (ref.sheetName) sheet = this.SN.getSheet(ref.sheetName);
         if (!sheet) throw new Error('#REF!');
 
@@ -907,6 +915,13 @@ export default class Formula {
             return walk(arg);
         };
 
+        const getPivotTableFromArg = (arg) => {
+            const cell = firstCellFromArg(arg);
+            const sheet = cell?.row?.sheet;
+            if (!sheet?.PivotTable || cell?.row?.rIndex === undefined || cell?.cIndex === undefined) return null;
+            return sheet.PivotTable.getByCell?.(cell.row.rIndex, cell.cIndex) || null;
+        };
+
         const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         const buildCriteriaTester = (criterionRaw) => {
@@ -1124,6 +1139,23 @@ export default class Formula {
 
                 const values = collectAggregateValues(stack.slice(2), meta);
                 return calcAggregate(meta.functionNum, values);
+            },
+            GETPIVOTDATA: () => {
+                if (stack.length < 2) throw new Error('#VALUE!');
+                const dataFieldName = this.#gVal(stack[0]);
+                const pivotTable = getPivotTableFromArg(stack[1]);
+                if (!pivotTable) throw new Error('#REF!');
+
+                const fieldItems = [];
+                for (let i = 2; i < stack.length; i += 2) {
+                    if (i + 1 >= stack.length) throw new Error('#VALUE!');
+                    fieldItems.push(this.#gVal(stack[i]), this.#gVal(stack[i + 1]));
+                }
+
+                const result = pivotTable.getPivotData?.(dataFieldName, fieldItems);
+                if (result instanceof Error) throw result;
+                if (typeof result === 'string' && result.startsWith('#')) throw new Error(result);
+                return result;
             },
             AVERAGE: () => {
                 const values = this.#gNums(stack);

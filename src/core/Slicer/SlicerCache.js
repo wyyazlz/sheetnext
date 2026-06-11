@@ -22,6 +22,7 @@ export default class SlicerCache {
         this._pivotTables = this._normalizePivotTables(options);
         this._SN = SN;
         this._itemMap = new Map();
+        this._selectedKeys = new Set(options.selectedKeys || []);
         this._version = 0;
         this._dirty = true;
     }
@@ -61,6 +62,16 @@ export default class SlicerCache {
     /** @type {number} */
     get version() {
         return this._version;
+    }
+
+    /** @type {Set<string>} */
+    get selectedKeys() {
+        return this._selectedKeys;
+    }
+
+    /** @param {Iterable<string>} keys */
+    set selectedKeys(keys) {
+        this._selectedKeys = new Set(keys || []);
     }
 
     markDirty() {

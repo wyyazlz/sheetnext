@@ -116,6 +116,19 @@ export default class DependencyGraph {
         return out;
     }
 
+    _collectSheetFormulaKeys(sheet, keys = new Set()) {
+        if (!sheet) return keys;
+        for (let r = 0; r < sheet.rows.length; r++) {
+            const row = sheet.rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.cells.length; c++) {
+                const cell = row.cells[c];
+                if (cell?.isFormula) keys.add(this.cellKey(sheet.name, r, c));
+            }
+        }
+        return keys;
+    }
+
     _recalculateKeys(keys) {
         if (!keys.size) return;
         const sorted = this.topologicalSort(keys);
@@ -144,6 +157,26 @@ export default class DependencyGraph {
     recalculateVolatile() {
         if (this.volatileCells.size === 0) return;
         this._recalculateKeys(this._collectVolatileRecalcKeys());
+    }
+
+    /**
+     * Recalculate formulas on one sheet.
+     * @param {import('../Sheet/Sheet.js').default} sheet - Target sheet
+     */
+    recalculateSheetFormulas(sheet) {
+        this._recalculateKeys(this._collectSheetFormulaKeys(sheet));
+    }
+
+    /**
+     * Recalculate formulas on all initialized sheets.
+     */
+    recalculateAllFormulas() {
+        const keys = new Set();
+        for (const sheet of this.SN.sheets || []) {
+            if (!sheet?.initialized) continue;
+            this._collectSheetFormulaKeys(sheet, keys);
+        }
+        this._recalculateKeys(keys);
     }
 
     /**

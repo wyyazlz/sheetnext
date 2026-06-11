@@ -334,6 +334,9 @@ export function _init() {
     initPivotTables.call(this);
     initSlicers.call(this);
     initDependencyGraph.call(this);
+    if (this.SN.calcMode !== 'manual') {
+        this.SN.DependencyGraph?.recalculateSheetFormulas?.(this);
+    }
 
     return this
 }

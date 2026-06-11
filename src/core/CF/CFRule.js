@@ -109,7 +109,7 @@ export class CFRule {
         if (this._SN.Formula) {
             try {
                 return this._SN.Formula.calcFormula(f, {
-                    row: { rIndex: r },
+                    row: { rIndex: r, sheet: this.sheet },
                     cIndex: c
                 });
             } catch (e) {

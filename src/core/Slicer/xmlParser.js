@@ -293,6 +293,9 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
         const existing = SN._slicerCaches.get(cacheId);
         if (cacheMeta?.cacheName && !existing._excelCacheName) existing._excelCacheName = cacheMeta.cacheName;
         if (cacheMeta?.uid && !existing._excelUid) existing._excelUid = cacheMeta.uid;
+        if (Array.isArray(cacheMeta?.selectedKeys) && existing.selectedKeys.size === 0) {
+            existing.selectedKeys = cacheMeta.selectedKeys;
+        }
         applyParsedCacheItems(existing, cacheMeta);
         return existing;
     }
@@ -306,7 +309,8 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
             sourceId: cacheMeta.sourceId || null,
             fieldIndex: Number.isFinite(cacheMeta.fieldIndex) ? cacheMeta.fieldIndex : 0,
             fieldName: cacheMeta.fieldName || slicerNode?._$name || '',
-            pivotTables: cacheMeta.pivotTables || []
+            pivotTables: cacheMeta.pivotTables || [],
+            selectedKeys: cacheMeta.selectedKeys || []
         });
         cache._excelCacheName = cacheMeta.cacheName || null;
         cache._excelUid = cacheMeta.uid || null;
@@ -329,7 +333,8 @@ function ensureStandardCache(sheet, cacheMeta, slicerNode) {
         sourceName: table?.name || table?.displayName || null,
         sourceId: table?.id || (Number.isFinite(Number(cacheMeta?.tableId)) ? `table_${Number(cacheMeta.tableId)}` : null),
         fieldIndex,
-        fieldName
+        fieldName,
+        selectedKeys: cacheMeta?.selectedKeys || []
     });
     cache._excelCacheName = cacheMeta?.cacheName || null;
     cache._excelUid = cacheMeta?.uid || null;

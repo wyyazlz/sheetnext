@@ -244,7 +244,7 @@ function getPivotSlicerItemNodes(cache, linked) {
     const pivotTable = buildPivotTargets(cache)[0]?.pivotTable;
     const cacheField = pivotTable?.cache?.fields?.[cache.fieldIndex];
     const sharedItems = cacheField?.sharedItems?.values || [];
-    const selectedKeys = linked?.slicer?.selectedKeys || new Set();
+    const selectedKeys = cache?.selectedKeys || linked?.slicer?.selectedKeys || new Set();
     const hasFilter = selectedKeys.size > 0;
 
     return sharedItems.map((item, index) => {

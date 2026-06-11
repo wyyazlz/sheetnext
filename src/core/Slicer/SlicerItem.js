@@ -40,13 +40,15 @@ export default class SlicerItem {
         this.multiSelect = !!options.multiSelect;
         /** @type {string} */
         this.styleName = options.styleName ?? 'SlicerStyleLight1';
-        /** @type {Set} */
-        this.selectedKeys = new Set(options.selectedKeys || []);
 
         // Accept both Drawing and drawing option names for compatibility.
         /** @type {import('../Drawing/DrawingItem.js').default|null} */
         this.Drawing = options.Drawing || options.drawing || null;
         this._SN = sheet.SN;
+        this._selectedKeysFallback = new Set(options.selectedKeys || []);
+        if (this._selectedKeysFallback.size > 0 && this.cache && this.cache.selectedKeys.size === 0) {
+            this.cache.selectedKeys = this._selectedKeysFallback;
+        }
         if (this.Drawing) {
             this.Drawing.Slicer = this;
         }
@@ -69,36 +71,54 @@ export default class SlicerItem {
         return this._SN._slicerCaches?.get(this.cacheId) || null;
     }
 
+    /** @type {Set<string>} */
+    get selectedKeys() {
+        return this.cache?.selectedKeys || this._selectedKeysFallback;
+    }
+
+    /** @param {Iterable<string>} keys */
+    set selectedKeys(keys) {
+        const nextKeys = new Set(keys || []);
+        const cache = this.cache;
+        if (cache) {
+            cache.selectedKeys = nextKeys;
+        } else {
+            this._selectedKeysFallback = nextKeys;
+        }
+    }
+
     /** @param {string} key @param {boolean} multi */
     toggleSelection(key, multi = false) {
         const cache = this.cache;
         if (!cache) return;
         const items = cache.getItems();
         const allKeys = items.map(item => item.key);
+        const selectedKeys = new Set(this.selectedKeys);
 
         if (!multi) {
-            this.selectedKeys.clear();
-            this.selectedKeys.add(key);
+            selectedKeys.clear();
+            selectedKeys.add(key);
         } else {
-            if (this.selectedKeys.has(key)) {
-                this.selectedKeys.delete(key);
+            if (selectedKeys.has(key)) {
+                selectedKeys.delete(key);
             } else {
-                this.selectedKeys.add(key);
+                selectedKeys.add(key);
             }
         }
 
-        if (this.selectedKeys.size === allKeys.length || this.selectedKeys.size === 0) {
-            this.selectedKeys.clear();
+        if (selectedKeys.size === allKeys.length || selectedKeys.size === 0) {
+            selectedKeys.clear();
         }
 
-        this._updateSelectionClasses();
+        this.selectedKeys = selectedKeys;
+        this._syncLinkedSelectionClasses();
         this.applyFilter();
     }
 
     /** @param {boolean} apply */
     clearSelection(apply = false) {
-        this.selectedKeys.clear();
-        this._updateSelectionClasses();
+        this.selectedKeys = [];
+        this._syncLinkedSelectionClasses();
         if (apply) {
             this.applyFilter();
         }
@@ -395,6 +415,17 @@ export default class SlicerItem {
         });
     }
 
+    _syncLinkedSelectionClasses() {
+        const SN = this._SN;
+        (SN.sheets || []).forEach(sheet => {
+            sheet.Slicer?.getAll?.().forEach(slicer => {
+                if (slicer === this || String(slicer.cacheId) !== String(this.cacheId)) return;
+                slicer._updateSelectionClasses?.();
+            });
+        });
+        this._updateSelectionClasses();
+    }
+
     _applyTableFilter() {
         const cache = this.cache;
         const table = cache?.getSourceTable();
@@ -431,6 +462,7 @@ export default class SlicerItem {
         if (targets.length === 0) return;
 
         const selectedKeys = new Set(this.selectedKeys);
+        const changedSheets = new Set();
 
         targets.forEach(({ pivotTable, fieldIndex }) => {
             pivotTable._ensureFieldItems?.(fieldIndex);
@@ -442,7 +474,8 @@ export default class SlicerItem {
             if (this.selectedKeys.size === 0 || this.selectedKeys.size === sharedItems.length) {
                 pivotTable.clearFieldFilter(fieldIndex);
                 pivotTable.calculate();
-                pivotTable.render();
+                pivotTable.render({ silent: true });
+                if (pivotTable.sheet) changedSheets.add(pivotTable.sheet);
                 return;
             }
 
@@ -456,7 +489,17 @@ export default class SlicerItem {
 
             pivotTable.setItemsHidden(fieldIndex, hiddenMap);
             pivotTable.calculate();
-            pivotTable.render();
+            pivotTable.render({ silent: true });
+            if (pivotTable.sheet) changedSheets.add(pivotTable.sheet);
         });
+
+        if (this.sheet?.SN?.calcMode !== 'manual') {
+            changedSheets.forEach(sheet => {
+                this.sheet.SN.DependencyGraph?.recalculateSheetFormulas?.(sheet);
+            });
+        }
+        if (changedSheets.size > 0) {
+            this.sheet?.SN?._r?.();
+        }
     }
 }

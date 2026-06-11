@@ -456,6 +456,7 @@ function _serializeSlicerCache(cache) {
         excelCacheName: cache._excelCacheName ?? null,
         excelUid: cache._excelUid ?? null,
         pivotTables: Array.isArray(cache._pivotTables) ? _clone(cache._pivotTables) : [],
+        selectedKeys: Array.from(cache.selectedKeys || []),
         items: _serializeDynamicValue(items)
     };
 }
@@ -475,7 +476,8 @@ function _restoreSlicerCaches(SN, slicerCachesData) {
             sourceId: cacheData.sourceId ?? null,
             fieldIndex: _safeInt(cacheData.fieldIndex, 0),
             fieldName: cacheData.fieldName || '',
-            pivotTables: Array.isArray(cacheData.pivotTables) ? cacheData.pivotTables : []
+            pivotTables: Array.isArray(cacheData.pivotTables) ? cacheData.pivotTables : [],
+            selectedKeys: Array.isArray(cacheData.selectedKeys) ? cacheData.selectedKeys : []
         });
         cache._excelCacheName = cacheData.excelCacheName ?? null;
         cache._excelUid = cacheData.excelUid ?? null;
@@ -1273,7 +1275,7 @@ export function setData(data) {
             SN.DependencyGraph.clear();
             SN.DependencyGraph.rebuildAll();
             if (SN.calcMode !== 'manual') {
-                SN.DependencyGraph.recalculateVolatile();
+                SN.DependencyGraph.recalculateAllFormulas();
             }
         }
 

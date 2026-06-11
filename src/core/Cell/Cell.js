@@ -478,6 +478,10 @@ export default class Cell {
             this._fmtResult = formatValue(this.calcVal, this.numFmt, this._type);
             return this._showVal = (this._fmtResult?.text ?? "") + "";
         }
+        else if (this.type == 'number') {
+            this._fmtResult = formatValue(this.calcVal, 'General', this._type);
+            return this._showVal = (this._fmtResult?.text ?? "") + "";
+        }
         else return this._showVal = String(this.calcVal);
     }
 
