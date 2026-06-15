@@ -108,11 +108,14 @@ export const chartXmlToEChartOption = (obj, SN) => {
                     if (valArr) values = valArr.map(item => item['c:v'])
                 }
 
-                const nameRefNode = safeGet(ser, ['c:cat', 'c:strRef']) || safeGet(ser, ['c:cat', 'c:numRef']);
+                const nameRefNode = safeGet(ser, ['c:cat', 'c:strRef']) ||
+                    safeGet(ser, ['c:cat', 'c:numRef']) ||
+                    safeGet(ser, ['c:cat', 'c:multiLvlStrRef']);
                 const nameRef = nameRefNode?.['c:f'];
-                const nameCache = isPivotChart ? getCachedPoints(nameRefNode) : [];
+                const nameCache = isPivotChart ? getCachedCategoryPoints(nameRefNode) : [];
                 if (nameRef) {
                     names = rangeStrToCellRefs(nameRef, SN)
+                    if (isPivotChart && names.length === 0) names = nameCache;
                 } else if (nameCache.length) {
                     names = nameCache;
                 } else {
@@ -1956,6 +1959,21 @@ function applyPivotChartPresentation(option, chartSpace, plotArea, SN = null) {
     const dataFieldName = getPivotChartDataFieldName(plotArea);
     if (dataFieldName) {
         const visibleSeries = option.series?.filter(series => series?.name) || [];
+        const pieLegendData = getPivotPieLegendData(option);
+        if (pieLegendData.length > 0) {
+            option.series?.forEach(series => {
+                if (series?.type === 'pie' && (!series.name || isRefWithSheet(series.name))) {
+                    series.name = dataFieldName;
+                }
+            });
+            option.legend = {
+                ...(option.legend || {}),
+                show: option.legend?.show !== false,
+                data: pieLegendData
+            };
+            return;
+        }
+
         if (visibleSeries.length <= 1) {
             option.series?.forEach(series => {
                 if (!series.name || isRefWithSheet(series.name)) series.name = dataFieldName;
@@ -1972,6 +1990,14 @@ function applyPivotChartPresentation(option, chartSpace, plotArea, SN = null) {
             };
         }
     }
+}
+
+function getPivotPieLegendData(option) {
+    const pieSeries = option.series?.find(series => series?.type === 'pie' && Array.isArray(series.data));
+    if (!pieSeries) return [];
+    return pieSeries.data
+        .map(item => item && typeof item === 'object' ? item.name : '')
+        .filter(item => !isBlankChartValue(item));
 }
 
 function getPivotChartDataFieldName(plotArea) {
@@ -2259,12 +2285,43 @@ function getCachedPoints(refNode) {
     return sureArray(points).map(getPtValue);
 }
 
+function getMultiLevelCachedPoints(refNode) {
+    const levels = sureArray(safeGet(refNode, ['c:multiLvlStrCache', 'c:lvl']));
+    if (levels.length === 0) return [];
+
+    const levelMaps = levels.map((level) => {
+        const points = sureArray(level?.['c:pt']);
+        const map = new Map();
+        points.forEach((point, position) => {
+            const rawIndex = Number(point?._$idx);
+            const index = Number.isFinite(rawIndex) ? rawIndex : position;
+            map.set(index, getPtValue(point));
+        });
+        return map;
+    });
+    const indexes = [...new Set(levelMaps.flatMap(map => [...map.keys()]))].sort((a, b) => a - b);
+
+    return indexes.map(index => {
+        const parts = levelMaps
+            .map(map => map.get(index))
+            .filter(value => !isBlankChartValue(value));
+        return parts.join(' ');
+    });
+}
+
+function getCachedCategoryPoints(refNode) {
+    const cached = getCachedPoints(refNode);
+    return cached.length ? cached : getMultiLevelCachedPoints(refNode);
+}
+
 function getCategoryData(ser, useCache = false) {
-    const refNode = safeGet(ser, ['c:cat', 'c:strRef']) || safeGet(ser, ['c:cat', 'c:numRef']);
+    const refNode = safeGet(ser, ['c:cat', 'c:strRef']) ||
+        safeGet(ser, ['c:cat', 'c:numRef']) ||
+        safeGet(ser, ['c:cat', 'c:multiLvlStrRef']);
     const catRef = refNode?.['c:f'];
     if (catRef) return catRef;
 
-    const cached = useCache ? getCachedPoints(refNode) : [];
+    const cached = useCache ? getCachedCategoryPoints(refNode) : [];
     if (cached.length > 0) return cached;
 
     return safeGet(ser, ['c:cat', 'c:strLit', 'c:pt'])

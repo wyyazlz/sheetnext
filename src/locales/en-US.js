@@ -1824,6 +1824,11 @@ const enUS = {
     "layoutScrollTipCol": "Col",
     "layoutScrollTipRow": "Row",
     "pivot": {
+        "chart": {
+            "modal": {
+                "title": "Insert Pivot Chart"
+            }
+        },
         "field": {
             "fallbackName": "Field {index}"
         }

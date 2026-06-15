@@ -1,6 +1,6 @@
 # Enum API
 
-> Generated: 2026-04-28
+> Generated: 2026-06-15
 
 ## Enum Types
 

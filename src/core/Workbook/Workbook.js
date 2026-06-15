@@ -14,6 +14,7 @@ import IO from "../IO/IO.js"
 import EventEmitter from "../Event/EventEmitter.js"
 import { Operation } from "../Event/Operation.js"
 import { parsePivotTables, parseSlicerCaches } from "../OpenEdition/PivotSlicerStub.js"
+import { initPivotTableModule } from "../PivotTable/index.js"
 import I18n from "../I18n/I18n.js"
 import { registerLocale, getLocalePack, getAllLocalePacks } from "../../locales/registry.js"
 import Enum from "../../enum/index.js"
@@ -126,6 +127,7 @@ class SheetNext {
         this._trackChangesAlways = false
         this._themeColors = themeColors
 
+        initPivotTableModule(this)
         this._loadXmlObj()
     }
 

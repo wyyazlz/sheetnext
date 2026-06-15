@@ -1,27 +1,15 @@
 ---
 name: "sheetnext-dev"
-description: "Use for SheetNext spreadsheet apps, templates, events, import/export, JSON workbook data, and AI relay integration."
+description: "Develop SheetNext spreadsheet apps and integrations. Use when building or debugging SheetNext workbook, sheet, cell, formula, event, import/export, JSON workbook data, template, AI relay, drawing, table, pivot, or slicer features."
 ---
 
 # SheetNext Development
 
-Generated from SheetNext API docs on 2026-04-28.
+Generated from SheetNext API docs on 2026-06-15.
 
-This is a portable Agent Skill package. `SKILL.md` is the entry point, `references/` contains lazy-loaded API docs, and `adapters/` contains tool-specific setup notes.
+Use the bundled references as the source of truth. Do not invent undocumented APIs.
 
-Use the bundled references as the source of truth. Do not invent APIs.
-
-## Compatibility
-
-- Skill-aware agents can install or load this directory directly.
-- Any AI coding assistant can use this package by reading this file first, then opening the relevant files in `references/`.
-- Tool-specific setup notes live in `adapters/`; they are optional and do not change the source-of-truth API docs.
-
-## When To Use
-
-- Building SheetNext workbook, sheet, row, column, cell, drawing, table, pivot, slicer, formula, event, import/export, or AI relay features.
-- Debugging SheetNext integrations or generated spreadsheet code.
-- Converting requirements into SheetNext templates, JSON workbook data, or event-driven workflows.
+Tool-specific setup notes live in `adapters/`; they are optional and do not change the API contract.
 
 ## Read Order
 

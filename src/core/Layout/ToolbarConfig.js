@@ -634,6 +634,7 @@ export function createToolbarConfig(ns) {
                 {
                     labelKey: 'layout.auto.label34005110',
                     items: [
+                        { type: 'large', icon: 'tubiao', labelKey: 'pivot.chart.modal.title', action: `${ns}.Action.insertPivotChart()` },
                         { type: 'large', icon: 'niantie', labelKey: 'layout.auto.label694838cc', action: `${ns}.Action.insertPivotSlicer()` }
                     ]
                 },

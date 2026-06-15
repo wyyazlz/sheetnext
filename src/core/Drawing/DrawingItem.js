@@ -413,10 +413,23 @@ export default class DrawingItem {
     /** @type {Object|null} */
     get renderOption() {
         if (this._renderOption) return this._renderOption;
-        // 首次解析：检测是否含单元格引用（用于 Cell.editVal 变化时定向清缓存）
+        this._hasChartReferences();
+        return this._renderOption = refOptionParse(this.chartOption, this.sheet.SN);
+    }
+
+    /** @returns {boolean} */
+    _hasChartReferences() {
+        if (this.type !== 'chart') return false;
+        if (this._hasChartRefs !== undefined) return this._hasChartRefs;
+
         const refRegex = /(?:'[^']+'|[^'!]+)!\$?[A-Za-z]{1,3}\$?\d+/;
         this._hasChartRefs = refRegex.test(JSON.stringify(this.chartOption));
-        return this._renderOption = refOptionParse(this.chartOption, this.sheet.SN);
+        return this._hasChartRefs;
+    }
+
+    _clearRenderCache() {
+        this._renderOption = null;
+        this.drawCache = null;
     }
 
     // ==================== Anchor behavior ====================

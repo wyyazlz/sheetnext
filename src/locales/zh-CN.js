@@ -1824,6 +1824,11 @@ const zhCN = {
     "layoutScrollTipCol": "列",
     "layoutScrollTipRow": "行",
     "pivot": {
+        "chart": {
+            "modal": {
+                "title": "插入透视图"
+            }
+        },
         "field": {
             "fallbackName": "字段{index}"
         }

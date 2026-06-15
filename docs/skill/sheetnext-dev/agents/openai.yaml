@@ -1,0 +1,7 @@
+interface:
+  display_name: "SheetNext Dev"
+  short_description: "Build SheetNext spreadsheet features with API references."
+  default_prompt: "Use $sheetnext-dev to build SheetNext spreadsheet features with the documented API references."
+
+policy:
+  allow_implicit_invocation: true

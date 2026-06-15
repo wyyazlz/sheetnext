@@ -272,9 +272,8 @@ export default class Drawing {
 
     _clearChartRefCaches() {
         for (const d of this._list) {
-            if (d._hasChartRefs) {
-                d._renderOption = null;
-                d._drawCache = null;
+            if (d.type === 'chart' && d._hasChartReferences?.()) {
+                d._clearRenderCache?.();
             }
         }
     }

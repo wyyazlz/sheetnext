@@ -164,6 +164,8 @@ export default class Xml {
                 'pivotTableDefinition.dataFields.dataField',
                 'pivotTableDefinition.pageFields.pageField',
                 'pivotTableDefinition.formats.format',
+                'pivotTableDefinition.chartFormats.chartFormat',
+                'pivotTableDefinition.conditionalFormats.conditionalFormat',
                 'FeaturePropertyBags.bag',
                 'FeaturePropertyBags.bag.bagId',
                 'FeaturePropertyBags.bag.a',

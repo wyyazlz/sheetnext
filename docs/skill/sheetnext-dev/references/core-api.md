@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-04-28
+> Generated: 2026-06-15
 
 Public callable classes detected for the generated API surface.
 
@@ -19,6 +19,7 @@ Public callable classes detected for the generated API surface.
 | options.locales | Object<string, Object> | No | - | Extra locale packs keyed by locale code. |
 | options.menuRight | function | No | - | Callback `(defaultHTML: string) => string`. Receives the default right-menu HTML, return modified HTML. |
 | options.menuList | function | No | - | Callback `(config: Array<{key: string, labelKey?: string, text?: string, groups?: Array, contextual?: boolean, contextType?: string, trigger?: 'panel'\|'action', action?: string, color?: string}>) => Array`. Receives the default toolbar panel config array, return modified array. Use `trigger: 'action'` to make a top tab run code directly without switching the toolbar panel. `color` customizes the top-tab text and accent color. |
+| options.theme | Object \| string | No | - | UI theme overrides. Passing a string is treated as `primary`; object tokens include `primary`, `primaryHover`, `primaryActive`, `primarySoft`, `primarySoftHover`, `primaryBorder`, `primarySubtleBorder`, `primaryRing`, `primaryShadow`, `primaryLight`, and `primaryContrast`. |
 | options.AI_URL | string | No | - | AI relay endpoint URL. |
 | options.AI_TOKEN | string | No | - | Optional bearer token for AI relay endpoint. |
 
@@ -107,6 +108,17 @@ SheetNext.registerLocale('zh-CN', zhCN);
 
 **Returns**
 - Type: `Object | undefined`
+
+#### `setTheme(theme = {}): Object`
+- Apply UI theme colors to this workbook.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| theme | Object \| string | No | {} | Theme overrides. A string is treated as the primary color. |
+
+**Returns**
+- Type: `Object`
 
 #### `addSheet(sheetName?): Sheet | null`
 
@@ -1486,7 +1498,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 **Returns**
 - Type: `{colIndex:number, scopeId:string} | null`
 
-#### `drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder)`
+#### `drawFilterIcon(ctx, iconX, iconY, iconSize, hasFilter, sortOrder, colors = null)`
 - Category: `FilterRenderer`
 
 **Parameters**
@@ -1498,6 +1510,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 | iconSize | number | Yes | - | - |
 | hasFilter | boolean | Yes | - | - |
 | sortOrder | string \| null | Yes | - | - |
+| colors | null | No | null | - |
 
 #### `rPivotTablePlaceholders(sheet)`
 - Render PivotTable Placeholder
@@ -1523,7 +1536,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 - Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
 | Name | Static | Source Line | Example Assignment |
 | --- | --- | --- | --- |
-| SKctx | No | 354 | this.scrollSkeletonLayer.getContext('2d') |
+| SKctx | No | 357 | this.scrollSkeletonLayer.getContext('2d') |
 
 ## Layout
 - Layout & Toolbar Management
@@ -1712,7 +1725,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 - Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
 | Name | Static | Source Line | Example Assignment |
 | --- | --- | --- | --- |
-| currentCell | No | 79 | cell |
+| currentCell | No | 81 | cell |
 
 ## AutoFilter
 
@@ -2358,6 +2371,18 @@ pt.refresh();
 **Returns**
 - Type: `Array<PivotTable>`
 
+#### `getByCell(row, col): PivotTableItem | null`
+- Get the pivot table containing a cell.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | Row index |
+| col | number | Yes | - | Column index |
+
+**Returns**
+- Type: `PivotTableItem | null`
+
 #### `forEach(callback)`
 - I've been through all of them.
 
@@ -2366,8 +2391,13 @@ pt.refresh();
 | --- | --- | --- | --- | --- |
 | callback | Function | Yes | - | - |
 
-#### `refreshAll()`
+#### `refreshAll(options = {})`
 - Refresh all view tables
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | Object | No | {} | - |
 
 ## Slicer
 - Slicer Manager<br>We'll be in charge of the cutter.
