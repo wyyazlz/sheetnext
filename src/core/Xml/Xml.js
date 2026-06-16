@@ -133,6 +133,7 @@ export default class Xml {
                 'worksheet.mergeCells.mergeCell',
                 'worksheet.hyperlinks.hyperlink',
                 'worksheet.dataValidations.dataValidation',
+                'worksheet.autoFilter.filterColumn',
                 'worksheet.AutoFilter.filterColumn',
                 'worksheet.tableParts.tablePart',
                 'styleSheet.numFmts.numFmt',

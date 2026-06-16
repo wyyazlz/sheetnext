@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-06-15
+> Generated: 2026-06-16
 
 Public callable classes detected for the generated API surface.
 

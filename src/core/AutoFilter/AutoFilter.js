@@ -653,6 +653,7 @@ export default class AutoFilter {
             });
         }
 
+        const restoredHiddenRowsFromSheet = options.restoreHiddenRowsFromSheet === true && scope.hiddenRows.size > 0;
         if (scope.columns.size > 0 && options.restoreHiddenRowsFromSheet !== true) {
             this._applyFilters(scopeId, {
                 silent: options.silent === true,
@@ -660,6 +661,11 @@ export default class AutoFilter {
                 recordChange: false,
                 recalculate: options.silent !== true
             });
+        } else if (restoredHiddenRowsFromSheet) {
+            this._syncCombinedHiddenRows();
+            if (options.silent !== true && !isRangeEqual(oldRange, scope.range)) {
+                this._SN._r();
+            }
         } else {
             scope.hiddenRows.clear();
             this._syncCombinedHiddenRows();
@@ -1426,7 +1432,7 @@ export default class AutoFilter {
      * @param {Object} xmlObj
      */
     parse(xmlObj) {
-        const autoFilterXml = xmlObj?.AutoFilter;
+        const autoFilterXml = xmlObj?.autoFilter || xmlObj?.AutoFilter;
         if (!autoFilterXml) return;
 
         const scope = this._getDefaultScope();

@@ -357,6 +357,8 @@ export default class Cell {
             newType
         });
 
+        sheet.Table?._autoExpandForCellEdit?.(this.row.rIndex, this.cIndex, { value: newValue });
+
         // 触发 afterCellEdit 事件
         if (clearCheckboxControl && this._SN.Event.hasListeners('afterCellStyleChange')) {
             this._SN.Event.emit('afterCellStyleChange', {

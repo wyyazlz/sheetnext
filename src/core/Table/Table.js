@@ -5,6 +5,28 @@
 import TableItem from './TableItem.js';
 import { generateTableName, toRef } from './TableUtils.js';
 
+function cloneRange(range) {
+    if (!range?.s || !range?.e) return null;
+    return {
+        s: { r: range.s.r, c: range.s.c },
+        e: { r: range.e.r, c: range.e.c }
+    };
+}
+
+function cloneColumns(columns = []) {
+    return columns.map(col => ({ ...col }));
+}
+
+function isRangeEqual(a, b) {
+    return !!a?.s && !!a?.e && !!b?.s && !!b?.e &&
+        a.s.r === b.s.r && a.s.c === b.s.c &&
+        a.e.r === b.e.r && a.e.c === b.e.c;
+}
+
+function isNonEmptyValue(value) {
+    return value !== undefined && value !== null && value !== '' && !Number.isNaN(value);
+}
+
 export default class Table {
     /**
      * @param {Sheet} sheet
@@ -232,6 +254,169 @@ export default class Table {
         if (!range1 || !range2) return false;
         return !(range1.e.r < range2.s.r || range1.s.r > range2.e.r ||
                  range1.e.c < range2.s.c || range1.s.c > range2.e.c);
+    }
+
+    _normalizeArea(area) {
+        if (!area) return null;
+        const s = area.s || area;
+        const e = area.e || area;
+        if (!Number.isInteger(s.r) || !Number.isInteger(s.c) ||
+            !Number.isInteger(e.r) || !Number.isInteger(e.c)) {
+            return null;
+        }
+        return {
+            s: { r: Math.min(s.r, e.r), c: Math.min(s.c, e.c) },
+            e: { r: Math.max(s.r, e.r), c: Math.max(s.c, e.c) }
+        };
+    }
+
+    _cellHasValue(row, col) {
+        const cell = this.sheet.rows[row]?.cells?.[col];
+        return isNonEmptyValue(cell?._editVal);
+    }
+
+    _getAutoExpandEndRow(table, area, options = {}) {
+        const range = table.range;
+        if (!range || table.showTotalsRow) return -1;
+
+        const insertRow = range.e.r + 1;
+        if (area.e.r < insertRow || area.s.r > insertRow) return -1;
+        if (area.e.c < range.s.c || area.s.c > range.e.c) return -1;
+
+        const isSingleCell = area.s.r === area.e.r && area.s.c === area.e.c;
+        if (isSingleCell && Object.prototype.hasOwnProperty.call(options, 'value')) {
+            return isNonEmptyValue(options.value) ? area.s.r : -1;
+        }
+
+        const startCol = Math.max(area.s.c, range.s.c);
+        const endCol = Math.min(area.e.c, range.e.c);
+        let endRow = -1;
+        const hasEditedValue = typeof options.hasEditedValue === 'function'
+            ? options.hasEditedValue
+            : (r, c) => this._cellHasValue(r, c);
+
+        for (let r = insertRow; r <= area.e.r; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+                if (hasEditedValue(r, c)) {
+                    endRow = r;
+                    break;
+                }
+            }
+        }
+
+        return endRow;
+    }
+
+    _canResizeWithoutOverlap(targetTable, nextRange) {
+        for (const table of this._tables.values()) {
+            if (table === targetTable) continue;
+            if (this._isOverlapping(nextRange, table.range)) return false;
+        }
+        return true;
+    }
+
+    _resetTableRowCache(table) {
+        table._stripeRowIndexCache = null;
+        table._stripeCacheStartRow = -1;
+        table._stripeCacheEndRow = -1;
+        table._stripeCacheVisibilityVersion = -1;
+    }
+
+    _captureLinkedPivotCacheStates(table) {
+        const states = [];
+        this.sheet.SN._pivotCaches?.forEach(cache => {
+            if (!cache?._isLinkedToTable?.(table)) return;
+            states.push({
+                cache,
+                state: cache._captureStructureState?.()
+            });
+        });
+        return states;
+    }
+
+    _captureAutoExpandStateWithCaches(table, pivotCaches) {
+        return {
+            range: cloneRange(table.range),
+            columns: cloneColumns(table.columns),
+            pivotCaches: pivotCaches.map(item => ({
+                cache: item.cache,
+                state: item.cache?._captureStructureState?.()
+            }))
+        };
+    }
+
+    _applyAutoExpandState(table, state) {
+        if (!table || !state) return;
+
+        table._ref = cloneRange(state.range);
+        table.columns = cloneColumns(state.columns);
+        this._resetTableRowCache(table);
+
+        if (table.showTotalsRow && table.range) {
+            table.applyTotalsRow({ initializeDefaults: true, force: true });
+        }
+
+        if (table.autoFilterEnabled && table.range) {
+            table._updateAutoFilter();
+        } else {
+            this.sheet.AutoFilter.unregisterTableScope(table.id, { silent: true });
+        }
+
+        state.pivotCaches?.forEach(item => {
+            item.cache?._applyStructureState?.(item.state);
+        });
+    }
+
+    _expandTableToRow(table, row, options = {}) {
+        const oldRange = cloneRange(table.range);
+        if (!oldRange || row <= oldRange.e.r) return false;
+
+        const nextRange = cloneRange(oldRange);
+        nextRange.e.r = row;
+        if (!this._canResizeWithoutOverlap(table, nextRange)) return false;
+
+        const linkedPivotCaches = this._captureLinkedPivotCacheStates(table);
+        const beforeState = this._captureAutoExpandStateWithCaches(table, linkedPivotCaches);
+        table.resize(nextRange);
+
+        if (!isRangeEqual(table.range, nextRange)) return false;
+
+        linkedPivotCaches.forEach(item => item.cache?._syncTableSource?.(table, { force: true }));
+        const afterState = this._captureAutoExpandStateWithCaches(table, linkedPivotCaches);
+        if (options.recordUndo !== false) {
+            this.sheet.SN.UndoRedo.add({
+                undo: () => this._applyAutoExpandState(table, beforeState),
+                redo: () => this._applyAutoExpandState(table, afterState)
+            });
+        }
+
+        this.sheet.SN._recordChange({
+            type: 'tableAutoExpand',
+            sheet: this.sheet,
+            table,
+            oldRange,
+            newRange: cloneRange(table.range)
+        });
+
+        return true;
+    }
+
+    _autoExpandForEditArea(area, options = {}) {
+        const normalizedArea = this._normalizeArea(area);
+        if (!normalizedArea || this._tables.size === 0) return false;
+
+        let changed = false;
+        for (const table of this._tables.values()) {
+            const endRow = this._getAutoExpandEndRow(table, normalizedArea, options);
+            if (endRow < 0) continue;
+            changed = this._expandTableToRow(table, endRow, options) || changed;
+        }
+
+        return changed;
+    }
+
+    _autoExpandForCellEdit(row, col, options = {}) {
+        return this._autoExpandForEditArea({ s: { r: row, c: col }, e: { r: row, c: col } }, options);
     }
 
     /**

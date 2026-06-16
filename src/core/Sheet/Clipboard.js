@@ -15,6 +15,10 @@ function emitIfListeners(SN, event, data) {
     return SN.Event.emit(event, data);
 }
 
+function isNonEmptyValue(value) {
+    return value !== undefined && value !== null && value !== '' && !Number.isNaN(value);
+}
+
 /**
  * Copy Regional Data
  * @param {Object} area - Copy area {s: {r, c}, e: {r, c}
@@ -215,6 +219,8 @@ export function paste(targetArea = null, options = {}) {
     // 预处理：清除目标区域的合并单元格
     clearTargetMerges(sheet, pasteArea);
 
+    const editedValueCells = new Set();
+
     // 批量粘贴单元格数据
     for (let r = 0; r < rowCount; r++) {
         for (let c = 0; c < colCount; c++) {
@@ -232,7 +238,16 @@ export function paste(targetArea = null, options = {}) {
 
             // 根据模式粘贴
             pasteCellByMode(targetCell, srcCell, mode, operation, sheet);
+            if (needsEdit && isNonEmptyValue(targetCell._editVal)) {
+                editedValueCells.add(`${targetR + r}:${targetC + c}`);
+            }
         }
+    }
+
+    if (editedValueCells.size > 0) {
+        sheet.Table?._autoExpandForEditArea?.(pasteArea, {
+            hasEditedValue: (r, c) => editedValueCells.has(`${r}:${c}`)
+        });
     }
 
     // 粘贴合并单元格（非仅值/仅公式模式）
