@@ -168,68 +168,6 @@ export function areasNumFmt(fmtStr) {
     this.SN._r();
 }
 
-export function clearAreaFormat(type = 'all') {
-    const sheet = this.SN.activeSheet;
-    const areas = sheet.activeAreas;
-    // 收集行/列
-    const styledRows = new Set();
-    const styledCols = new Set();
-
-    areas.forEach(region => {
-        if (typeof region === 'string') region = sheet.rangeStrToNum(region);
-        const info = detectFullRowCol(region, sheet);
-
-        if (info.isFullRow && !info.isFullCol) {
-            info.rows.forEach(r => styledRows.add(r));
-        } else if (info.isFullCol && !info.isFullRow) {
-            info.cols.forEach(c => styledCols.add(c));
-        }
-    });
-
-    // 清除行样式
-    styledRows.forEach(r => {
-        const row = sheet.getRow(r);
-        if (type === 'style' || type === 'all') {
-            row.style = null;
-        }
-        if (type === 'border') {
-            row.border = null;
-        }
-    });
-
-    // 清除列样式
-    styledCols.forEach(c => {
-        const col = sheet.getCol(c);
-        if (type === 'style' || type === 'all') {
-            col.style = null;
-        }
-        if (type === 'border') {
-            col.border = null;
-        }
-    });
-
-    // 对非整行整列的区域，应用到单元格
-    sheet.eachCells(areas, (r, c, range) => {
-        const info = detectFullRowCol({ s: range.s, e: range.e }, sheet);
-        if ((info.isFullRow && !info.isFullCol) || (info.isFullCol && !info.isFullRow)) return;
-        const cell = sheet.getCell(r, c);
-        if (type == 'style') {
-            cell.style = {};
-        } else if (type == 'value') {
-            cell.editVal = "";
-        } else if (type == 'border') {
-            cell.border = null;
-        } else {
-            cell.style = {};
-            cell.editVal = "";
-            cell.border = null;
-        }
-    });
-
-    this.SN._recordChange({ type: 'format', action: 'clearAreaFormat', sheet, areas, clearType: type });
-    this.SN._r();
-}
-
 // 文本转数值
 export function textToNumber() {
     const sheet = this.SN.activeSheet;

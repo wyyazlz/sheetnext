@@ -8,7 +8,7 @@ function getPivotTableByCellIndex(sheet, row, col) {
     if (!sheet.PivotTable || sheet.PivotTable.size === 0) return null;
 
     for (const pt of sheet.PivotTable.getAll()) {
-        const ref = pt.location?.ref;
+        const ref = pt.getRenderRef?.() ?? pt.location?.ref;
         if (!ref) continue;
 
         // 解析区域引用 (如 "A1:C18")

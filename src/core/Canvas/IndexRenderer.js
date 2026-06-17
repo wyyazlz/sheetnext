@@ -526,7 +526,7 @@ function getPivotTableAt(sheet, row, col) {
  * @returns {boolean}
  */
 function isPivotTableContainsCell(pt, row, col) {
-    const ref = pt.location?.ref;
+    const ref = pt.getRenderRef?.() ?? pt.location?.ref;
     if (!ref) return false;
 
     // 解析区域引用 (如 "A1:E10")

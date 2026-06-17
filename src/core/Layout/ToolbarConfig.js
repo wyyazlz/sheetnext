@@ -144,7 +144,7 @@ export function createToolbarConfig(ns) {
                                 { type: 'splitDropdown', icon: 'jurassic_borderAll', titleKey: 'layout.auto.title20d59678', action: `${ns}.Action.applyBorderPreset()`, menu: 'border', menuWidth: '180px' },
                                 { type: 'splitColorPicker', icon: 'fontColor', titleKey: 'layout.auto.titleFf0455e0', colorType: 'font' },
                                 { type: 'splitColorPicker', icon: 'styleFill', titleKey: 'layout.auto.titleB46e89c8', colorType: 'fill' },
-                                { type: 'dropdown', icon: 'qingchugeshi1', action: `${ns}.Action.clearAreaFormat()`, menu: 'clear', titleKey: 'layout.auto.titleAb4a78ac' },
+                                { type: 'dropdown', icon: 'qingchugeshi1', action: `${ns}.activeSheet.clearRange(${ns}.activeSheet.activeAreas);${ns}._r()`, menu: 'clear', titleKey: 'layout.auto.titleAb4a78ac' },
                             ]
                         }
                     ]
@@ -892,10 +892,10 @@ export function createMenuConfig(ns) {
             { labelKey: 'layout.auto.label525c8b3c', action: `${ns}.Action.areasNumFmt('HK$#,##0.00')` },
         ],
         clear: [
-            { labelKey: 'layout.auto.labelB683336c', action: `${ns}.Action.clearAreaFormat()` },
-            { labelKey: 'layout.auto.labelAb4a78ac', action: `${ns}.Action.clearAreaFormat('style')` },
-            { labelKey: 'layout.auto.label80c65db8', action: `${ns}.Action.clearAreaFormat('value')` },
-            { labelKey: 'layout.auto.label83c5b1ec', action: `${ns}.Action.clearAreaFormat('border')` },
+            { labelKey: 'layout.auto.labelB683336c', action: `${ns}.activeSheet.clearRange(${ns}.activeSheet.activeAreas);${ns}._r()` },
+            { labelKey: 'layout.auto.labelAb4a78ac', action: `${ns}.activeSheet.clearRange(${ns}.activeSheet.activeAreas, 'formats');${ns}._r()` },
+            { labelKey: 'layout.auto.label80c65db8', action: `${ns}.activeSheet.clearRange(${ns}.activeSheet.activeAreas, 'contents');${ns}._r()` },
+            { labelKey: 'layout.auto.label83c5b1ec', action: `${ns}.activeSheet.clearRange(${ns}.activeSheet.activeAreas, 'borders');${ns}._r()` },
         ],
         protection: [
             { labelKey: 'layout.auto.labelEa7f2a4b', action: `${ns}.Action.configProtection()` },

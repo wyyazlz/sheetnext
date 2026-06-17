@@ -21,6 +21,7 @@ import * as ViewCalculator from './ViewCalculator.js';
 import * as Initializer from './Initializer.js';
 import * as Clipboard from './Clipboard.js';
 import * as CellControl from './CellControl.js';
+import * as ClearRange from './ClearRange.js';
 
 /** @typedef {import('../Workbook/Workbook.js').default} SheetNext */
 
@@ -1053,6 +1054,8 @@ Object.assign(Sheet.prototype, {
     consolidate: Consolidate.consolidate,
     setDataValidation: DataValidation.setDataValidation,
     clearDataValidation: DataValidation.clearDataValidation,
+    /** @param {RangeRef|RangeRef[]} range @param {string|Object} [ops] */
+    clearRange: ClearRange.clearRange,
     /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops] @returns {RangeNum} */
     insertTemplate: InsertTable.insertTemplate,
 

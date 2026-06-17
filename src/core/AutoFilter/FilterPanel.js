@@ -232,13 +232,6 @@ export default class FilterPanel {
         const list = this._panel.querySelector('.sn-filter-list');
         if (!list) return;
 
-        const allowMultiple = this._customContext?.type !== 'pivot'
-            || this._customContext?.pivotTable?.multipleFieldFilters !== false;
-        if (!allowMultiple && this._selectedValues.size > 1) {
-            const first = this._selectedValues.values().next().value;
-            this._selectedValues = new Set(first ? [first] : []);
-        }
-
         list.innerHTML = values.map(item => {
             const key = item.filterKey ?? String(item.value ?? '');
             const checked = this._selectedValues.has(key) ? 'checked' : '';
@@ -260,12 +253,6 @@ export default class FilterPanel {
             item.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     checkbox.checked = !checkbox.checked;
-                }
-                if (!allowMultiple) {
-                    this._selectedValues.clear();
-                    this._selectedValues.add(value);
-                    this._renderCurrentView();
-                    return;
                 }
                 if (checkbox.checked) {
                     this._selectedValues.add(value);

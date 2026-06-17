@@ -1,6 +1,6 @@
 # Event API
 
-> Generated: 2026-06-16
+> Generated: 2026-06-17
 
 ## Subscription surface
 
@@ -157,7 +157,7 @@ SN.Event.once('afterSheetAdd', (e) => {
 
 ## Emitted events
 
-- Total detected events: 120
+- Total detected events: 122
 - Dynamic event patterns: 7
 
 ### Col
@@ -174,6 +174,7 @@ SN.Event.once('afterSheetAdd', (e) => {
 | after${eventSuffix} | emit | No | [indexKey], changedCount, limitedCount, maxLevel, sheet |
 | afterClearCellControl | emit | No | ...summary, sheet |
 | afterClearDataValidation | emit | No | ...summary, sheet |
+| afterClearRange | emit | No | ...summary, sheet |
 | afterConsolidate | emit | No | ...summary, sheet |
 | afterDeleteColumns | emit | No | col, count, sheet |
 | afterDeleteRows | emit | No | count, row, sheet |
@@ -193,6 +194,7 @@ SN.Event.once('afterSheetAdd', (e) => {
 | before${eventSuffix} | emit | No | [indexKey], areas, maxLevel, sheet |
 | beforeClearCellControl | emit | No | areas, sheet |
 | beforeClearDataValidation | emit | No | areas, sheet |
+| beforeClearRange | emit | No | areas, options, sheet |
 | beforeConsolidate | emit | No | functionName, sheet, skipBlanks, sourceRanges, targetRange |
 | beforeDeleteColumns | emit | No | col, count, sheet |
 | beforeDeleteRows | emit | No | count, row, sheet |

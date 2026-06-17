@@ -244,7 +244,7 @@ export default class LazyDOM {
                 ${this._createContextMenuItemHTML(`${ns}.Action.clearFilter()`, t('contextMenu.cell.clearFilter'), getSvg('clear'))}
                 ${this._createContextMenuDividerHTML()}
                 ${this._createContextMenuItemHTML(`${ns}.Action.toggleWrapText()`, t('contextMenu.cell.wrapText'))}
-                ${this._createContextMenuItemHTML(`${ns}.Action.clearAreaFormat()`, t('contextMenu.cell.clearFormat'), getSvg('clear'))}
+                ${this._createContextMenuItemHTML(`${ns}.activeSheet.clearRange(${ns}.activeSheet.activeAreas);${ns}._r()`, t('contextMenu.cell.clearFormat'), getSvg('clear'))}
                 ${this._createContextMenuDividerHTML()}
                 ${this._createContextMenuItemHTML(`${ns}.Action.fontInversion('bold');`, t('contextMenu.cell.bold'), getSvg('bold'))}
                 ${this._createContextMenuItemHTML(`${ns}.Action.fontInversion('italic');`, t('contextMenu.cell.italic'), getSvg('italic'))}

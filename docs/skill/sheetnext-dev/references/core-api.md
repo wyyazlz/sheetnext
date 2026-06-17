@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-06-16
+> Generated: 2026-06-17
 
 Public callable classes detected for the generated API surface.
 
@@ -549,6 +549,19 @@ sheet.rangeSort([
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | range | string \| Object \| Array<string \| Object> | Yes | - | - |
+
+#### `clearRange(range, ops?): {success:boolean, canceled?:boolean, areas:Array, options:Object, cellCount:number, commentCount?:number, rowColStyleCount?:number, mergeCount?:number}`
+- Clear cells in a range. Defaults to clearing contents and formats.
+- Category: `ClearRange`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| range | RangeRef \| RangeRef[] | Yes | - | - |
+| ops | string \| Object | No | - | Defaults to clearing contents and formats. |
+
+**Returns**
+- Type: `{success:boolean, canceled?:boolean, areas:Array, options:Object, cellCount:number, commentCount?:number, rowColStyleCount?:number, mergeCount?:number}`
 
 #### `insertTemplate(arr, pos, options = {}, ops?): RangeNum`
 - Insert a template from the given position.

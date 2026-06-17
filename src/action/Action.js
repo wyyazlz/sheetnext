@@ -66,7 +66,6 @@ Object.assign(Fun.prototype, {
     decimalPlaces: FormatActions.decimalPlaces,
     areasNumFmt: FormatActions.areasNumFmt,
     customNumFmtDialog: FormatActions.customNumFmtDialog,
-    clearAreaFormat: FormatActions.clearAreaFormat,
     textToNumber: FormatActions.textToNumber,
     numberToText: FormatActions.numberToText,
     toLowercase: FormatActions.toLowercase,
