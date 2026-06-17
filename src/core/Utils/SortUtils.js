@@ -1,3 +1,47 @@
+import { dateStrToDate } from '../Cell/helpers.js';
+
+function toComparableDate(value) {
+    if (value instanceof Date) {
+        const time = value.getTime();
+        return Number.isNaN(time) ? null : time;
+    }
+
+    if (typeof value !== 'string') return null;
+    const text = value.trim();
+    if (!text) return null;
+
+    const result = dateStrToDate(text);
+    const date = result?.date;
+    if (!(date instanceof Date)) return null;
+
+    const time = date.getTime();
+    return Number.isNaN(time) ? null : time;
+}
+
+function toComparableNumber(value) {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value !== 'string') return null;
+    const text = value.trim();
+    if (!text) return null;
+
+    const normalized = text.replace(/,/g, '');
+    if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(normalized)) return null;
+
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : null;
+}
+
+function getSortValue(cell) {
+    if (!cell) return '';
+    if (cell._editVal instanceof Date) return cell._editVal;
+    if (cell._calcVal !== undefined) return cell._calcVal;
+    const calcVal = cell.calcVal;
+    return calcVal !== undefined && calcVal !== null ? calcVal : cell.showVal;
+}
+
 /** @param {*} a @param {*} b @param {{order?:string, nulls?:string, locale?:string, customOrder?:Array, caseSensitive?:boolean}} [options] @returns {number} Compare sort values. */
 export function compare(a, b, options = {}) {
     const { order = 'asc', nulls = 'last', locale = 'zh-CN', customOrder, caseSensitive = false } = options;
@@ -17,9 +61,15 @@ export function compare(a, b, options = {}) {
     if (emptyA) return nulls === 'last' ? 1 : -1;
     if (emptyB) return nulls === 'last' ? -1 : 1;
 
-    const nA = typeof a === 'number' ? a : parseFloat(a);
-    const nB = typeof b === 'number' ? b : parseFloat(b);
-    if (!isNaN(nA) && !isNaN(nB)) {
+    const dA = toComparableDate(a);
+    const dB = toComparableDate(b);
+    if (dA !== null && dB !== null) {
+        return (dA - dB) * mul;
+    }
+
+    const nA = toComparableNumber(a);
+    const nB = toComparableNumber(b);
+    if (nA !== null && nB !== null) {
         return (nA - nB) * mul;
     }
 
@@ -71,7 +121,7 @@ export function sortRange(sheet, range, sortKeys, options = {}) {
         rows.push({
             idx: rowIndex,
             cells: row?.cells?.slice() || [],
-            values: keys.map(key => sheet.getCell(rowIndex, key.col)?.showVal)
+            values: keys.map(key => getSortValue(sheet.getCell(rowIndex, key.col)))
         });
     }
 
