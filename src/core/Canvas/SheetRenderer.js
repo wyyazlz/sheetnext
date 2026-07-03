@@ -110,10 +110,16 @@ export async function rDrawing(nowRCount, options = {}) {
         }
 
         // 进来时应该直接计算长高,否则拉列宽时会影响
-        // 计算图纸在单元格的偏移信息,实时变化
+        // 计算图纸在单元格的偏移信息,实时变化；隐藏行列在屏幕上占 0px，锚点行列被隐藏时偏移量按 0 计
+        const sCol = sheet.getCol(drawing.area.s.c);
+        const sRow = sheet.getRow(drawing.area.s.r);
+        const eCol = sheet.getCol(drawing.area.e.c);
+        const eRow = sheet.getRow(drawing.area.e.r);
+        const sOffX = sCol.hidden ? 0 : drawing.area.s.offsetX;
+        const sOffY = sRow.hidden ? 0 : drawing.area.s.offsetY;
         let x, y
-        let w = info.w - drawing.area.s.offsetX - (sheet.getCol(drawing.area.e.c).width - drawing.area.e.offsetX);
-        let h = info.h - drawing.area.s.offsetY - (sheet.getRow(drawing.area.e.r).height - drawing.area.e.offsetY);
+        let w = info.w - sOffX - (eCol.hidden ? 0 : eCol.width - drawing.area.e.offsetX);
+        let h = info.h - sOffY - (eRow.hidden ? 0 : eRow.height - drawing.area.e.offsetY);
         if (drawing.anchorType !== 'twoCell') {
             w = drawing.width;
             h = drawing.height;
@@ -122,12 +128,9 @@ export async function rDrawing(nowRCount, options = {}) {
         if (drawing.moving) { // 都move了肯定是有position信息的
             x = drawing.position.x
             y = drawing.position.y
-        } else if (drawing.position) { // 只实时更新xy坐标
-            x = info.x + drawing.area.s.offsetX
-            y = info.y + drawing.area.s.offsetY
         } else {
-            x = info.x + drawing.area.s.offsetX
-            y = info.y + drawing.area.s.offsetY
+            x = info.x + sOffX
+            y = info.y + sOffY
         }
 
         if (drawing.type === 'slicer') {

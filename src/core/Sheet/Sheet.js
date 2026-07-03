@@ -22,6 +22,7 @@ import * as Initializer from './Initializer.js';
 import * as Clipboard from './Clipboard.js';
 import * as CellControl from './CellControl.js';
 import * as ClearRange from './ClearRange.js';
+import * as UsedRange from './UsedRange.js';
 
 /** @typedef {import('../Workbook/Workbook.js').default} SheetNext */
 
@@ -1056,6 +1057,9 @@ Object.assign(Sheet.prototype, {
     clearDataValidation: DataValidation.clearDataValidation,
     /** @param {RangeRef|RangeRef[]} range @param {string|Object} [ops] */
     clearRange: ClearRange.clearRange,
+
+    getUsedRange: UsedRange.getUsedRange,
+
     /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops] @returns {RangeNum} */
     insertTemplate: InsertTable.insertTemplate,
 

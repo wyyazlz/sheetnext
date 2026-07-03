@@ -339,6 +339,39 @@ export function getStyleIndex(style, SN) {
     }
 }
 
+// 以纯文本（sharedString/inlineStr）写入单元格值
+function _emitPlainString(obj, SN, key) {
+    let sharedIndex = SN._Xml.sharedStringsObj[key];
+    if (sharedIndex !== undefined) {
+        obj["_$t"] = 's';
+        SN._Xml._sharedStringTotalCount++;
+        obj.v = sharedIndex;
+    } else if (_shouldUseInlineString(SN, key)) {
+        delete obj.v;
+        obj["_$t"] = 'inlineStr';
+        obj.is = { t: key };
+    } else {
+        obj["_$t"] = 's';
+        const sst = SN._Xml.sst;
+        sharedIndex = SN._Xml._sharedStringCount++;
+        SN._Xml.sharedStringsObj[key] = sharedIndex;
+        sst.si.push({ t: key });
+        SN._Xml._sharedStringTotalCount++;
+        obj.v = sharedIndex;
+    }
+}
+
+// 表头单元格必须导出为与 tableColumn name 完全一致的文本，否则 Excel 打开时会修复 table 部件
+function _getTableHeaderText(cell, rowIndex, colIndex) {
+    const tableManager = cell.row?.sheet?.Table;
+    if (!tableManager || tableManager.size === 0) return null;
+    if (cell.isFormula || cell._richText) return null;
+    const table = tableManager.getTableAt(rowIndex, colIndex);
+    if (!table?.isHeaderCell(rowIndex, colIndex)) return null;
+    const idx = table.getColumnIndex(colIndex);
+    return table.columns[idx]?.name || null;
+}
+
 // 构建单元格XML对象
 export function buildCellXml(cell, rowIndex, colIndex) {
     let obj = {
@@ -348,8 +381,11 @@ export function buildCellXml(cell, rowIndex, colIndex) {
     const SN = cell._SN;
 
     // 类型构建
+    const tableHeaderText = _getTableHeaderText(cell, rowIndex, colIndex);
     if (cell.isFormula) {
         obj = { f: cell.editVal.substring(1), ...obj };
+    } else if (tableHeaderText !== null) {
+        _emitPlainString(obj, SN, tableHeaderText);
     } else if (cell.type === 'boolean') {
         obj['_$t'] = 'b';
         obj.v = cell._editVal ? '1' : '0';
@@ -403,25 +439,7 @@ export function buildCellXml(cell, rowIndex, colIndex) {
             obj.v = sharedIndex;
         } else {
             // 纯文本
-            const key = cell.editVal;
-            let sharedIndex = SN._Xml.sharedStringsObj[key];
-            if (sharedIndex !== undefined) {
-                obj["_$t"] = 's';
-                SN._Xml._sharedStringTotalCount++;
-                obj.v = sharedIndex;
-            } else if (_shouldUseInlineString(SN, key)) {
-                delete obj.v;
-                obj["_$t"] = 'inlineStr';
-                obj.is = { t: key };
-            } else {
-                obj["_$t"] = 's';
-                const sst = SN._Xml.sst;
-                sharedIndex = SN._Xml._sharedStringCount++;
-                SN._Xml.sharedStringsObj[key] = sharedIndex;
-                sst.si.push({ t: key });
-                SN._Xml._sharedStringTotalCount++;
-                obj.v = sharedIndex;
-            }
+            _emitPlainString(obj, SN, cell.editVal);
         }
     } else {
         obj.v = cell.editVal;

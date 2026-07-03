@@ -5,7 +5,7 @@ description: "Develop SheetNext spreadsheet apps and integrations. Use when buil
 
 # SheetNext Development
 
-Generated from SheetNext API docs on 2026-06-17.
+Generated from SheetNext API docs on 2026-07-03.
 
 Use the bundled references as the source of truth. Do not invent undocumented APIs.
 

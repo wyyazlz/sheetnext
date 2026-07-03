@@ -127,6 +127,7 @@ export default class Col {
         this.sheet._totalWidthCache = undefined;
         this.sheet._colAxisMetricsCache = null;
         this.sheet._colMetricVersion = (this.sheet._colMetricVersion || 0) + 1;
+        this.sheet.Drawing?._clearChartRefCaches?.(); // charts plot visible cells only
     }
 
     get _outlineLevel() { return this.#outlineLevel; }

@@ -60,6 +60,7 @@ class SheetNext {
      * @param {Object<string, Object>} [options.locales] - Extra locale packs keyed by locale code.
      * @param {function} [options.menuRight] - Callback `(defaultHTML: string) => string`. Receives the default right-menu HTML, return modified HTML.
      * @param {function} [options.menuList] - Callback `(config: Array<{key: string, labelKey?: string, text?: string, groups?: Array, contextual?: boolean, contextType?: string, trigger?: 'panel'|'action', action?: string, color?: string}>) => Array`. Receives the default toolbar panel config array, return modified array. Use `trigger: 'action'` to make a top tab run code directly without switching the toolbar panel. `color` customizes the top-tab text and accent color.
+     * @param {boolean} [options.minimalToolbar=false] - Start with the minimal toolbar enabled.
      * @param {Object|string} [options.theme] - UI theme overrides. Passing a string is treated as `primary`; object tokens include `primary`, `primaryHover`, `primaryActive`, `primarySoft`, `primarySoftHover`, `primaryBorder`, `primarySubtleBorder`, `primaryRing`, `primaryShadow`, `primaryLight`, and `primaryContrast`.
      * @param {string} [options.AI_URL] - AI relay endpoint URL.
      * @param {string} [options.AI_TOKEN] - Optional bearer token for AI relay endpoint.
@@ -113,7 +114,7 @@ class SheetNext {
         this.Formula = new Formula(this)
         this.DependencyGraph = new DependencyGraph(this)
         this.UndoRedo = new UndoRedo(this)
-        this.Canvas = new Canvas(this, this.#license)
+        this.Canvas = new Canvas(this)
 
         this._readOnly = false
         this._activeSheet = null

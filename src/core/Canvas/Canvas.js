@@ -21,9 +21,6 @@ const SCROLL_INERTIA_MIN_VELOCITY = 0.018;
 const SCROLL_INERTIA_DECAY = 0.94;
 const SCROLL_INERTIA_FRAME_MS = 16.67;
 
-const _clm = new WeakMap();
-export const _cgl = (canvas) => _clm.get(canvas);
-
 /**
  * Canvas Rendering and Interaction Management
  * @title 🖱️ Binding Actions
@@ -41,15 +38,13 @@ export default class Canvas {
 
     /**
      * @param {Object} SN - SheetNext Main Instance
-     * @param {Object} license
      */
-    constructor(SN, license) {
+    constructor(SN) {
         /**
          * SheetNext Main Instance
          * @type {Object}
          */
         this.SN = SN
-        _clm.set(this, license);
         /**
          * Tool Method Collection
          * @type {Utils}

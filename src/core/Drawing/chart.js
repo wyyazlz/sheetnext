@@ -2241,7 +2241,11 @@ const getDataByRef = (ref, SN) => {
     const data = [];
     const sheet = SN.getSheet(sheetName);
     if (sheetRef.includes(':')) {
-        sheet.eachCells(sheetRef, (r, c) => data.push(sheet.getCell(r, c).calcVal));
+        // Excel plots visible cells only: skip rows/cols hidden manually or by filter
+        sheet.eachCells(sheetRef, (r, c) => {
+            if (sheet.getRow(r).hidden || sheet.getCol(c).hidden) return;
+            data.push(sheet.getCell(r, c).calcVal);
+        });
     } else {
         return sheet.getCell(sheetRef).calcVal
     }

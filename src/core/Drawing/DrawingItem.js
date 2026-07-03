@@ -278,19 +278,19 @@ export default class DrawingItem {
 
         if (this._area) return this._area
 
-        // compute end position from width/height
-        let remW = this.width + this.offsetX;
+        // compute end position from width/height (hidden rows/cols occupy 0px on screen)
+        let remW = this.width + (this._visColW(this.startCell.c) ? this.offsetX : 0);
         let endC = this.startCell.c;
-        while (remW > this.sheet.getCol(endC).width) {
-            remW -= this.sheet.getCol(endC).width;
+        while (remW > this._visColW(endC)) {
+            remW -= this._visColW(endC);
             endC++;
         }
         const endOffsetX = remW;
 
-        let remH = this.height + this.offsetY;
+        let remH = this.height + (this._visRowH(this.startCell.r) ? this.offsetY : 0);
         let endR = this.startCell.r;
-        while (remH > this.sheet.getRow(endR).height) {
-            remH -= this.sheet.getRow(endR).height;
+        while (remH > this._visRowH(endR)) {
+            remH -= this._visRowH(endR);
             endR++;
         }
         const endOffsetY = remH;
@@ -344,21 +344,23 @@ export default class DrawingItem {
 
     /** @type {number} */
     get width() {
-        // twoCell 模式：从单元格网格实时计算像素宽度
+        // twoCell 模式：从单元格网格实时计算像素宽度（隐藏列按 0 计）
         if (this.anchorType === 'twoCell' && this._endCell) {
-            let w = -this._offsetX;
+            let w = this._visColW(this._startCell.c) ? -this._offsetX : 0;
             for (let c = this._startCell.c; c < this._endCell.c; c++) {
-                w += this.sheet.getCol(c).width;
+                w += this._visColW(c);
             }
-            return w + this._endOffsetX;
+            return w + (this._visColW(this._endCell.c) ? this._endOffsetX : 0);
         }
         // 惰性计算：如果_width是null且有_area，从area反推
         if (this._width === null && this._area) {
             let width = 0;
             for (let c = this._area.s.c; c <= this._area.e.c; c++) {
-                width += this.sheet.getCol(c).width;
+                width += this._visColW(c);
             }
-            this._width = width - this._area.s.offsetX - (this.sheet.getCol(this._area.e.c).width - this._area.e.offsetX);
+            const sOff = this._visColW(this._area.s.c) ? this._area.s.offsetX : 0;
+            const eTail = this._visColW(this._area.e.c) ? this._visColW(this._area.e.c) - this._area.e.offsetX : 0;
+            this._width = width - sOff - eTail;
         }
         return this._width;
     }
@@ -371,21 +373,23 @@ export default class DrawingItem {
 
     /** @type {number} */
     get height() {
-        // twoCell 模式：从单元格网格实时计算像素高度
+        // twoCell 模式：从单元格网格实时计算像素高度（隐藏行按 0 计）
         if (this.anchorType === 'twoCell' && this._endCell) {
-            let h = -this._offsetY;
+            let h = this._visRowH(this._startCell.r) ? -this._offsetY : 0;
             for (let r = this._startCell.r; r < this._endCell.r; r++) {
-                h += this.sheet.getRow(r).height;
+                h += this._visRowH(r);
             }
-            return h + this._endOffsetY;
+            return h + (this._visRowH(this._endCell.r) ? this._endOffsetY : 0);
         }
         // 惰性计算：如果_height是null且有_area，从area反推
         if (this._height === null && this._area) {
             let height = 0;
             for (let r = this._area.s.r; r <= this._area.e.r; r++) {
-                height += this.sheet.getRow(r).height;
+                height += this._visRowH(r);
             }
-            this._height = height - this._area.s.offsetY - (this.sheet.getRow(this._area.e.r).height - this._area.e.offsetY);
+            const sOff = this._visRowH(this._area.s.r) ? this._area.s.offsetY : 0;
+            const eTail = this._visRowH(this._area.e.r) ? this._visRowH(this._area.e.r) - this._area.e.offsetY : 0;
+            this._height = height - sOff - eTail;
         }
         return this._height;
     }
@@ -434,21 +438,33 @@ export default class DrawingItem {
 
     // ==================== Anchor behavior ====================
 
-    /** sync _endCell from pixel size (twoCell mode) */
+    /** on-screen col width: hidden cols occupy 0px @param {number} c @returns {number} */
+    _visColW(c) {
+        const col = this.sheet.getCol(c);
+        return col.hidden ? 0 : col.width;
+    }
+
+    /** on-screen row height: hidden/filtered rows occupy 0px @param {number} r @returns {number} */
+    _visRowH(r) {
+        const row = this.sheet.getRow(r);
+        return row.hidden ? 0 : row.height;
+    }
+
+    /** sync _endCell from pixel size (twoCell mode); pixel size is on-screen size, so hidden rows/cols count 0 */
     _syncEndCell() {
         if (this._width === null || this._height === null) return;
 
-        let remW = this._width + this._offsetX;
+        let remW = this._width + (this._visColW(this._startCell.c) ? this._offsetX : 0);
         let endC = this._startCell.c;
-        while (remW > this.sheet.getCol(endC).width) {
-            remW -= this.sheet.getCol(endC).width;
+        while (remW > this._visColW(endC)) {
+            remW -= this._visColW(endC);
             endC++;
         }
 
-        let remH = this._height + this._offsetY;
+        let remH = this._height + (this._visRowH(this._startCell.r) ? this._offsetY : 0);
         let endR = this._startCell.r;
-        while (remH > this.sheet.getRow(endR).height) {
-            remH -= this.sheet.getRow(endR).height;
+        while (remH > this._visRowH(endR)) {
+            remH -= this._visRowH(endR);
             endR++;
         }
 

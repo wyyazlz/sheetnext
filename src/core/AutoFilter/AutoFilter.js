@@ -853,7 +853,12 @@ export default class AutoFilter {
         const values = new Map();
         const sheet = this.sheet;
 
+        // Excel-style: list only rows that pass the OTHER columns' filters
+        // (own column's filter is ignored so hidden items can be re-selected)
+        const otherFilters = Array.from(scope.columns).filter(([ci]) => ci !== colIndex);
+
         for (let r = scope.range.s.r + 1; r <= scope.range.e.r; r++) {
+            if (otherFilters.some(([ci, filter]) => !this._matchFilter(sheet.getCell(r, ci).editVal, filter))) continue;
             const cell = sheet.getCell(r, colIndex);
             const val = cell.editVal;
             const displayVal = cell.showVal ?? val ?? '';

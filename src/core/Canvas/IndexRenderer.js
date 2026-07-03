@@ -79,8 +79,8 @@ export function rAllBtn() {
 export function rRowColHeaders(sheet, lightInfo) {
     const activeHeaderAccent = this._themeColor('primary', '#2f6f4e');
     const activeHeaderAccentSoft = this._themeColor('primaryBorder', '#97bea7');
-    const activeHeaderFill = this._themeColor('primarySoftHover', '#dceee3');
-    const activeHeaderBorder = this._themeColor('primarySubtleBorder', '#c1d8ca');
+    const activeHeaderFill = '#e4e4e4';
+    const activeHeaderBorder = '#c9c9c9';
     const activeHeaderText = this._themeColor('primaryActive', '#224f38');
     const activeHeaderAccentSize = this.toLogical(1);
     this.rAllBtn(); // 全选按钮

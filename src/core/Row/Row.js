@@ -141,6 +141,7 @@ export default class Row {
         this.sheet._rowAxisMetricsCache = null;
         this.sheet._rowMetricVersion = (this.sheet._rowMetricVersion || 0) + 1;
         this.sheet._rowVisibilityVersion = (this.sheet._rowVisibilityVersion || 0) + 1;
+        this.sheet.Drawing?._clearChartRefCaches?.(); // charts plot visible cells only
     }
 
     get _filterHidden() { return this.#filterHidden; }
@@ -152,6 +153,7 @@ export default class Row {
         this.sheet._rowAxisMetricsCache = null;
         this.sheet._rowMetricVersion = (this.sheet._rowMetricVersion || 0) + 1;
         this.sheet._rowVisibilityVersion = (this.sheet._rowVisibilityVersion || 0) + 1;
+        this.sheet.Drawing?._clearChartRefCaches?.(); // charts plot visible cells only
     }
 
     get _outlineLevel() { return this.#outlineLevel; }

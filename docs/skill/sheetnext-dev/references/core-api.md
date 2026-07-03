@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-06-17
+> Generated: 2026-07-03
 
 Public callable classes detected for the generated API surface.
 
@@ -19,6 +19,7 @@ Public callable classes detected for the generated API surface.
 | options.locales | Object<string, Object> | No | - | Extra locale packs keyed by locale code. |
 | options.menuRight | function | No | - | Callback `(defaultHTML: string) => string`. Receives the default right-menu HTML, return modified HTML. |
 | options.menuList | function | No | - | Callback `(config: Array<{key: string, labelKey?: string, text?: string, groups?: Array, contextual?: boolean, contextType?: string, trigger?: 'panel'\|'action', action?: string, color?: string}>) => Array`. Receives the default toolbar panel config array, return modified array. Use `trigger: 'action'` to make a top tab run code directly without switching the toolbar panel. `color` customizes the top-tab text and accent color. |
+| options.minimalToolbar | boolean | No | false | Start with the minimal toolbar enabled. |
 | options.theme | Object \| string | No | - | UI theme overrides. Passing a string is treated as `primary`; object tokens include `primary`, `primaryHover`, `primaryActive`, `primarySoft`, `primarySoftHover`, `primaryBorder`, `primarySubtleBorder`, `primaryRing`, `primaryShadow`, `primaryLight`, and `primaryContrast`. |
 | options.AI_URL | string | No | - | AI relay endpoint URL. |
 | options.AI_TOKEN | string | No | - | Optional bearer token for AI relay endpoint. |
@@ -65,7 +66,7 @@ const SN = new SheetNext(document.querySelector('#SNContainer'), {
 | IO | IO | No | new IO(this, this.#license) | - |
 | Formula | Formula | No | new Formula(this) | - |
 | UndoRedo | UndoRedo | No | new UndoRedo(this) | - |
-| Canvas | Canvas | No | new Canvas(this, this.#license) | - |
+| Canvas | Canvas | No | new Canvas(this) | - |
 
 ### Get/Set
 | Name | Type | Mode | Static | Description |
@@ -562,6 +563,36 @@ sheet.rangeSort([
 
 **Returns**
 - Type: `{success:boolean, canceled?:boolean, areas:Array, options:Object, cellCount:number, commentCount?:number, rowColStyleCount?:number, mergeCount?:number}`
+
+#### `getUsedRange(options = {}): {s:{r:number,c:number},e:{r:number,c:number}} | string | null`
+- Get the used range of the sheet without scanning the full grid.
+- Category: `UsedRange`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | Object | No | {} | - |
+| options.contents | boolean | No | true | Include non-empty values. |
+| options.formulas | boolean | No | true | Include formula cells. |
+| options.richText | boolean | No | true | Include rich text cells. |
+| options.hyperlinks | boolean | No | true | Include hyperlink cells. |
+| options.dataValidations | boolean | No | true | Include data validation cells. |
+| options.controls | boolean | No | true | Include cell control cells. |
+| options.comments | boolean | No | true | Include comments. |
+| options.merges | boolean | No | true | Include merged ranges. |
+| options.tables | boolean | No | true | Include table ranges. |
+| options.autoFilters | boolean | No | true | Include AutoFilter ranges. |
+| options.drawings | boolean | No | false | Include drawing ranges. |
+| options.sparklines | boolean | No | false | Include sparkline cells and source ranges. |
+| options.conditionalFormats | boolean | No | false | Include conditional formatting ranges. |
+| options.pivotTables | boolean | No | false | Include pivot table output ranges. |
+| options.includeFormats | boolean | No | false | Include explicitly formatted cells. |
+| options.includeRowColFormats | boolean | No | false | Include row and column format or visibility markers. |
+| options.emptyAsNull | boolean | No | false | Return null when the sheet is empty. |
+| options.asString | boolean | No | false | Return A1 range string instead of range object. |
+
+**Returns**
+- Type: `{s:{r:number,c:number},e:{r:number,c:number}} | string | null`
 
 #### `insertTemplate(arr, pos, options = {}, ops?): RangeNum`
 - Insert a template from the given position.
@@ -1549,7 +1580,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 - Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
 | Name | Static | Source Line | Example Assignment |
 | --- | --- | --- | --- |
-| SKctx | No | 357 | this.scrollSkeletonLayer.getContext('2d') |
+| SKctx | No | 352 | this.scrollSkeletonLayer.getContext('2d') |
 
 ## Layout
 - Layout & Toolbar Management
@@ -2147,6 +2178,175 @@ table.add({
 | --- | --- | --- | --- | --- |
 | jsonArray | Array | Yes | - | - |
 
+## TableItem
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheet | Sheet | No | sheet | - |
+| id | string | No | options.id \|\| this._generateId() | - |
+| columns | Array<Object> | No | options.columns \|\| [] | - |
+| showHeaderRow | boolean | No | options.showHeaderRow ?? true | - |
+| showFirstColumn | boolean | No | options.showFirstColumn ?? false | - |
+| showLastColumn | boolean | No | options.showLastColumn ?? false | - |
+| showRowStripes | boolean | No | options.showRowStripes ?? true | - |
+| showColumnStripes | boolean | No | options.showColumnStripes ?? false | - |
+| headerRowDxfId | number \| undefined | No | options.headerRowDxfId | - |
+| dataDxfId | number \| undefined | No | options.dataDxfId | - |
+| headerRowBorderDxfId | number \| undefined | No | options.headerRowBorderDxfId | - |
+| tableBorderDxfId | number \| undefined | No | options.tableBorderDxfId | - |
+| totalsRowBorderDxfId | number \| undefined | No | options.totalsRowBorderDxfId | - |
+
+### Get/Set
+| Name | Type | Mode | Static | Description |
+| --- | --- | --- | --- | --- |
+| name | string | get/set | No | - |
+| displayName | string | get/set | No | - |
+| styleId | string \| null | get/set | No | - |
+| showTotalsRow | boolean | get/set | No | - |
+| autoFilterEnabled | boolean | get/set | No | - |
+| ref | string \| null | get/set | No | - |
+
+### Get
+| Name | Type | Static | Description |
+| --- | --- | --- | --- |
+| range | {s: {r: number, c: number}, e: {r: number, c: number}} \| null | No | - |
+| headerRowIndex | number | No | - |
+| dataStartRow | number | No | - |
+| dataEndRow | number | No | - |
+| totalsRowIndex | number | No | - |
+| style | Object \| null | No | - |
+
+### Methods
+#### `contains(row, col): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `isHeaderCell(row, col): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `isTotalsCell(row, col): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `isDataCell(row, col): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `getDataRowIndex(row): number`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+
+**Returns**
+- Type: `number`
+- visible row index in data area, -1 if hidden or outside
+
+#### `getColumnIndex(col): number`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `number`
+
+#### `getColumn(colIndex): Object | null`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| colIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `Object | null`
+
+#### `getColumnIndexByName(name): number`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| name | string | Yes | - | - |
+
+**Returns**
+- Type: `number`
+
+#### `resize(newRef)`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| newRef | string \| Object | Yes | - | - |
+
+#### `syncColumnNames()`
+- Sync column names from header cell values.
+
+#### `applyTotalsRow(options = {})`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | {initializeDefaults?: boolean, force?: boolean} | No | {} | - |
+
+#### `setTotalsFunction(colIndex, funcType)`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| colIndex | number | Yes | - | - |
+| funcType | string \| null | Yes | - | - |
+
+#### `convertToRange()`
+- Convert table to plain range.
+
+#### `toJSON(): Object`
+
+**Returns**
+- Type: `Object`
+
+#### `static fromJSON(sheet, json): TableItem`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheet | Sheet | Yes | - | - |
+| json | Object | Yes | - | - |
+
+**Returns**
+- Type: `TableItem`
+
 ## Drawing
 - Drawing manager - CRUD, XML parse & export
 
@@ -2327,19 +2527,28 @@ sheet.Drawing.addChart({
 | size | number | No | - |
 
 ### Methods
-#### `add(config): PivotTable`
-- Add Perceive Table
+#### `add(config): PivotTableItem | null`
+- Add a pivot table to this sheet.<br>The source is either a worksheet range (`sourceSheet` + `sourceRangeRef`) or in-memory<br>business records (`records`, cache-first, no worksheet data is written).
 
 **Parameters**
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | config | Object | Yes | - | Configure Object |
-| config.sourceSheet | Sheet | Yes | - | Source Sheet |
-| config.sourceRangeRef | string | Yes | - | Source range |
-| config.cellRef | string \| Object | Yes | - | target cell<br>Is there a cycle for |
+| config.sourceSheet | Sheet | No | - | Source sheet (range source) |
+| config.sourceRangeRef | string \| Object | No | - | Source range (range source) |
+| config.records | Array<Object> \| any[][] | No | - | Business records (cache-first source) |
+| config.fields | Array<string \| {name: string, numFmtId?: number}> | No | - | Field definitions for `records`; inferred from object keys when omitted |
+| config.cellRef | string \| Object | No | - | Target cell, defaults to A3 |
+| config.name | string | No | - | Pivot table name, auto generated when omitted |
+| config.rows | Array<string \| number> | No | - | Row fields (field name or index) |
+| config.cols | Array<string \| number> | No | - | Column fields |
+| config.filters | Array<string \| number> | No | - | Report filter fields |
+| config.values | Array<string \| {field: string \| number, subtotal?: string, name?: string}> | No | - | Value fields |
+| config.render | boolean | No | true | Calculate and render when a field layout is provided |
+| config.chart | Object \| boolean | No | - | Create a pivot chart after render: {type, includeTotals, drawing} |
 
 **Returns**
-- Type: `PivotTable`
+- Type: `PivotTableItem | null`
 
 **Examples**
 ```js
@@ -2411,6 +2620,354 @@ pt.refresh();
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | options | Object | No | {} | - |
+
+## PivotTableItem
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheet | Sheet | No | sheet | - |
+| name | string | No | options.name ?? this._generateName() | - |
+| cacheId | string \| number \| undefined | No | options.cacheId | - |
+| uid | string \| null | No | options.uid ?? null | - |
+| location | {ref: string, firstHeaderRow: number, firstDataRow: number, firstDataCol: number} | No | { | - |
+| pivotFields | PivotField[] | No | [] | - |
+| rowFields | number[] | No | [] | - |
+| colFields | number[] | No | [] | - |
+| dataFields | PivotDataField[] | No | [] | - |
+| pageFields | number[] | No | [] | - |
+| rowGrandTotals | boolean | No | options.rowGrandTotals !== false | - |
+| colGrandTotals | boolean | No | options.colGrandTotals !== false | - |
+| showRowHeaders | boolean | No | options.showRowHeaders !== false | - |
+| showColHeaders | boolean | No | options.showColHeaders !== false | - |
+| compact | boolean | No | options.compact !== false | - |
+| compactData | boolean | No | options.compactData !== false | - |
+| outline | boolean | No | options.outline !== false | - |
+| outlineData | boolean | No | options.outlineData !== false | - |
+| showDrill | boolean | No | options.showDrill !== false | - |
+| gridDropZones | boolean | No | options.gridDropZones ?? true | - |
+| multipleFieldFilters | boolean | No | options.multipleFieldFilters !== false | - |
+| showPageFields | boolean | No | options.showPageFields !== false | - |
+| reportFilterLayout | string | No | options.reportFilterLayout ?? 'vertical' | - |
+| reportFilterFieldsPerRow | number | No | Math.max(1, Number(options.reportFilterFieldsPerRow) \|\| 1) | - |
+| compactIndent | number | No | Number.isFinite(options.compactIndent) ? Math.max(0, options.compactIndent) : 1 | - |
+| mergeLabelCells | boolean | No | options.mergeLabelCells ?? false | - |
+| errorValueEnabled | boolean | No | options.errorValueEnabled ?? false | - |
+| errorValueText | string | No | options.errorValueText ?? '' | - |
+| emptyValueEnabled | boolean | No | options.emptyValueEnabled ?? false | - |
+| emptyValueText | string | No | options.emptyValueText ?? '' | - |
+| enableValueCellEditing | boolean | No | options.enableValueCellEditing ?? false | - |
+| showContextTips | boolean | No | options.showContextTips !== false | - |
+| printDrillButtons | boolean | No | options.printDrillButtons !== false | - |
+| printRepeatRowLabels | boolean | No | options.printRepeatRowLabels ?? false | - |
+| printTitles | boolean | No | options.printTitles ?? false | - |
+| includeCalculatedItemsInTotals | boolean | No | options.includeCalculatedItemsInTotals !== false | - |
+| dataCaption | string | No | - | - |
+| grandTotalCaption | string | No | - | - |
+| pivotTableStyleName | string | No | options.pivotTableStyleName ?? 'PivotStyleLight16' | - |
+| showRowStripes | boolean | No | options.showRowStripes ?? false | - |
+| showColStripes | boolean | No | options.showColStripes ?? false | - |
+| formats | Array | No | [] | - |
+| chartFormat | string \| number \| null | No | options.chartFormat ?? null | - |
+| chartFormats | Object \| null | No | options.chartFormats ? _clonePivotXmlNode(options.chartFormats) : null | - |
+
+### Get/Set
+| Name | Type | Mode | Static | Description |
+| --- | --- | --- | --- | --- |
+| cache | Object \| null | get/set | No | - |
+
+### Methods
+#### `addRowField(fieldIndex, position = -1): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| position | number | No | -1 | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `removeRowField(fieldIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `addColField(fieldIndex, position = -1): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| position | number | No | -1 | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `removeColField(fieldIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `addDataField(fieldIndex, subtotal = 'sum', name = null, position = -1): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| subtotal | string | No | 'sum' | - |
+| name | string \| null | No | null | - |
+| position | number | No | -1 | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `removeDataField(dataFieldIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| dataFieldIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `moveDataField(dataFieldIndex, position = -1): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| dataFieldIndex | number | Yes | - | - |
+| position | number | No | -1 | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `addPageField(fieldIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `removePageField(fieldIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `moveField(fieldIndex, fromArea, toArea, position = -1)`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| fromArea | string | Yes | - | - |
+| toArea | string | Yes | - | - |
+| position | number | No | -1 | - |
+
+#### `cloneToSheet(targetSheet, options = {}): PivotTableItem | null`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| targetSheet | Sheet | Yes | - | - |
+| options | Object | No | {} | - |
+
+**Returns**
+- Type: `PivotTableItem | null`
+
+#### `moveTo(targetSheet, cellRef = { r: 2, c: 0 }): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| targetSheet | Sheet | Yes | - | - |
+| cellRef | string \| {r:number,c:number} | No | { r: 2, c: 0 } | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `changeDataSource(sourceSheet, sourceRangeRef, options = {}): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| sourceSheet | Sheet | Yes | - | - |
+| sourceRangeRef | string \| Object | Yes | - | - |
+| options | Object | No | {} | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `setDataFieldSubtotal(dataFieldIndex, subtotal)`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| dataFieldIndex | number | Yes | - | - |
+| subtotal | string | Yes | - | - |
+
+#### `setDataFieldShowAs(dataFieldIndex, showDataAs, baseField = -1, baseItem = 0)`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| dataFieldIndex | number | Yes | - | - |
+| showDataAs | string | Yes | - | - |
+| baseField | number | No | -1 | - |
+| baseItem | number | No | 0 | - |
+
+#### `setItemHidden(fieldIndex, itemIndex, hidden): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| itemIndex | number | Yes | - | - |
+| hidden | boolean | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `setItemsHidden(fieldIndex, hiddenMap): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| hiddenMap | Object | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `clearFieldFilter(fieldIndex): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `setFieldSort(fieldIndex, sortType): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| fieldIndex | number | Yes | - | - |
+| sortType | string | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `calculate()`
+
+#### `getPivotData(dataFieldName, fieldItems = [): number | string`
+- Return a pivot value using Excel GETPIVOTDATA-style field/item criteria.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| dataFieldName | string | Yes | - | Pivot data field caption |
+| fieldItems | Array | No | [ | ] - Pairs of field name and item value |
+
+**Returns**
+- Type: `number | string`
+
+#### `isRowCollapsed(level, values): boolean`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| level | number | Yes | - | - |
+| values | Array | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `toggleRowCollapsed(level, values)`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| level | number | Yes | - | - |
+| values | Array | Yes | - | - |
+
+#### `getRowToggleInfo(row, col): Object | null`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| row | number | Yes | - | - |
+| col | number | Yes | - | - |
+
+**Returns**
+- Type: `Object | null`
+
+#### `getRenderRef(): string`
+
+**Returns**
+- Type: `string`
+
+#### `render(options = {})`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | Object | No | {} | - |
+
+#### `createChart(options = {}): DrawingItem | null`
+- Create a PivotChart from this PivotTable.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | Object | No | {} | - |
+| options.type | string | No | 'bar_clustered' | Chart type key. |
+| options.includeTotals | boolean | No | true | Whether chart source includes grand totals. |
+| options.drawing | Object | No | - | Drawing position and size options. |
+
+**Returns**
+- Type: `DrawingItem | null`
+
+#### `static fromXml(sheet, xmlObj, cache): PivotTableItem`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheet | Sheet | Yes | - | - |
+| xmlObj | Object | Yes | - | - |
+| cache | Object \| null | Yes | - | - |
+
+**Returns**
+- Type: `PivotTableItem`
+
+#### `prepareForExport()`
+
+#### `toXml()`
+
+#### `refresh()`
+
+#### `remove()`
 
 ## Slicer
 - Slicer Manager<br>We'll be in charge of the cutter.

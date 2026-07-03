@@ -27,6 +27,7 @@ export default class Layout {
      * @param {Object} [options={}] - Layout options.
      * @param {function} [options.menuRight] - Callback `(defaultHTML: string) => string` to customize the top-right menu HTML.
      * @param {function} [options.menuList] - Callback `(config: Array<{key: string, groups?: Array, trigger?: 'panel'|'action', action?: string, class?: string}>) => Array` to customize menu tab config. `class` attaches custom classes to the top tab and overflow item.
+     * @param {boolean} [options.minimalToolbar=false] - Start with the minimal toolbar enabled (same as `Layout.minimalToolbarEnabled = true`).
      */
     constructor(SN, options = {}) {
         this._options = options;
@@ -58,7 +59,7 @@ export default class Layout {
         this._currentContextType = null;
         this._currentContextData = null;
         this._minimalToolbarEnabled = false;
-        this._userMinimalToolbarEnabled = false;
+        this._userMinimalToolbarEnabled = !!options.minimalToolbar;
         this._isMinimalToolbarLocked = false;
         this._toolbarAdaptiveRaf = null;
         this._minimalToolbarEventsBound = false;

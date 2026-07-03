@@ -512,6 +512,19 @@ export default class TableItem {
             const cellValue = cell.calcVal ?? cell.v;
             this.columns[colIndex].name = cellValue?.toString() || `列${colIndex + 1}`;
         }
+
+        // Excel 要求列名唯一（大小写不敏感），重名按 Excel 规则追加 2、3...
+        const seen = new Set();
+        this.columns.forEach(col => {
+            let name = col.name;
+            if (seen.has(name.toLowerCase())) {
+                let n = 2;
+                while (seen.has(`${name}${n}`.toLowerCase())) n++;
+                name = `${name}${n}`;
+                col.name = name;
+            }
+            seen.add(name.toLowerCase());
+        });
     }
 
     _updateAutoFilter() {
