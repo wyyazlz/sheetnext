@@ -103,3 +103,77 @@
     color: #999;
     text-align: center;
 }
+
+/* ==================== 公式内联编辑（联想下拉 / 参数提示 / 引用着色） ==================== */
+
+.sn-input-editor.sn-formula-mode {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.sn-formula-ac {
+    position: absolute;
+    z-index: 1000;
+    min-width: 220px;
+    max-width: 380px;
+    max-height: 232px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sn-formula-ac-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+    line-height: 21px;
+}
+
+.sn-formula-ac-item.active,
+.sn-formula-ac-item:hover {
+    background: var(--sn-primary-soft-hover);
+}
+
+.sn-formula-ac-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    flex-shrink: 0;
+}
+
+.sn-formula-ac-desc {
+    font-size: 12px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sn-formula-hint {
+    position: absolute;
+    z-index: 1000;
+    max-width: 420px;
+    padding: 3px 10px;
+    background: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sn-formula-hint-name {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.sn-formula-hint b {
+    color: var(--sn-primary-active);
+}

@@ -14,6 +14,7 @@ export function formulaBarFocus() {
     this.opFun.style.color = this._themeColor('primary', '#2f6f4e')
     const inputFun = () => {
         this.input.innerText = this.formulaBar.value
+        this.formulaEditor?.onExternalTextChange(); // 公式栏输入同步引用高亮
     }
     this.formulaBar.addEventListener('input', inputFun)
     this.opCancel.addEventListener('mousedown', () => {

@@ -46,6 +46,8 @@ function insertLineBreakAtCursor(input) {
 }
 
 export function docKeyDown(event) {
+    // 公式编辑态优先处理（联想下拉导航、F4、方向键 Point 引用等）
+    if (this.formulaEditor?.handleKeyDown(event)) return;
     if (event.altKey) {
         const isFormulaBarFocused = document.activeElement === this.formulaBar;
         if (event.key === 'Enter' && !isFormulaBarFocused) {

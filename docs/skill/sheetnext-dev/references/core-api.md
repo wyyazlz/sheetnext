@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-07-03
+> Generated: 2026-07-06
 
 Public callable classes detected for the generated API surface.
 
@@ -1089,6 +1089,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 | slicersCon | HTMLElement | No | SN.containerDom.querySelector('.sn-slicers-con') | Slicer Container |
 | maxTop | number | No | 0 | Maximum longitudinal scrolling distance |
 | maxLeft | number | No | 0 | Maximum lateral scrolling distance |
+| formulaEditor | FormulaEditor | No | new FormulaEditor(this) | Inline Formula Editor Controller |
 | rCount | number | No | 0 | Render Count |
 | hoveredComment | Object \| null | No | null | Current hover comment |
 | statSum | HTMLElement \| null | No | SN.containerDom.querySelector('[data-stat="sum"]') | Statistical Sum: Dom |
@@ -1580,7 +1581,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 - Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
 | Name | Static | Source Line | Example Assignment |
 | --- | --- | --- | --- |
-| SKctx | No | 352 | this.scrollSkeletonLayer.getContext('2d') |
+| SKctx | No | 359 | this.scrollSkeletonLayer.getContext('2d') |
 
 ## Layout
 - Layout & Toolbar Management
@@ -3306,6 +3307,75 @@ sparkline.add({
 
 **Returns**
 - Type: `Object | null`
+
+## FormulaEditor
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| canvas | Canvas | No | canvas | Canvas instance |
+| SN | Object | No | canvas.SN | SheetNext Main Instance |
+
+### Get
+| Name | Type | Static | Description |
+| --- | --- | --- | --- |
+| active | boolean | No | Whether the formula editing mode is currently active |
+
+### Methods
+#### `beginSession(): void`
+- Start a fresh editing session, called when the cell editor opens.
+
+#### `syncFromInput(): void`
+- Re-read the editor content and refresh coloring, overlays and highlights.
+
+#### `onInput(): void`
+- User typed into the cell editor.
+
+#### `onExternalTextChange(): void`
+- Editor content was mirrored from the formula bar, refresh without caret handling.
+
+#### `handleKeyDown(event): boolean`
+- Intercept keyboard events during formula editing.<br>Handles dropdown navigation, Tab-accept, Escape, F4 and arrow-key pointing.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| event | KeyboardEvent | Yes | - | Keydown event from the document handler |
+
+**Returns**
+- Type: `boolean`
+- true when the event was consumed
+
+#### `handleCanvasMousedown(event): boolean`
+- Intercept a canvas mousedown during formula editing.<br>When the cursor is at a reference-insertable position the click/drag<br>inserts a cell/range/row/column reference instead of committing the edit.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| event | MouseEvent | Yes | - | Mousedown event on the handle layer |
+
+**Returns**
+- Type: `boolean`
+- true when the event was consumed
+
+#### `drawRefHighlights(sheet): void`
+- Draw colored frames around referenced areas, called from the render pipeline.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheet | Sheet | Yes | - | Sheet being rendered |
+
+#### `onViewScrolled(): void`
+- Reposition editor overlays after view scrolling during formula editing.
+
+#### `deactivate(render = true): void`
+- Leave formula mode and clear overlays/highlights.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| render | boolean | No | true | Whether to trigger a snapshot repaint |
 
 ## FormulaAstParser
 

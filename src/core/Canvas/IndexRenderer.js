@@ -410,6 +410,11 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
         this.rRowColHeaders(sheet, selectionVisible ? lightInfo : { rows: [], columns: [] }); // 渲染行标列标
     }
 
+    // 公式编辑态：引用区域彩色高亮（与编辑器内引用着色同色）
+    if (!isScreenshot) {
+        this.formulaEditor?.drawRefHighlights(sheet);
+    }
+
     const lf = lightInfo.lastFrame
     if (selectionVisible && lf && lf.inView && !(isScreenshot && hideSelectionFrame)) {
         withGridBodyClip(this, sheet, () => {

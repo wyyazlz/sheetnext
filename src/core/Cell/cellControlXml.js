@@ -40,7 +40,9 @@ function _readText(node) {
     return node;
 }
 
-function _readInt(node, fallback = 0) {
+// No default fallback: callers pass undefined to mean "no value", and a
+// `fallback = 0` default would silently map missing xfComplement to index 0.
+function _readInt(node, fallback) {
     const value = Number(_readText(node));
     return Number.isFinite(value) ? value : fallback;
 }

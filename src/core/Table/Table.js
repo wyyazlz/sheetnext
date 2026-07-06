@@ -307,6 +307,55 @@ export default class Table {
         return endRow;
     }
 
+    /**
+     * Stretch chart refs bound to the table's old data boundary so charts
+     * created from the table follow its resize (Excel table-chart behavior).
+     * A ref follows when it lies inside the old table range and ends exactly
+     * at the old last data row (or last column).
+     * @param {TableItem} table - table already holding the new range
+     * @param {{s:{r:number,c:number},e:{r:number,c:number}}} oldRange
+     */
+    _syncChartRefsToResize(table, oldRange) {
+        const newRange = table.range;
+        if (!oldRange?.s || !newRange?.s) return;
+
+        const totals = table.showTotalsRow ? 1 : 0;
+        const oldDataStart = oldRange.s.r + (table.showHeaderRow ? 1 : 0);
+        const oldDataEnd = oldRange.e.r - totals;
+        const newDataEnd = table.dataEndRow;
+        const oldColEnd = oldRange.e.c;
+        const newColEnd = newRange.e.c;
+        if (oldDataEnd === newDataEnd && oldColEnd === newColEnd) return;
+
+        const mapRange = (range) => {
+            let changed = false;
+            const next = { s: { ...range.s }, e: { ...range.e } };
+            // 行方向：单列引用（系列值/分类列）落在表格列内且止于旧数据末行 → 拉伸到新数据末行
+            // 单格引用仅当位于数据起始行时才拉伸，避免误拉伸表头名称引用
+            if (newDataEnd !== oldDataEnd && newDataEnd >= range.s.r &&
+                range.s.c === range.e.c && (range.s.r < range.e.r || range.s.r === oldDataStart) &&
+                range.e.r === oldDataEnd && range.s.r >= oldRange.s.r &&
+                range.s.c >= oldRange.s.c && range.s.c <= oldColEnd) {
+                next.e.r = newDataEnd;
+                changed = true;
+            }
+            // 列方向：单行引用（横向系列值/分类行）落在表格行内且止于旧末列 → 拉伸到新末列
+            if (newColEnd !== oldColEnd && newColEnd >= range.s.c &&
+                range.s.r === range.e.r && (range.s.c < range.e.c || range.s.c === oldRange.s.c + 1) &&
+                range.e.c === oldColEnd && range.s.c >= oldRange.s.c &&
+                range.s.r >= oldRange.s.r && range.s.r <= oldRange.e.r) {
+                next.e.c = newColEnd;
+                changed = true;
+            }
+            return changed ? next : null;
+        };
+
+        const sheetName = this.sheet.name;
+        this.sheet.SN.sheets.forEach(sh => {
+            sh.Drawing?.getAll().forEach(d => d._remapChartRefs?.(sheetName, mapRange));
+        });
+    }
+
     _canResizeWithoutOverlap(targetTable, nextRange) {
         for (const table of this._tables.values()) {
             if (table === targetTable) continue;
@@ -341,6 +390,10 @@ export default class Table {
             pivotCaches: pivotCaches.map(item => ({
                 cache: item.cache,
                 state: item.cache?._captureStructureState?.()
+            })),
+            drawings: this.sheet.SN.sheets.map(sh => ({
+                sheet: sh,
+                state: sh.Drawing?._captureState?.() ?? null
             }))
         };
     }
@@ -364,6 +417,10 @@ export default class Table {
 
         state.pivotCaches?.forEach(item => {
             item.cache?._applyStructureState?.(item.state);
+        });
+
+        state.drawings?.forEach(item => {
+            item.sheet?.Drawing?._applyState?.(item.state);
         });
     }
 

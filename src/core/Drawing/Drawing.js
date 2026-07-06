@@ -281,35 +281,127 @@ export default class Drawing {
     // ===== row/col change handlers =====
 
     /**
+     * Snapshot anchors and chart ref options for structural undo/redo.
+     * @returns {Array}
+     */
+    _captureState() {
+        return this._list.map(d => ({
+            d,
+            startCell: { ...d._startCell },
+            endCell: d._endCell ? { ...d._endCell } : null,
+            offsetX: d._offsetX,
+            offsetY: d._offsetY,
+            endOffsetX: d._endOffsetX,
+            endOffsetY: d._endOffsetY,
+            chartOption: d.type === 'chart' && d._hasChartReferences() ? JSON.stringify(d.chartOption) : null
+        }));
+    }
+
+    /** @param {Array} state - snapshot from _captureState */
+    _applyState(state) {
+        if (!state) return;
+        state.forEach(item => {
+            const d = item.d;
+            d._startCell = { ...item.startCell };
+            d._endCell = item.endCell ? { ...item.endCell } : null;
+            d._offsetX = item.offsetX;
+            d._offsetY = item.offsetY;
+            d._endOffsetX = item.endOffsetX;
+            d._endOffsetY = item.endOffsetY;
+            d._area = null;
+            if (item.chartOption) {
+                d._chartOption = JSON.parse(item.chartOption);
+                d._clearRenderCache();
+            }
+        });
+    }
+
+    /**
      * @param {number} r - row index
      * @param {number} n - count
+     * @param {string} [sheetName] - sheet where rows changed (for cross-sheet chart refs)
      */
-    _onRowsInserted(r, n) {
-        for (const d of this._list) d._adjustForRowInsert(r, n);
+    _onRowsInserted(r, n, sheetName = this.sheet.name) {
+        const own = sheetName === this.sheet.name;
+        const mapRange = (range) => {
+            if (range.e.r < r) return null;
+            const next = { s: { ...range.s }, e: { ...range.e } };
+            if (next.s.r >= r) next.s.r += n;
+            next.e.r += n;
+            return next;
+        };
+        for (const d of this._list) {
+            if (own) d._adjustForRowInsert(r, n);
+            d._remapChartRefs(sheetName, mapRange);
+        }
     }
 
     /**
      * @param {number} r - start row index
      * @param {number} n - count
+     * @param {string} [sheetName] - sheet where rows changed (for cross-sheet chart refs)
      */
-    _onRowsDeleted(r, n) {
-        for (const d of this._list) d._adjustForRowDelete(r, n);
+    _onRowsDeleted(r, n, sheetName = this.sheet.name) {
+        const own = sheetName === this.sheet.name;
+        const delEnd = r + n;
+        const mapRange = (range) => {
+            if (range.e.r < r) return null;
+            const next = { s: { ...range.s }, e: { ...range.e } };
+            if (next.s.r >= delEnd) next.s.r -= n;
+            else if (next.s.r >= r) next.s.r = r;
+            if (next.e.r >= delEnd) next.e.r -= n;
+            else next.e.r = r - 1;
+            if (next.e.r < next.s.r) { next.s.r = r; next.e.r = r; } // range fully deleted: collapse
+            return next;
+        };
+        for (const d of this._list) {
+            if (own) d._adjustForRowDelete(r, n);
+            d._remapChartRefs(sheetName, mapRange);
+        }
     }
 
     /**
      * @param {number} c - col index
      * @param {number} n - count
+     * @param {string} [sheetName] - sheet where cols changed (for cross-sheet chart refs)
      */
-    _onColsInserted(c, n) {
-        for (const d of this._list) d._adjustForColInsert(c, n);
+    _onColsInserted(c, n, sheetName = this.sheet.name) {
+        const own = sheetName === this.sheet.name;
+        const mapRange = (range) => {
+            if (range.e.c < c) return null;
+            const next = { s: { ...range.s }, e: { ...range.e } };
+            if (next.s.c >= c) next.s.c += n;
+            next.e.c += n;
+            return next;
+        };
+        for (const d of this._list) {
+            if (own) d._adjustForColInsert(c, n);
+            d._remapChartRefs(sheetName, mapRange);
+        }
     }
 
     /**
      * @param {number} c - start col index
      * @param {number} n - count
+     * @param {string} [sheetName] - sheet where cols changed (for cross-sheet chart refs)
      */
-    _onColsDeleted(c, n) {
-        for (const d of this._list) d._adjustForColDelete(c, n);
+    _onColsDeleted(c, n, sheetName = this.sheet.name) {
+        const own = sheetName === this.sheet.name;
+        const delEnd = c + n;
+        const mapRange = (range) => {
+            if (range.e.c < c) return null;
+            const next = { s: { ...range.s }, e: { ...range.e } };
+            if (next.s.c >= delEnd) next.s.c -= n;
+            else if (next.s.c >= c) next.s.c = c;
+            if (next.e.c >= delEnd) next.e.c -= n;
+            else next.e.c = c - 1;
+            if (next.e.c < next.s.c) { next.s.c = c; next.e.c = c; } // range fully deleted: collapse
+            return next;
+        };
+        for (const d of this._list) {
+            if (own) d._adjustForColDelete(c, n);
+            d._remapChartRefs(sheetName, mapRange);
+        }
     }
 
     _toXmlObj() {

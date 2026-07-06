@@ -55,7 +55,10 @@ export function addEventListeners() {
     this.rollYS.addEventListener('touchstart', (event) => xTouchDown.call(this, event), { passive: false });
     this.rollXS.addEventListener('touchstart', (event) => yTouchDown.call(this, event), { passive: false });
     // 输入框
-    this.input.addEventListener('input', () => inputInput.call(this))
+    this.input.addEventListener('input', () => {
+        inputInput.call(this);
+        this.formulaEditor?.onInput();
+    })
     this.input.addEventListener('blur', () => {
         if (this.inputEditing) this.updInputValue();
     });

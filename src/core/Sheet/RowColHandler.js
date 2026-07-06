@@ -215,7 +215,8 @@ function _captureStructureStates(sheet) {
         crossSheet: sheet.SN.sheets.map(targetSheet => ({
             sheet: targetSheet,
             cf: targetSheet.CF?._captureState?.() ?? null,
-            sparkline: targetSheet.Sparkline?._captureState?.() ?? null
+            sparkline: targetSheet.Sparkline?._captureState?.() ?? null,
+            drawing: targetSheet.Drawing?._captureState?.() ?? null
         }))
     };
 }
@@ -229,6 +230,7 @@ function _applyStructureStates(sheet, states) {
     states.crossSheet?.forEach(entry => {
         entry.sheet?.CF?._applyState?.(entry.cf);
         entry.sheet?.Sparkline?._applyState?.(entry.sparkline);
+        entry.sheet?.Drawing?._applyState?.(entry.drawing);
     });
 }
 
@@ -238,6 +240,7 @@ function _notifyStructureChanges(sheet, method, index, number) {
     sheet.SN.sheets.forEach(targetSheet => {
         targetSheet.CF?.[method]?.(index, number, sheet.name);
         targetSheet.Sparkline?.[method]?.(index, number, sheet.name);
+        targetSheet.Drawing?.[method]?.(index, number, sheet.name);
     });
 }
 
@@ -342,6 +345,8 @@ export function addRows(r, number = 1) {
     applyRowInsertToTables();
     this.AutoFilter?._onRowsInserted?.(r, number);
     _notifyStructureChanges(this, '_onRowsInserted', r, number);
+    // 紧邻表格底部插入行时，图表引用跟随表格扩展（表内插入已由通用平移处理）
+    affectedTables.forEach(({ table, oldRange }) => this.Table._syncChartRefsToResize(table, oldRange));
     const autoFilterAfter = this.AutoFilter?._captureSheetScopeState?.() ?? null;
     const structureAfter = _captureStructureStates(this);
 
@@ -404,9 +409,6 @@ export function addRows(r, number = 1) {
             _applyStructureStates(this, structureAfter);
         }
     });
-
-    // 调整图纸位置（行插入）
-    this.Drawing._onRowsInserted(r, number);
 
     // 触发 afterInsertRows 事件
     this.SN.Event.emit('afterInsertRows', {
@@ -533,6 +535,8 @@ export function addCols(c, number = 1) {
     // 更新普通自动筛选范围（非超级表）
     this.AutoFilter?._onColsInserted?.(c, number);
     _notifyStructureChanges(this, '_onColsInserted', c, number);
+    // 紧邻表格右侧插入列时，图表引用跟随表格扩展（表内插入已由通用平移处理）
+    affectedTables.forEach(({ table, oldRange }) => this.Table._syncChartRefsToResize(table, oldRange));
     const autoFilterAfter = this.AutoFilter?._captureSheetScopeState?.() ?? null;
     const structureAfter = _captureStructureStates(this);
 
@@ -628,9 +632,6 @@ export function addCols(c, number = 1) {
             _applyStructureStates(this, structureAfter);
         }
     });
-
-    // 调整图纸位置（列插入）
-    this.Drawing._onColsInserted(c, number);
 
     // 触发 afterInsertColumns 事件
     this.SN.Event.emit('afterInsertColumns', {
@@ -765,9 +766,6 @@ export function delRows(r, number = 1) {
             _applyStructureStates(this, structureAfter);
         }
     });
-
-    // 调整图纸位置（行删除）
-    this.Drawing._onRowsDeleted(r, number);
 
     // 触发 afterDeleteRows 事件
     this.SN.Event.emit('afterDeleteRows', {
@@ -909,9 +907,6 @@ export function delCols(c, number = 1) {
             _applyStructureStates(this, structureAfter);
         }
     });
-
-    // 调整图纸位置（列删除）
-    this.Drawing._onColsDeleted(c, number);
 
     // 触发 afterDeleteColumns 事件
     this.SN.Event.emit('afterDeleteColumns', {

@@ -11,6 +11,7 @@ import * as CFRenderer from './CFRenderer.js';
 import * as FilterRenderer from './FilterRenderer.js';
 import * as PivotTableRenderer from './PivotTableRenderer.js';
 import FilterPanel from '../AutoFilter/FilterPanel.js';
+import FormulaEditor from './FormulaEditor.js';
 import LazyDOM from '../Layout/LazyDOM.js';
 import { _layerZIndex } from '../Layout/LayerConfig.js';
 import { getThemeColor } from '../Theme/Theme.js';
@@ -223,6 +224,12 @@ export default class Canvas {
          * @type {FilterPanel}
          */
         this.filterPanelManager = new FilterPanel(this);
+
+        /**
+         * Inline Formula Editor Controller
+         * @type {FormulaEditor}
+         */
+        this.formulaEditor = new FormulaEditor(this);
 
         /**
          * Render Count
