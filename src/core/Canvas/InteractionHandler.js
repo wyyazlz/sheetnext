@@ -1283,6 +1283,11 @@ function getPaddingArea(cellIndex) {
 function getMouseInBorder(x, y) {
     if (!this.activeSheet.protection.isSelectionVisible()) return null;
     if (!this.activeBorderInfo?.inView) return null;
+    const paneClip = this.activeBorderInfo.paneClip;
+    if (paneClip?.empty || (paneClip && (
+        x < paneClip.x || x > paneClip.x + paneClip.w ||
+        y < paneClip.y || y > paneClip.y + paneClip.h
+    ))) return null;
     const { x: rectX, y: rectY, w: rectW, h: rectH } = this.activeBorderInfo; // 矩形信息
     const borderWidth = 2; // 边框粗细
     const handleSize = 10; // 填充柄的大小

@@ -327,6 +327,14 @@ const enUS = {
         },
         "formula": {
             "content": {
+                "arguments": {
+                    "addArgument": "Add argument",
+                    "argument": "Argument {index}",
+                    "inputPlaceholder": "Enter a value or select a range",
+                    "noArguments": "This function has no arguments.",
+                    "optional": "Optional",
+                    "selectRange": "Select range"
+                },
                 "categories": {
                     "addins": "Add-ins & Automation",
                     "all": "All",
@@ -361,6 +369,11 @@ const enUS = {
                     "cancel": "Cancel",
                     "confirm": "Insert",
                     "title": "Insert Function"
+                },
+                "m002": {
+                    "cancel": "Cancel",
+                    "confirm": "OK",
+                    "title": "Function Arguments"
                 }
             },
             "toast": {
@@ -537,6 +550,45 @@ const enUS = {
                 "msg003": "Please enter a reference",
                 "msg004": "This name already exists",
                 "msg005": "No defined names are available"
+            }
+        },
+        "print": {
+            "modal": {
+                "m001": {
+                    "cancel": "Cancel",
+                    "confirm": "OK",
+                    "title": "Margins"
+                },
+                "m002": {
+                    "cancel": "Cancel",
+                    "confirm": "OK",
+                    "title": "Print Scale"
+                },
+                "m003": {
+                    "cancel": "Cancel",
+                    "confirm": "OK",
+                    "title": "Print Titles"
+                },
+                "m004": {
+                    "cancel": "Cancel",
+                    "confirm": "OK",
+                    "title": "Background Image"
+                },
+                "m005": {
+                    "cancel": "Cancel",
+                    "confirm": "OK",
+                    "title": "Header/Footer"
+                }
+            },
+            "toast": {
+                "aPageBreakAlreadyExists": "A page break already exists at this position",
+                "marginsUpdated": "Margins updated",
+                "pageBreakInserted": "Page break inserted",
+                "pleaseEnterANumberBetween": "Please enter a number between 10 and 400",
+                "pleaseSelectAPrintArea": "Please select a print area first",
+                "pleaseSelectAValidCell": "Please select a valid cell first",
+                "printAreaCleared": "Print area cleared",
+                "printAreaSet": "Print area set"
             }
         },
         "protection": {
@@ -1213,6 +1265,20 @@ const enUS = {
                 "toast": {
                     "msg001": "Pivot table data source is empty",
                     "msg002": "Pivot table has been updated"
+                }
+            }
+        },
+        "print": {
+            "print": {
+                "modal": {
+                    "m001": {
+                        "cancel": "Close",
+                        "confirm": "Print",
+                        "title": "Print Preview"
+                    }
+                },
+                "toast": {
+                    "nothingToPrint": "Nothing to print"
                 }
             }
         },

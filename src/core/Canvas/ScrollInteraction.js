@@ -76,6 +76,11 @@ function isTouchInSelectionHandle(canvas, touch) {
     const frame = canvas.activeBorderInfo;
     if (!frame?.inView) return false;
     const { x, y } = canvas.getEventPosition(touch);
+    const paneClip = frame.paneClip;
+    if (paneClip?.empty || (paneClip && (
+        x < paneClip.x || x > paneClip.x + paneClip.w ||
+        y < paneClip.y || y > paneClip.y + paneClip.h
+    ))) return false;
     const zoom = canvas.activeSheet?.zoom ?? 1;
     const hitSize = Math.max(10, TOUCH_SELECTION_HANDLE_HIT_SIZE / zoom);
     const centerX = frame.x + frame.w + 1;

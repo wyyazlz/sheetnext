@@ -4,25 +4,10 @@
  */
 
 import { syncToolbarState } from '../Layout/ToolbarBuilder.js';
-import { getFormulaBarValue } from './helpers.js';
+import { getFormulaBarValue, getRangePaneClip, withPaneClip } from './helpers.js';
 
 function isCoarsePointer() {
     return typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
-}
-
-function withGridBodyClip(canvas, sheet, draw) {
-    const left = sheet.indexWidth;
-    const top = sheet.headHeight;
-    const width = canvas.viewWidth - left;
-    const height = canvas.viewHeight - top;
-    if (width <= 0 || height <= 0) return;
-
-    canvas.bc.save();
-    canvas.bc.beginPath();
-    canvas.bc.rect(left, top, width, height);
-    canvas.bc.clip();
-    draw();
-    canvas.bc.restore();
 }
 
 // 获取高亮信息（选中区域的行列）
@@ -34,7 +19,8 @@ export function getLight() {
     const frames = [];
     areas.forEach(area => {
         const { x, y, w, h, inView } = sheet.getAreaInviewInfo(area);
-        frames.push({ x, y, w, h, inView, area });
+        const paneClip = inView ? getRangePaneClip(this, sheet, area) : { empty: true };
+        frames.push({ x, y, w, h, inView, area, paneClip });
         const sr = Math.min(area.s.r, area.e.r);
         const er = Math.max(area.s.r, area.e.r);
         const sc = Math.min(area.s.c, area.e.c);
@@ -72,6 +58,114 @@ export function rAllBtn() {
     this.bc.lineTo(this.activeSheet.indexWidth - 5, this.activeSheet.headHeight - 5); // 画线到第三个点
     this.bc.fillStyle = '#ccc';
     this.bc.fill(); // 填充三角形
+}
+
+function getMarkerLinePositions(canvas, boundary, min, max) {
+    const lineWidth = canvas.toLogical(1);
+    const lineSeparation = canvas.toLogical(2);
+    let first = boundary - lineSeparation / 2 - lineWidth / 2;
+    let second = boundary + lineSeparation / 2 - lineWidth / 2;
+
+    if (first < min) {
+        first = min + lineWidth;
+        second = first + lineSeparation;
+    } else if (second + lineWidth > max) {
+        second = max - lineWidth;
+        first = second - lineSeparation;
+    }
+
+    if (first < min || second + lineWidth > max) return [];
+    return [canvas.snap(first), canvas.snap(second)];
+}
+
+function isManuallyHiddenRow(sheet, rowIndex) {
+    const row = sheet.rows[rowIndex];
+    if (row) return !!row._hidden;
+    return sheet._getPendingXlsxRowState?.(rowIndex)?.hidden === true;
+}
+
+function drawHiddenColMarkers(canvas, sheet) {
+    const layouts = sheet.vi.colLayouts || [];
+    const boundaries = new Map();
+    const epsilon = canvas.toLogical(0.5);
+
+    const addBoundary = (x, frozen) => {
+        const clipLeft = frozen ? sheet.indexWidth : sheet.vi.fw;
+        const clipRight = frozen ? sheet.vi.fw : canvas.viewWidth;
+        if (x < clipLeft - epsilon || x > clipRight + epsilon) return;
+        const snappedX = canvas.snap(x);
+        boundaries.set(Math.round(snappedX * canvas.pixelRatio), snappedX);
+    };
+
+    layouts.forEach(({ index: c, x, w, frozen }) => {
+        if (c > 0 && sheet.cols[c - 1]?.hidden) addBoundary(x, frozen);
+        if (c < sheet.colCount - 1 && sheet.cols[c + 1]?.hidden) addBoundary(x + w, frozen);
+    });
+
+    if (boundaries.size === 0) return;
+
+    const lineWidth = canvas.toLogical(1);
+    const insetY = canvas.toLogical(3);
+    const markerHeight = Math.max(0, sheet.headHeight - insetY * 2);
+    const minX = sheet.indexWidth;
+    const maxX = canvas.viewWidth;
+    if (markerHeight <= 0 || maxX <= minX) return;
+
+    canvas.bc.save();
+    canvas.bc.beginPath();
+    canvas.bc.rect(minX, 0, maxX - minX, sheet.headHeight);
+    canvas.bc.clip();
+    canvas.bc.fillStyle = '#7f7f7f';
+
+    boundaries.forEach(boundaryX => {
+        getMarkerLinePositions(canvas, boundaryX, minX, maxX).forEach(x => {
+            canvas.bc.fillRect(x, insetY, lineWidth, markerHeight);
+        });
+    });
+
+    canvas.bc.restore();
+}
+
+function drawHiddenRowMarkers(canvas, sheet) {
+    const layouts = sheet.vi.rowLayouts || [];
+    const boundaries = new Map();
+    const epsilon = canvas.toLogical(0.5);
+
+    const addBoundary = (y, frozen) => {
+        const clipTop = frozen ? sheet.headHeight : sheet.vi.fh;
+        const clipBottom = frozen ? sheet.vi.fh : canvas.viewHeight;
+        if (y < clipTop - epsilon || y > clipBottom + epsilon) return;
+        const snappedY = canvas.snap(y);
+        boundaries.set(Math.round(snappedY * canvas.pixelRatio), snappedY);
+    };
+
+    layouts.forEach(({ index: r, y, h, frozen }) => {
+        if (r > 0 && isManuallyHiddenRow(sheet, r - 1)) addBoundary(y, frozen);
+        if (r < sheet.rowCount - 1 && isManuallyHiddenRow(sheet, r + 1)) addBoundary(y + h, frozen);
+    });
+
+    if (boundaries.size === 0) return;
+
+    const lineWidth = canvas.toLogical(1);
+    const insetX = canvas.toLogical(3);
+    const markerWidth = Math.max(0, sheet.indexWidth - insetX * 2);
+    const minY = sheet.headHeight;
+    const maxY = canvas.viewHeight;
+    if (markerWidth <= 0 || maxY <= minY) return;
+
+    canvas.bc.save();
+    canvas.bc.beginPath();
+    canvas.bc.rect(0, minY, sheet.indexWidth, maxY - minY);
+    canvas.bc.clip();
+    canvas.bc.fillStyle = '#7f7f7f';
+
+    boundaries.forEach(boundaryY => {
+        getMarkerLinePositions(canvas, boundaryY, minY, maxY).forEach(y => {
+            canvas.bc.fillRect(insetX, y, markerWidth, lineWidth);
+        });
+    });
+
+    canvas.bc.restore();
 }
 
 // 只渲染行标列标（提取出来供截图模式复用）
@@ -133,6 +227,8 @@ export function rRowColHeaders(sheet, lightInfo) {
         this.bc.restore();
     })
 
+    drawHiddenColMarkers(this, sheet);
+
     // 渲染序号
     this.bc.font = '14.6px Arial';
     (sheet.vi.rowLayouts || []).forEach(({ index: r, y, h: rowHeight, frozen }) => {
@@ -174,6 +270,8 @@ export function rRowColHeaders(sheet, lightInfo) {
         this.bc.fillText(r + 1, sheet.indexWidth / 2, y + rowHeight / 2 + 2);
         this.bc.restore();
     })
+
+    drawHiddenRowMarkers(this, sheet);
 }
 
 // 合并重叠区间
@@ -259,42 +357,56 @@ export function rHighlightBars(sheet, lightInfo) {
     lightInfo.rows.forEach(r => {
         const layout = sheet.vi.rowMap?.get(r);
         if (!layout) return;
-        const { y, h } = layout;
+        const { y, h, frozen } = layout;
+        const clipTop = frozen ? headHeight : sheet.vi.fh;
+        const clipBottom = frozen ? sheet.vi.fh : this.viewHeight;
+        const paneClip = clipBottom > clipTop && this.viewWidth > indexWidth
+            ? { x: indexWidth, y: clipTop, w: this.viewWidth - indexWidth, h: clipBottom - clipTop }
+            : { empty: true };
 
-        // 收集并合并跳过区间
-        const skipRanges = frames
-            .filter(f => f.inView && r >= f.area.s.r && r <= f.area.e.r)
-            .map(f => ({ x1: f.x, x2: f.x + f.w }));
-        const merged = mergeRanges(skipRanges, 'x1', 'x2');
+        withPaneClip(this.bc, paneClip, () => {
+            // 收集并合并跳过区间
+            const skipRanges = frames
+                .filter(f => f.inView && r >= f.area.s.r && r <= f.area.e.r)
+                .map(f => ({ x1: f.x, x2: f.x + f.w }));
+            const merged = mergeRanges(skipRanges, 'x1', 'x2');
 
-        // 分段绘制
-        let x = indexWidth;
-        for (const skip of merged) {
-            if (skip.x1 > x) this.bc.fillRect(x, y, skip.x1 - x, h);
-            x = skip.x2;
-        }
-        if (x < this.viewWidth) this.bc.fillRect(x, y, this.viewWidth - x, h);
+            // 分段绘制
+            let x = indexWidth;
+            for (const skip of merged) {
+                if (skip.x1 > x) this.bc.fillRect(x, y, skip.x1 - x, h);
+                x = skip.x2;
+            }
+            if (x < this.viewWidth) this.bc.fillRect(x, y, this.viewWidth - x, h);
+        });
     });
 
     // 绘制列高亮条
     lightInfo.columns.forEach(c => {
         const layout = sheet.vi.colMap?.get(c);
         if (!layout) return;
-        const { x, w } = layout;
+        const { x, w, frozen } = layout;
+        const clipLeft = frozen ? indexWidth : sheet.vi.fw;
+        const clipRight = frozen ? sheet.vi.fw : this.viewWidth;
+        const paneClip = clipRight > clipLeft && this.viewHeight > headHeight
+            ? { x: clipLeft, y: headHeight, w: clipRight - clipLeft, h: this.viewHeight - headHeight }
+            : { empty: true };
 
-        // 收集并合并跳过区间
-        const skipRanges = frames
-            .filter(f => f.inView && c >= f.area.s.c && c <= f.area.e.c)
-            .map(f => ({ y1: f.y, y2: f.y + f.h }));
-        const merged = mergeRanges(skipRanges, 'y1', 'y2');
+        withPaneClip(this.bc, paneClip, () => {
+            // 收集并合并跳过区间
+            const skipRanges = frames
+                .filter(f => f.inView && c >= f.area.s.c && c <= f.area.e.c)
+                .map(f => ({ y1: f.y, y2: f.y + f.h }));
+            const merged = mergeRanges(skipRanges, 'y1', 'y2');
 
-        // 分段绘制
-        let y = headHeight;
-        for (const skip of merged) {
-            if (skip.y1 > y) this.bc.fillRect(x, y, w, skip.y1 - y);
-            y = skip.y2;
-        }
-        if (y < this.viewHeight) this.bc.fillRect(x, y, w, this.viewHeight - y);
+            // 分段绘制
+            let y = headHeight;
+            for (const skip of merged) {
+                if (skip.y1 > y) this.bc.fillRect(x, y, w, skip.y1 - y);
+                y = skip.y2;
+            }
+            if (y < this.viewHeight) this.bc.fillRect(x, y, w, this.viewHeight - y);
+        });
     });
 }
 
@@ -396,9 +508,9 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
 
     // 绘制在区域中的选中的区域，将其背景设为#ddd
     if (!isScreenshot && selectionVisible) {
-        withGridBodyClip(this, sheet, () => {
-            lightInfo.frames.forEach((frame) => {
-                if (!frame.inView) return;
+        lightInfo.frames.forEach((frame) => {
+            if (!frame.inView) return;
+            withPaneClip(this.bc, frame.paneClip, () => {
                 this.bc.fillStyle = 'rgba(99, 99, 99, 0.2)';
                 this.bc.fillRect(frame.x + 1.5, frame.y + 1.5, frame.w - 3, frame.h - 3); // 边之间留了一些小空隙
             });
@@ -417,12 +529,23 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
 
     const lf = lightInfo.lastFrame
     if (selectionVisible && lf && lf.inView && !(isScreenshot && hideSelectionFrame)) {
-        withGridBodyClip(this, sheet, () => {
+        withPaneClip(this.bc, lf.paneClip, () => {
             const primaryColor = this._themeColor('primary', '#2f6f4e');
             let { x, y, w, h } = lf
             // 渲染当前活动的单元格
             const activeCellInfo = sheet.getCellInViewInfo(sheet.activeCell.r, sheet.activeCell.c);
-            if (activeCellInfo.inView && !isScreenshot) this.bc.clearRect(activeCellInfo.x + 1, activeCellInfo.y + 1, activeCellInfo.w - 2, activeCellInfo.h - 2);
+            if (activeCellInfo.inView && !isScreenshot) {
+                const activeCell = sheet.getCell(sheet.activeCell.r, sheet.activeCell.c);
+                const master = activeCell.master || sheet.activeCell;
+                const activeMerge = activeCell.isMerged
+                    ? sheet.merges.find(m => m.s.r === master.r && m.s.c === master.c)
+                    : null;
+                const activeArea = activeMerge || { s: sheet.activeCell, e: sheet.activeCell };
+                const activePaneClip = getRangePaneClip(this, sheet, activeArea);
+                withPaneClip(this.bc, activePaneClip, () => {
+                    this.bc.clearRect(activeCellInfo.x + 1, activeCellInfo.y + 1, activeCellInfo.w - 2, activeCellInfo.h - 2);
+                });
+            }
             const hp = this.halfPixel;
             const rect = this.snapRect(x, y, w, h);
             this.bc.strokeStyle = primaryColor;

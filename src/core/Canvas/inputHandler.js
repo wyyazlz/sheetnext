@@ -1,6 +1,10 @@
 // 输入框相关监听
 
 export function formulaBarFocus() {
+    if (this.formulaEditor?.rangePicking) {
+        this.formulaBar.blur();
+        return;
+    }
     const oEditValue = this.formulaBar.value // 保留原始数据
     this._fbOriginalValue = oEditValue; // 供 Escape 取消使用
     if (!this.opCancel) {
@@ -21,7 +25,7 @@ export function formulaBarFocus() {
         this.input.innerText = oEditValue
     }, { once: true })
     this.formulaBar.addEventListener('blur', () => {
-        this.updInputValue()
+        if (!this._suspendEditCommit) this.updInputValue()
         this.formulaBar.removeEventListener('input', inputFun)
         this.opConfirm.style.color = ''
         this.opCancel.style.color = ''

@@ -21,6 +21,22 @@
     pointer-events: auto;
 }
 
+.sn-modal-overlay-modeless {
+    align-items: flex-start;
+    padding: 72px 12px 12px;
+    box-sizing: border-box;
+    background: transparent;
+    pointer-events: none;
+}
+
+.sn-modal-overlay-modeless.active {
+    pointer-events: none;
+}
+
+.sn-modal-overlay-modeless .sn-modal {
+    pointer-events: auto;
+}
+
 .sn-modal {
     background: #fff;
     border-radius: 8px;
@@ -163,6 +179,13 @@
 .sn-modal-overlay.closing .sn-modal {
     transform: scale(0.95);
     opacity: 0;
+    pointer-events: none;
+}
+
+@media (max-width: 640px) {
+    .sn-modal-overlay-modeless {
+        padding-top: 12px;
+    }
 }
 
 /* Chart modal */

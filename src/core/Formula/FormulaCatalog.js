@@ -83,7 +83,11 @@ function readRecentNames() {
 
 function writeRecentNames(names) {
     if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(RECENT_KEY, JSON.stringify(names.slice(0, RECENT_LIMIT)));
+    try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(names.slice(0, RECENT_LIMIT)));
+    } catch {
+        // Recent functions are optional UI state and must not block formula insertion.
+    }
 }
 
 function getRecentFormulas() {

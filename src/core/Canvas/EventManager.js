@@ -60,7 +60,7 @@ export function addEventListeners() {
         this.formulaEditor?.onInput();
     })
     this.input.addEventListener('blur', () => {
-        if (this.inputEditing) this.updInputValue();
+        if (this.inputEditing && !this._suspendEditCommit) this.updInputValue();
     });
     this.formulaBar.addEventListener('focus', () => formulaBarFocus.call(this))
     this.formulaBar.addEventListener('keydown', (event => formulaBarKeyDown.call(this, event)))

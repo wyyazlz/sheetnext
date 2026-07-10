@@ -1,5 +1,4 @@
-import { interpolateColor } from './helpers.js';
-import { shouldHideFormula } from './helpers.js'
+import { getRangePaneClip, interpolateColor, shouldHideFormula, withPaneClip } from './helpers.js';
 import { getFilterIconLayout } from './FilterRenderer.js';
 import { getCanvasFont, getFontSizePx } from '../Cell/fontDefaults.js';
 import { isCheckboxControl } from '../Cell/cellControlXml.js';
@@ -90,20 +89,6 @@ function getPaneClip(canvas, sheet, rowLayout, colLayout) {
         return null;
     }
     return { x, y, w, h };
-}
-
-function withPaneClip(ctx, clip, draw) {
-    if (clip?.empty) return;
-    if (!clip) {
-        draw();
-        return;
-    }
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(clip.x, clip.y, clip.w, clip.h);
-    ctx.clip();
-    draw();
-    ctx.restore();
 }
 
 function getStripeColor(index, stripe1Color, stripe2Color, stripe1Size = 1, stripe2Size = 1) {
@@ -1463,9 +1448,13 @@ export function rMerged(sheet) {
         const sCell = sheet.getAreaInviewInfo(m);
         const cellInfo = sheet.getCell(start.r, start.c);
         if (sCell.inView) { // 区域有一部分在视图中,那么合并
+            const paneClip = getRangePaneClip(this, sheet, m);
+            if (paneClip.empty) return;
             const layoutRect = sheet._getAreaInviewInfo2(m);
-            rCellBackground.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo);
-            rCellText.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo, layoutRect);
+            withPaneClip(this.bc, paneClip, () => {
+                rCellBackground.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo);
+                rCellText.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo, layoutRect);
+            });
             // ****************设置合并单元格边框比较特殊,逻辑为：比如如果top有边框,那么top的所有单元格的topborder属性都必须一样****************
             // 获取合并区域的范围
             const { s, e } = m; // s是起始位置,e是结束位置
@@ -1476,13 +1465,12 @@ export function rMerged(sheet) {
             // 存储四边的边框属性
             const result = {};
             // 检查顶部边框
-            let topBorderConsistent = true;
             const topBorder = sheet.getCell(startRow, startCol).border.top;
-            for (let c = startCol + 1; c <= endCol; c++) {
+            let topBorderConsistent = !!topBorder;
+            for (let c = startCol + 1; c <= endCol && topBorderConsistent; c++) {
                 const cellBorder = sheet.getCell(startRow, c).border.top;
                 if (!cellBorder || cellBorder.color !== topBorder.color || cellBorder.style !== topBorder.style) {
                     topBorderConsistent = false;
-                    break;
                 }
             }
             if (topBorderConsistent && topBorder) {
@@ -1492,13 +1480,12 @@ export function rMerged(sheet) {
                 };
             }
             // 检查右侧边框
-            let rightBorderConsistent = true;
             const rightBorder = sheet.getCell(startRow, endCol).border.right;
-            for (let r = startRow + 1; r <= endRow; r++) {
+            let rightBorderConsistent = !!rightBorder;
+            for (let r = startRow + 1; r <= endRow && rightBorderConsistent; r++) {
                 const cellBorder = sheet.getCell(r, endCol).border.right;
                 if (!cellBorder || cellBorder.color !== rightBorder.color || cellBorder.style !== rightBorder.style) {
                     rightBorderConsistent = false;
-                    break;
                 }
             }
             if (rightBorderConsistent && rightBorder) {
@@ -1508,13 +1495,12 @@ export function rMerged(sheet) {
                 };
             }
             // 检查底部边框
-            let bottomBorderConsistent = true;
             const bottomBorder = sheet.getCell(endRow, startCol).border.bottom;
-            for (let c = startCol + 1; c <= endCol; c++) {
+            let bottomBorderConsistent = !!bottomBorder;
+            for (let c = startCol + 1; c <= endCol && bottomBorderConsistent; c++) {
                 const cellBorder = sheet.getCell(endRow, c).border.bottom;
                 if (!cellBorder || cellBorder.color !== bottomBorder.color || cellBorder.style !== bottomBorder.style) {
                     bottomBorderConsistent = false;
-                    break;
                 }
             }
             if (bottomBorderConsistent && bottomBorder) {
@@ -1524,13 +1510,12 @@ export function rMerged(sheet) {
                 };
             }
             // 检查左侧边框
-            let leftBorderConsistent = true;
             const leftBorder = sheet.getCell(startRow, startCol).border.left;
-            for (let r = startRow + 1; r <= endRow; r++) {
+            let leftBorderConsistent = !!leftBorder;
+            for (let r = startRow + 1; r <= endRow && leftBorderConsistent; r++) {
                 const cellBorder = sheet.getCell(r, startCol).border.left;
                 if (!cellBorder || cellBorder.color !== leftBorder.color || cellBorder.style !== leftBorder.style) {
                     leftBorderConsistent = false;
-                    break;
                 }
             }
             if (leftBorderConsistent && leftBorder) {
@@ -1553,12 +1538,13 @@ export function rMerged(sheet) {
             if (Object.keys(result).length > 0) {
                 this.borders.push({
                     b: result,
-                    x: sCell.x,
-                    y: sCell.y,
-                    w: sCell.w,
-                    h: sCell.h,
+                    x: layoutRect.x,
+                    y: layoutRect.y,
+                    w: layoutRect.w,
+                    h: layoutRect.h,
                     r: startRow,
-                    c: startCol
+                    c: startCol,
+                    paneClip
                 }); // 边框待渲染
             }
         }

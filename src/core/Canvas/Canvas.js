@@ -15,6 +15,7 @@ import FormulaEditor from './FormulaEditor.js';
 import LazyDOM from '../Layout/LazyDOM.js';
 import { _layerZIndex } from '../Layout/LayerConfig.js';
 import { getThemeColor } from '../Theme/Theme.js';
+import { getRangePaneClip, withPaneClip } from './helpers.js';
 
 const INPUT_VISIBLE_Z_INDEX = String(_layerZIndex.cellEditor);
 const INPUT_HIDDEN_Z_INDEX = '-1';
@@ -212,6 +213,7 @@ export default class Canvas {
         this._touchSelectionInfo = null;
         this._touchSelectionToastAt = 0;
         this._ignoreTouchMouseUntil = 0;
+        this._suspendEditCommit = false;
 
         /**
          * Lazy loading Dom manager
@@ -499,6 +501,17 @@ export default class Canvas {
 
     get activeSheet() {
         return this.SN.activeSheet
+    }
+
+    /**
+     * Start a modeless grid range-picking session.
+     * @param {Object} options - Picker callbacks and target context
+     * @param {(reference:string, detail:{area:Object, sheet:Object})=>void} options.onChange - Range change callback
+     * @param {string} [options.targetSheetName] - Formula target sheet used to qualify cross-sheet references
+     * @returns {() => void} Session disposer
+     */
+    startRangePicker(options = {}) {
+        return this.formulaEditor?._startRangePicker(options) ?? (() => {});
     }
 
     _themeColor(token, fallback) {
@@ -1025,26 +1038,19 @@ export default class Canvas {
         if (Object.keys(this.mpBorder).length < 1) return
         const { x, y, w, h, inView } = sheet.getAreaInviewInfo(this.mpBorder)
         if (!inView) return
-        const clipX = sheet.indexWidth;
-        const clipY = sheet.headHeight;
-        const clipW = this.viewWidth - clipX;
-        const clipH = this.viewHeight - clipY;
-        if (clipW <= 0 || clipH <= 0) return;
         const rect = this.snapRect(x, y, w, h);
-        this.bc.save();
-        this.bc.beginPath();
-        this.bc.rect(clipX, clipY, clipW, clipH);
-        this.bc.clip();
-        const dash = this.px(5);
-        this.bc.beginPath();
-        this.bc.lineWidth = this.px(1.5);
-        this.bc.setLineDash([dash, dash]); // 设置虚线样式,数字表示线段和间隙的长度
-        this.bc.strokeStyle = '#333';
-        this.bc.strokeRect(rect.x, rect.y, rect.w, rect.h);
-        this.bc.closePath();
-        this.bc.lineWidth = this.px(1);
-        this.bc.setLineDash([]);
-        this.bc.restore();
+        const paneClip = getRangePaneClip(this, sheet, this.mpBorder);
+        withPaneClip(this.bc, paneClip, () => {
+            const dash = this.px(5);
+            this.bc.beginPath();
+            this.bc.lineWidth = this.px(1.5);
+            this.bc.setLineDash([dash, dash]); // 设置虚线样式,数字表示线段和间隙的长度
+            this.bc.strokeStyle = '#333';
+            this.bc.strokeRect(rect.x, rect.y, rect.w, rect.h);
+            this.bc.closePath();
+            this.bc.lineWidth = this.px(1);
+            this.bc.setLineDash([]);
+        });
     }
 
     #rFreezeLine(sheet) {

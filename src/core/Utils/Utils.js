@@ -188,8 +188,11 @@ export default class Utils {
             cancelKey = '',
             cancelText = null,
             bodyClass = '',
+            modalClass = '',
+            modeless = false,
             onOpen = null,
-            onConfirm = null
+            onConfirm = null,
+            onClosed = null
         } = options;
         const bodyContent = content || body;
         const bodyTranslationKey = contentKey || bodyKey;
@@ -228,6 +231,9 @@ export default class Utils {
                 `;
                 this._SN.containerDom.appendChild(modalOverlay);
             }
+            while (modalOverlay._snModalSession) {
+                modalOverlay._snModalSession.forceClose();
+            }
 
             const modalEl = modalOverlay.querySelector('.sn-modal');
             const titleEl = modalOverlay.querySelector('.sn-modal-title');
@@ -243,10 +249,13 @@ export default class Utils {
             cancelBtn.replaceWith(newCancelBtn);
             confirmBtn.replaceWith(newConfirmBtn);
             newCloseBtn.setAttribute('aria-label', closeText);
+            newConfirmBtn.disabled = false;
 
             titleEl.textContent = translatedTitle;
             bodyEl.innerHTML = translatedBody;
             bodyEl.className = `sn-modal-body${bodyClass ? ` ${bodyClass}` : ''}`;
+            modalEl.className = `sn-modal${modalClass ? ` ${modalClass}` : ''}`;
+            modalOverlay.classList.toggle('sn-modal-overlay-modeless', Boolean(modeless));
             modalEl.style.maxWidth = maxWidth || '';
             modalEl.style.maxHeight = maxHeight || '';
 
@@ -257,32 +266,67 @@ export default class Utils {
             newCancelBtn.style.display = translatedCancelText ? '' : 'none';
             footerEl.style.display = translatedConfirmText || translatedCancelText ? '' : 'none';
 
-            const cleanup = () => {
-                modalOverlay.classList.remove('active', 'closing');
+            let closeState = null;
+            let cleanupTimer = null;
+            let cleaned = false;
+            let session = null;
+            const cleanup = (isConfirm) => {
+                if (cleaned) return;
+                cleaned = true;
+                if (cleanupTimer) clearTimeout(cleanupTimer);
+                if (modalOverlay._snModalSession === session) modalOverlay._snModalSession = null;
+                modalOverlay.classList.remove('active', 'closing', 'sn-modal-overlay-modeless');
                 titleEl.textContent = '';
                 bodyEl.innerHTML = '';
                 bodyEl.className = 'sn-modal-body';
+                modalEl.className = 'sn-modal';
                 modalEl.style.maxWidth = '';
                 modalEl.style.maxHeight = '';
                 modalEl.style.transform = '';
                 footerEl.style.display = '';
+                if (onClosed) {
+                    try {
+                        onClosed(isConfirm);
+                    } catch (error) {
+                        if (error) this.toast(error);
+                    }
+                }
             };
 
             const closeModal = (isConfirm = false) => {
+                if (closeState !== null) return;
+                closeState = isConfirm;
                 modalOverlay.classList.add('closing');
-                setTimeout(cleanup, 200);
+                cleanupTimer = setTimeout(() => cleanup(isConfirm), 200);
                 resolve(isConfirm ? { bodyEl } : null);
             };
+            session = {
+                forceClose: () => {
+                    if (cleaned) return;
+                    if (closeState === null) {
+                        resolve(null);
+                    }
+                    closeState = false;
+                    cleanup(false);
+                }
+            };
+            modalOverlay._snModalSession = session;
 
             newCloseBtn.onclick = () => closeModal(false);
             newCancelBtn.onclick = () => closeModal(false);
             newConfirmBtn.onclick = async () => {
+                if (newConfirmBtn.disabled || closeState !== null) return;
+                newConfirmBtn.disabled = true;
                 if (onConfirm) {
                     try {
                         const result = await onConfirm(bodyEl);
-                        if (result === false) return;
+                        if (result === false) {
+                            newConfirmBtn.disabled = false;
+                            return;
+                        }
                     } catch (error) {
                         if (error) this.toast(error);
+                        newConfirmBtn.disabled = false;
                         return;
                     }
                 }
@@ -290,6 +334,7 @@ export default class Utils {
             };
 
             requestAnimationFrame(() => {
+                if (modalOverlay._snModalSession !== session) return;
                 modalOverlay.classList.add('active');
                 if (onOpen) onOpen(bodyEl);
             });

@@ -11,6 +11,7 @@
 import { analyzeFormulaInput, cycleReferenceAnchor } from '../Formula/FormulaEditContext.js';
 import { FormulaCatalog } from '../Formula/FormulaCatalog.js';
 import { getFormulaSignature } from '../../assets/formulaSignature.js';
+import { getRangePaneClip, withPaneClip } from './helpers.js';
 
 // Reference colors, cycled per distinct reference (aligned with Excel's palette)
 const REF_COLORS = ['#2E75B6', '#C00000', '#7030A0', '#548235', '#BF8F00', '#0E8A8A', '#C55A9B'];
@@ -72,6 +73,7 @@ export default class FormulaEditor {
         this._hintEl = null;
         this._composing = false;
         this._selectionRaf = null;
+        this._rangePicker = null;
 
         canvas.input.addEventListener('compositionstart', () => { this._composing = true; });
         canvas.input.addEventListener('compositionend', () => {
@@ -87,6 +89,11 @@ export default class FormulaEditor {
      */
     get active() {
         return this._active === true;
+    }
+
+    /** @type {boolean} */
+    get rangePicking() {
+        return this._rangePicker !== null;
     }
 
     /**
@@ -160,6 +167,33 @@ export default class FormulaEditor {
     }
 
     /**
+     * Start a modeless grid range-picking session for an external input.
+     * @param {Object} options - Picker callbacks and target context
+     * @param {(reference:string, detail:{area:Object, sheet:Object})=>void} options.onChange - Range change callback
+     * @param {string} [options.targetSheetName] - Formula target sheet used to qualify cross-sheet references
+     * @returns {() => void} Session disposer
+     */
+    _startRangePicker(options = {}) {
+        this._rangePicker?.dragCleanup?.();
+        const session = {
+            onChange: typeof options.onChange === 'function' ? options.onChange : null,
+            targetSheetName: String(options.targetSheetName ?? this.canvas.activeSheet?.name ?? ''),
+            area: null,
+            sheetName: '',
+            dragCleanup: null
+        };
+        this._rangePicker = session;
+        this.canvas.r('s');
+        return () => {
+            if (this._rangePicker !== session) return;
+            session.dragCleanup?.();
+            this._rangePicker = null;
+            this.canvas.disableMoveCheck = false;
+            this.canvas.r('s');
+        };
+    }
+
+    /**
      * Intercept keyboard events during formula editing.
      * Handles dropdown navigation, Tab-accept, Escape, F4 and arrow-key pointing.
      * @param {KeyboardEvent} event - Keydown event from the document handler
@@ -225,6 +259,8 @@ export default class FormulaEditor {
      * @returns {boolean} true when the event was consumed
      */
     handleCanvasMousedown(event) {
+        if (this._rangePicker) return this._handleRangePickerMousedown(event);
+
         const canvas = this.canvas;
         if (!this._active || !canvas.inputEditing) return false;
         if (event.button !== 0) return false;
@@ -295,37 +331,43 @@ export default class FormulaEditor {
      * @returns {void}
      */
     drawRefHighlights(sheet) {
-        if (!this._active || !this._refAreas.length) return;
+        const refs = this._active ? [...this._refAreas] : [];
+        if (this._rangePicker?.area &&
+            String(this._rangePicker.sheetName).toLowerCase() === String(sheet.name ?? '').toLowerCase()) {
+            refs.push({
+                sheetName: this._rangePicker.sheetName,
+                s: this._rangePicker.area.s,
+                e: this._rangePicker.area.e,
+                colorIndex: 0
+            });
+        }
+        if (!refs.length) return;
         const canvas = this.canvas;
         const bc = canvas.bc;
         if (!bc) return;
-        const clipX = sheet.indexWidth;
-        const clipY = sheet.headHeight;
-        const clipW = canvas.viewWidth - clipX;
-        const clipH = canvas.viewHeight - clipY;
-        if (clipW <= 0 || clipH <= 0) return;
 
         const sheetName = String(sheet.name ?? '').toLowerCase();
         bc.save();
-        bc.beginPath();
-        bc.rect(clipX, clipY, clipW, clipH);
-        bc.clip();
-        for (const ref of this._refAreas) {
+        for (const ref of refs) {
             if (String(ref.sheetName ?? '').toLowerCase() !== sheetName) continue;
-            const info = sheet.getAreaInviewInfo({ s: ref.s, e: ref.e });
+            const area = { s: ref.s, e: ref.e };
+            const info = sheet.getAreaInviewInfo(area);
             if (!info.inView) continue;
-            const color = REF_COLORS[ref.colorIndex % REF_COLORS.length];
-            const rect = canvas.snapRect(info.x, info.y, info.w, info.h);
-            bc.fillStyle = color + '26';
-            bc.fillRect(rect.x, rect.y, rect.w, rect.h);
-            bc.strokeStyle = color;
-            bc.lineWidth = 1.5;
-            bc.strokeRect(rect.x, rect.y, rect.w, rect.h);
-            // 四角小方块（Excel 风格拖拽柄外观）
-            bc.fillStyle = color;
-            const size = 4;
-            [[rect.x, rect.y], [rect.x + rect.w, rect.y], [rect.x, rect.y + rect.h], [rect.x + rect.w, rect.y + rect.h]]
-                .forEach(([cx, cy]) => bc.fillRect(cx - size / 2, cy - size / 2, size, size));
+            const paneClip = getRangePaneClip(canvas, sheet, area);
+            withPaneClip(bc, paneClip, () => {
+                const color = REF_COLORS[ref.colorIndex % REF_COLORS.length];
+                const rect = canvas.snapRect(info.x, info.y, info.w, info.h);
+                bc.fillStyle = color + '26';
+                bc.fillRect(rect.x, rect.y, rect.w, rect.h);
+                bc.strokeStyle = color;
+                bc.lineWidth = 1.5;
+                bc.strokeRect(rect.x, rect.y, rect.w, rect.h);
+                // 四角小方块（Excel 风格拖拽柄外观）
+                bc.fillStyle = color;
+                const size = 4;
+                [[rect.x, rect.y], [rect.x + rect.w, rect.y], [rect.x, rect.y + rect.h], [rect.x + rect.w, rect.y + rect.h]]
+                    .forEach(([cx, cy]) => bc.fillRect(cx - size / 2, cy - size / 2, size, size));
+            });
         }
         bc.lineWidth = canvas.px(1);
         bc.restore();
@@ -541,6 +583,85 @@ export default class FormulaEditor {
             this._refAreas = areas;
             this.canvas.r('s');
         }
+    }
+
+    _handleRangePickerMousedown(event) {
+        const picker = this._rangePicker;
+        const canvas = this.canvas;
+        const sheet = canvas.activeSheet;
+        if (!picker || !sheet || event.button !== 0) return false;
+
+        event.preventDefault();
+        const { x, y } = canvas.getEventPosition(event);
+        const inColHead = y < sheet.headHeight;
+        const inRowHead = x < sheet.indexWidth;
+        if (inColHead && inRowHead) return true;
+
+        const mode = inColHead ? 'col' : inRowHead ? 'row' : 'cell';
+        const index = canvas.getCellIndex(event);
+        const clampCell = (cell) => ({
+            r: Math.min(Math.max(cell.r, 0), Math.max(0, sheet.rowCount - 1)),
+            c: Math.min(Math.max(cell.c, 0), Math.max(0, sheet.colCount - 1))
+        });
+        const anchor = clampCell(index);
+        let cursor = { ...anchor };
+
+        const apply = (target) => {
+            if (this._rangePicker !== picker) return;
+            const end = clampCell(target);
+            const reference = this._refTextBetween(mode, anchor, end);
+            let area;
+            if (mode === 'col') {
+                area = {
+                    s: { r: 0, c: Math.min(anchor.c, end.c) },
+                    e: { r: Math.max(0, sheet.rowCount - 1), c: Math.max(anchor.c, end.c) }
+                };
+            } else if (mode === 'row') {
+                area = {
+                    s: { r: Math.min(anchor.r, end.r), c: 0 },
+                    e: { r: Math.max(anchor.r, end.r), c: Math.max(0, sheet.colCount - 1) }
+                };
+            } else {
+                area = {
+                    s: { r: Math.min(anchor.r, end.r), c: Math.min(anchor.c, end.c) },
+                    e: { r: Math.max(anchor.r, end.r), c: Math.max(anchor.c, end.c) }
+                };
+            }
+            picker.area = area;
+            picker.sheetName = String(sheet.name ?? '');
+            const targetSheetName = picker.targetSheetName.toLowerCase();
+            const sourceSheetName = picker.sheetName.toLowerCase();
+            const qualifiedReference = sourceSheetName === targetSheetName
+                ? reference
+                : `'${picker.sheetName.replaceAll("'", "''")}'!${reference}`;
+            picker.onChange?.(qualifiedReference, { area, sheet });
+            canvas.r('s');
+        };
+
+        apply(anchor);
+        const onMove = (moveEvent) => {
+            if (this._rangePicker !== picker) {
+                picker.dragCleanup?.();
+                return;
+            }
+            const next = clampCell(canvas.getCellIndex(moveEvent));
+            if (next.r === cursor.r && next.c === cursor.c) return;
+            cursor = next;
+            apply(next);
+        };
+        const onMouseUp = () => picker.dragCleanup?.();
+        const cleanupDrag = () => {
+            canvas.handleLayer.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            if (picker.dragCleanup === cleanupDrag) picker.dragCleanup = null;
+            if (this._rangePicker === picker) canvas.disableMoveCheck = false;
+        };
+        picker.dragCleanup?.();
+        picker.dragCleanup = cleanupDrag;
+        canvas.disableMoveCheck = true;
+        canvas.handleLayer.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onMouseUp, { once: true });
+        return true;
     }
 
     // ==================== 内部：函数联想下拉 ====================

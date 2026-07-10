@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-07-06
+> Generated: 2026-07-10
 
 Public callable classes detected for the generated API surface.
 
@@ -1048,6 +1048,18 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 | validData | boolean | No | Data validation results |
 | isFormula | boolean | No | Is it a formula |
 
+### Methods
+#### `validateData(value = this.calcVal): boolean`
+- Check a candidate calculated value against this cell's data validation rule.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| value | any | No | this.calcVal | Candidate calculated value |
+
+**Returns**
+- Type: `boolean`
+
 ## Canvas
 - Canvas Rendering and Interaction Management
 
@@ -1185,6 +1197,20 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 
 **Returns**
 - Type: `{x: number, y: number, w: number, h: number}`
+
+#### `startRangePicker(options = {}): () => void`
+- Start a modeless grid range-picking session.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | Object | No | {} | Picker callbacks and target context |
+| options.onChange | (reference:string, detail:{area:Object, sheet:Object})=>void | Yes | - | Range change callback |
+| options.targetSheetName | string | No | - | Formula target sheet used to qualify cross-sheet references |
+
+**Returns**
+- Type: `() => void`
+- Session disposer
 
 #### `getEventPosition(event): {x: number, y: number}`
 - Gets the position of the event in the canvas (logical coordinates)<br>@ param {MouseEvent \| {clientX: number, clientY: number}} event - Mouse event or object with coordinates
@@ -1581,7 +1607,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 - Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
 | Name | Static | Source Line | Example Assignment |
 | --- | --- | --- | --- |
-| SKctx | No | 359 | this.scrollSkeletonLayer.getContext('2d') |
+| SKctx | No | 361 | this.scrollSkeletonLayer.getContext('2d') |
 
 ## Layout
 - Layout & Toolbar Management
@@ -3320,6 +3346,7 @@ sparkline.add({
 | Name | Type | Static | Description |
 | --- | --- | --- | --- |
 | active | boolean | No | Whether the formula editing mode is currently active |
+| rangePicking | boolean | No | - |
 
 ### Methods
 #### `beginSession(): void`

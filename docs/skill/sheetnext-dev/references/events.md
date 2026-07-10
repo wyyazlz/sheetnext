@@ -1,6 +1,6 @@
 # Event API
 
-> Generated: 2026-07-06
+> Generated: 2026-07-10
 
 ## Subscription surface
 

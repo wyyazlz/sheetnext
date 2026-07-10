@@ -104,6 +104,170 @@
     text-align: center;
 }
 
+/* Function argument picker */
+.sn-formula-args-modal {
+    width: min(96vw, 460px);
+    max-height: calc(100vh - 84px);
+    max-height: calc(100dvh - 84px);
+}
+
+.sn-modal-body.sn-modal-body-formula-args {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sn-formula-args {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.sn-formula-args-name {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e6e6e6;
+    color: #1f1f1f;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.sn-formula-args-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 9px;
+    min-height: 0;
+    max-height: min(48vh, 320px);
+    padding: 12px 2px 2px;
+    overflow-y: auto;
+}
+
+.sn-formula-arg-row {
+    display: grid;
+    grid-template-columns: minmax(96px, 132px) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+}
+
+.sn-formula-arg-label {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    color: #4a4a4a;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.sn-formula-arg-label > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sn-formula-arg-row.active .sn-formula-arg-label > span:first-child {
+    color: var(--sn-primary-active);
+    font-weight: 600;
+}
+
+.sn-formula-arg-optional {
+    flex-shrink: 0;
+    color: #999;
+    font-size: 11px;
+}
+
+.sn-formula-arg-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    gap: 6px;
+    min-width: 0;
+}
+
+.sn-modal .sn-formula-arg-input {
+    width: 100%;
+    height: 30px;
+}
+
+.sn-formula-range-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+}
+
+.sn-formula-range-btn:hover,
+.sn-formula-range-btn:focus-visible {
+    border-color: #aaa;
+    background: #f3f3f3;
+    color: #222;
+    outline: none;
+}
+
+.sn-formula-range-btn .sn-svg {
+    width: 15px;
+    height: 15px;
+}
+
+.sn-formula-add-arg {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    margin-top: 11px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #555;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.sn-formula-add-arg:hover,
+.sn-formula-add-arg:focus-visible {
+    background: #f0f0f0;
+    color: #222;
+    outline: none;
+}
+
+.sn-formula-add-arg .sn-svg {
+    width: 13px;
+    height: 13px;
+}
+
+.sn-formula-args-empty {
+    padding: 18px 2px 8px;
+    color: #888;
+    font-size: 13px;
+}
+
+@media (max-width: 480px) {
+    .sn-formula-args-modal {
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+
+    .sn-formula-arg-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .sn-formula-args-list {
+        max-height: 55vh;
+    }
+}
+
 /* ==================== 公式内联编辑（联想下拉 / 参数提示 / 引用着色） ==================== */
 
 .sn-input-editor.sn-formula-mode {

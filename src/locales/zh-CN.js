@@ -327,6 +327,14 @@ const zhCN = {
         },
         "formula": {
             "content": {
+                "arguments": {
+                    "addArgument": "添加参数",
+                    "argument": "参数 {index}",
+                    "inputPlaceholder": "输入值或选择区域",
+                    "noArguments": "此函数没有参数。",
+                    "optional": "可选",
+                    "selectRange": "选择区域"
+                },
                 "categories": {
                     "addins": "加载项和自动化",
                     "all": "全部",
@@ -361,6 +369,11 @@ const zhCN = {
                     "cancel": "取消",
                     "confirm": "插入",
                     "title": "插入函数"
+                },
+                "m002": {
+                    "cancel": "取消",
+                    "confirm": "确定",
+                    "title": "函数参数"
                 }
             },
             "toast": {
@@ -537,6 +550,45 @@ const zhCN = {
                 "msg003": "请输入引用位置",
                 "msg004": "该名称已存在",
                 "msg005": "没有可用的定义名称"
+            }
+        },
+        "print": {
+            "modal": {
+                "m001": {
+                    "cancel": "取消",
+                    "confirm": "确定",
+                    "title": "页边距"
+                },
+                "m002": {
+                    "cancel": "取消",
+                    "confirm": "确定",
+                    "title": "打印缩放"
+                },
+                "m003": {
+                    "cancel": "取消",
+                    "confirm": "确定",
+                    "title": "打印标题"
+                },
+                "m004": {
+                    "cancel": "取消",
+                    "confirm": "确定",
+                    "title": "背景图片"
+                },
+                "m005": {
+                    "cancel": "取消",
+                    "confirm": "确定",
+                    "title": "页眉/页脚"
+                }
+            },
+            "toast": {
+                "aPageBreakAlreadyExists": "该位置已存在分页符",
+                "marginsUpdated": "页边距已更新",
+                "pageBreakInserted": "分页符已插入",
+                "pleaseEnterANumberBetween": "请输入 10 到 400 之间的数字",
+                "pleaseSelectAPrintArea": "请先选择打印区域",
+                "pleaseSelectAValidCell": "请先选择有效单元格",
+                "printAreaCleared": "打印区域已清除",
+                "printAreaSet": "打印区域已设置"
             }
         },
         "protection": {
@@ -1213,6 +1265,20 @@ const zhCN = {
                 "toast": {
                     "msg001": "透视表数据源为空",
                     "msg002": "透视表已更新"
+                }
+            }
+        },
+        "print": {
+            "print": {
+                "modal": {
+                    "m001": {
+                        "cancel": "关闭",
+                        "confirm": "打印",
+                        "title": "打印预览"
+                    }
+                },
+                "toast": {
+                    "nothingToPrint": "没有可打印内容"
                 }
             }
         },

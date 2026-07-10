@@ -716,7 +716,7 @@ export function createToolbarConfig(ns) {
 }
 
 function _applyOpenEditionToolbarConfig(config) {
-    const blockedPanels = new Set(['file', 'page', 'pivotAnalyze', 'pivotDesign']);
+    const blockedPanels = new Set(['pivotAnalyze', 'pivotDesign']);
     return config
         .filter((panel) => !blockedPanels.has(panel.key))
         .map((panel) => ({
@@ -759,38 +759,20 @@ function _isOpenEditionBlockedItem(item) {
         'pivotGrandTotals',
         'pivotReportLayout',
         'pivotBlankRows',
-        'pivotStyles',
-        'printArea',
-        'printScale',
-        'pageMargins',
-        'pageOrientation',
-        'paperSize'
+        'pivotStyles'
     ]);
 
     if (blockedMenus.has(menu)) return true;
 
     const blockedActionSnippets = [
+        ".containerDom.querySelector('.sn-upload').click()",
         '.IO.export(',
+        '.IO.exportAllImage(',
         '.IO.import(',
         'Action.importFromUrl(',
         '.Layout.showAIChat=',
         'Action.createPivotTable(',
-        'Action.insertPivot',
-        'Action.printPreview(',
-        'Action.pageBreakPreview(',
-        'Action.toggleShowPageBreaks(',
-        'Action.insertPageBreak(',
-        'Action.togglePrintGridlines(',
-        'Action.togglePrintHeadings(',
-        'Action.setPageMargins',
-        'Action.setPageOrientation(',
-        'Action.setPaperSize(',
-        'Action.setPrintScale',
-        'Action.setPrintAreaFromSelection(',
-        'Action.clearPrintArea(',
-        'Action.setPrintTitles(',
-        'Action.setPageBackground(',
-        'Action.setHeaderFooter('
+        'Action.insertPivot'
     ];
 
     return blockedActionSnippets.some((snippet) => action.includes(snippet));
