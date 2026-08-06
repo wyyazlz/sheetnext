@@ -41,6 +41,27 @@ export function parseFormula(formula) {
     return new FormulaAstParser(formula).parse();
 }
 
+/**
+ * Tolerantly tokenize a formula input for editing support.
+ * Accepts the full input including the leading '=', never throws on
+ * incomplete/invalid input, and returns tokens carrying their
+ * [start, end) offsets within the original input string.
+ * @param {string} text - Full formula input, e.g. "=SUM(A1,"
+ * @returns {Array<{type:string,value?:any,start:number,end:number}>}
+ */
+export function tokenizeFormula(text) {
+    const raw = String(text ?? '');
+    const offset = raw.startsWith('=') ? 1 : 0;
+    const tokens = new FormulaLexer(raw.slice(offset), { tolerant: true }).scan();
+    if (offset) {
+        tokens.forEach(token => {
+            token.start += offset;
+            token.end += offset;
+        });
+    }
+    return tokens;
+}
+
 export function hasVolatileFunctionInAst(ast) {
     let found = false;
     walkAst(ast, node => {
@@ -274,10 +295,13 @@ class FormulaAstParser {
 }
 
 class FormulaLexer {
-    constructor(formula) {
+    constructor(formula, options = {}) {
         this._formula = formula;
         this._pos = 0;
         this._tokens = [];
+        this._tolerant = options.tolerant === true;
+        this._tokenStart = 0;
+        this._unterminated = false;
     }
 
     scan() {
@@ -289,8 +313,10 @@ class FormulaLexer {
                 continue;
             }
 
+            this._tokenStart = this._pos;
+
             if (ch === '"') {
-                this._tokens.push({ type: 'STRING', value: this._readQuoted('"') });
+                this._push('STRING', this._readQuoted('"'));
                 continue;
             }
 
@@ -300,67 +326,79 @@ class FormulaLexer {
             }
 
             if (isDigit(ch) || (ch === '.' && isDigit(this._formula[this._pos + 1]))) {
-                this._tokens.push({ type: 'NUMBER', value: this._readNumber() });
+                this._push('NUMBER', this._readNumber());
                 continue;
             }
 
             if (isIdentifierStart(ch)) {
-                this._tokens.push({ type: 'IDENT', value: this._readIdentifier() });
+                this._push('IDENT', this._readIdentifier());
                 continue;
             }
 
             if (ch === '(') {
-                this._tokens.push({ type: 'LPAREN' });
                 this._pos++;
+                this._push('LPAREN');
                 continue;
             }
             if (ch === ')') {
-                this._tokens.push({ type: 'RPAREN' });
                 this._pos++;
+                this._push('RPAREN');
                 continue;
             }
             if (ch === '{') {
-                this._tokens.push({ type: 'LBRACE' });
                 this._pos++;
+                this._push('LBRACE');
                 continue;
             }
             if (ch === '}') {
-                this._tokens.push({ type: 'RBRACE' });
                 this._pos++;
+                this._push('RBRACE');
                 continue;
             }
             if (ch === ',') {
-                this._tokens.push({ type: 'COMMA' });
                 this._pos++;
+                this._push('COMMA');
                 continue;
             }
             if (ch === ';') {
-                this._tokens.push({ type: 'SEMICOLON' });
                 this._pos++;
+                this._push('SEMICOLON');
                 continue;
             }
             if (ch === '@') {
-                this._tokens.push({ type: 'AT' });
                 this._pos++;
+                this._push('AT');
                 continue;
             }
             if (ch === '#') {
-                this._tokens.push({ type: 'HASH' });
                 this._pos++;
+                this._push('HASH');
                 continue;
             }
 
             const op = this._readOperator();
             if (op) {
-                this._tokens.push({ type: 'OPERATOR', value: op });
+                this._push('OPERATOR', op);
                 continue;
             }
 
+            if (this._tolerant) {
+                this._pos++;
+                this._push('UNKNOWN', ch);
+                continue;
+            }
             throw new FormulaParseError(`Unexpected character ${ch}`);
         }
 
-        this._tokens.push({ type: 'EOF' });
+        this._tokenStart = this._pos;
+        this._push('EOF');
         return this._tokens;
+    }
+
+    _push(type, value) {
+        const token = { type, start: this._tokenStart, end: this._pos };
+        if (value !== undefined) token.value = value;
+        this._tokens.push(token);
     }
 
     _readQuoted(quote) {
@@ -380,19 +418,24 @@ class FormulaLexer {
             value += ch;
             this._pos++;
         }
+        if (this._tolerant) {
+            this._unterminated = true;
+            return value;
+        }
         throw new FormulaParseError('Unterminated string literal');
     }
 
     _readSingleQuoted() {
+        this._unterminated = false;
         const start = this._pos;
         const quoted = this._readQuoted("'");
-        if (this._formula[this._pos] === '!') {
+        if (!this._unterminated && this._formula[this._pos] === '!') {
             this._pos++;
             const address = this._readIdentifierBody();
-            this._tokens.push({ type: 'IDENT', value: `'${quoted.replace(/'/g, "''")}'!${address}` });
+            this._push('IDENT', `'${quoted.replace(/'/g, "''")}'!${address}`);
             return;
         }
-        this._tokens.push({ type: 'STRING', value: this._formula.slice(start + 1, this._pos - 1) });
+        this._push('STRING', this._unterminated ? quoted : this._formula.slice(start + 1, this._pos - 1));
     }
 
     _readNumber() {

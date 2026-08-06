@@ -780,7 +780,9 @@ a {
 }
 
 .info-box-my {
-    background-color: var(--sn-ai-accent, var(--sn-primary));
+    --sn-user-message-bg: #6b7280;
+    --sn-user-message-rgb: 107, 114, 128;
+    background-color: var(--sn-user-message-bg);
     color: #fff;
     border: none;
     position: relative;
@@ -805,7 +807,7 @@ a {
     left: 0;
     right: 0;
     height: 60px;
-    background: linear-gradient(to bottom, rgba(var(--sn-ai-rgb, var(--sn-primary-rgb)), 0) 0%, rgba(var(--sn-ai-rgb, var(--sn-primary-rgb)), 0.9) 70%, var(--sn-ai-accent, var(--sn-primary)) 100%);
+    background: linear-gradient(to bottom, rgba(var(--sn-user-message-rgb), 0) 0%, rgba(var(--sn-user-message-rgb), 0.9) 70%, var(--sn-user-message-bg) 100%);
     pointer-events: none;
     display: none;
 }
@@ -1148,10 +1150,10 @@ a {
     transition: all 0.2s;
 }
 
-.ask-option:hover {
-    background: var(--sn-ai-accent, var(--sn-primary));
+.ai-ask-dialog .ask-option:hover {
+    background: #6b7280;
     color: #fff;
-    border-color: var(--sn-ai-accent, var(--sn-primary));
+    border-color: #6b7280;
 }
 
 .ask-input-wrap {
@@ -1172,19 +1174,43 @@ a {
     border-color: var(--sn-ai-accent, var(--sn-primary));
 }
 
-.ask-submit {
-    padding: 8px 16px;
-    background: var(--sn-ai-accent, var(--sn-primary));
-    color: #fff;
-    border: none;
+.ai-ask-dialog .ask-submit {
+    flex-shrink: 0;
+    min-width: 64px;
+    min-height: 34px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sn-primary);
+    color: var(--sn-primary-contrast, #fff);
+    border: 1px solid var(--sn-primary);
     border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    font-family: inherit;
     font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
-.ask-submit:hover {
-    background: var(--sn-ai-accent-hover, var(--sn-primary-hover));
+.ai-ask-dialog .ask-submit:hover {
+    background: var(--sn-primary-hover);
+    border-color: var(--sn-primary-hover);
+    box-shadow: 0 4px 10px var(--sn-primary-ring);
+}
+
+.ai-ask-dialog .ask-submit:active {
+    background: var(--sn-primary-active);
+    border-color: var(--sn-primary-active);
+    box-shadow: none;
+    transform: translateY(1px);
+}
+
+.ai-ask-dialog .ask-submit:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--sn-primary-ring);
 }
 
 .ask-answered {

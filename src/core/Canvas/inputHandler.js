@@ -1,6 +1,12 @@
 // 输入框相关监听
 
+import { moveByTab } from './KeyboardHandler.js';
+
 export function formulaBarFocus() {
+    if (this.formulaEditor?.rangePicking) {
+        this.formulaBar.blur();
+        return;
+    }
     const oEditValue = this.formulaBar.value // 保留原始数据
     this._fbOriginalValue = oEditValue; // 供 Escape 取消使用
     if (!this.opCancel) {
@@ -14,13 +20,14 @@ export function formulaBarFocus() {
     this.opFun.style.color = this._themeColor('primary', '#2f6f4e')
     const inputFun = () => {
         this.input.innerText = this.formulaBar.value
+        this.formulaEditor?.onExternalTextChange(); // 公式栏输入同步引用高亮
     }
     this.formulaBar.addEventListener('input', inputFun)
     this.opCancel.addEventListener('mousedown', () => {
         this.input.innerText = oEditValue
     }, { once: true })
     this.formulaBar.addEventListener('blur', () => {
-        this.updInputValue()
+        if (!this._suspendEditCommit) this.updInputValue()
         this.formulaBar.removeEventListener('input', inputFun)
         this.opConfirm.style.color = ''
         this.opCancel.style.color = ''
@@ -38,6 +45,13 @@ export function formulaBarKeyDown(event) {
         event.preventDefault();
         this.input.innerText = this._fbOriginalValue ?? '';
         this.formulaBar.blur();
+        return;
+    }
+    if (event.key === 'Tab') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.formulaBar.blur();
+        moveByTab.call(this, event.shiftKey);
         return;
     }
     if (event.key !== 'Enter') return;

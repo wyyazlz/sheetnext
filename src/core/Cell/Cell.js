@@ -218,7 +218,7 @@ export default class Cell {
             parent._fmtResult = undefined;
         }
 
-        // 手动计算模式下保留缓存值（除非是新公式）
+        // 自动计算模式清除缓存，手动计算模式保留现有缓存
         if (this._SN.calcMode !== 'manual') {
             this._calcVal = undefined;
             this._showVal = undefined;
@@ -899,8 +899,17 @@ export default class Cell {
      * @type {boolean}     */
 
     get validData() {
+        return this.validateData();
+    }
+
+    /**
+     * Check a candidate calculated value against this cell's data validation rule.
+     * @param {any} [value=this.calcVal] - Candidate calculated value
+     * @returns {boolean}
+     */
+    validateData(value = this.calcVal) {
         if (!this._dataValidation) return true;
-        const val = this.calcVal;
+        const val = value;
         const { type, operator, formula1, formula2, allowBlank } = this._dataValidation;
         const needsTwoBounds = ['whole', 'decimal', 'date', 'time', 'textLength'];
         const op = operator || (needsTwoBounds.includes(type) && formula2 ? 'between' : operator);
@@ -908,14 +917,14 @@ export default class Cell {
         if (allowBlank && (val === '' || val === null || val === undefined)) return true;
 
         switch (type) {
-            case 'list': return formula1.includes(val.toString());
+            case 'list': return formula1.includes(String(val ?? ''));
             case 'whole':
                 if (!Number.isInteger(Number(val))) return false;
                 return compareValue(Number(val), op, formula1, formula2);
             case 'decimal':
                 if (isNaN(Number(val))) return false;
                 return compareValue(Number(val), op, formula1, formula2);
-            case 'textLength': return compareValue(val.toString().length, op, formula1, formula2);
+            case 'textLength': return compareValue(String(val ?? '').length, op, formula1, formula2);
             case 'custom': return true;
             case 'date':
                 if (!(val instanceof Date)) return false;

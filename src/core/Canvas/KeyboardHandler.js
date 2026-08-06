@@ -1,5 +1,17 @@
 import { isCheckboxControl } from '../Cell/cellControlXml.js';
 
+const ARROW_DIRECTIONS = {
+    ArrowUp: 'up',
+    ArrowDown: 'down',
+    ArrowLeft: 'left',
+    ArrowRight: 'right'
+};
+
+const MODIFIER_KEYS = new Set([
+    'Alt', 'AltGraph', 'CapsLock', 'Control', 'Fn', 'FnLock', 'Hyper',
+    'Meta', 'NumLock', 'ScrollLock', 'Shift', 'Super', 'Symbol', 'SymbolLock'
+]);
+
 /**
  * Keyboard Event Processing Module
  * Calling the Action Layer's Clipboard Method
@@ -45,7 +57,192 @@ function insertLineBreakAtCursor(input) {
     return true;
 }
 
+function normalizeArea(area) {
+    if (!area?.s || !area?.e) return null;
+    return {
+        s: {
+            r: Math.min(area.s.r, area.e.r),
+            c: Math.min(area.s.c, area.e.c)
+        },
+        e: {
+            r: Math.max(area.s.r, area.e.r),
+            c: Math.max(area.s.c, area.e.c)
+        }
+    };
+}
+
+function sameCell(a, b) {
+    return a?.r === b?.r && a?.c === b?.c;
+}
+
+function sameArea(a, b) {
+    return !!a && !!b && sameCell(a.s, b.s) && sameCell(a.e, b.e);
+}
+
+function areaContains(area, cell) {
+    return !!area && !!cell &&
+        cell.r >= area.s.r && cell.r <= area.e.r &&
+        cell.c >= area.s.c && cell.c <= area.e.c;
+}
+
+function getCellSpan(sheet, cell) {
+    const target = sheet.getCell(cell.r, cell.c);
+    const master = target.master || cell;
+    const merge = target.isMerged || target.master
+        ? sheet.merges.find(item => item.s.r === master.r && item.s.c === master.c)
+        : null;
+    return merge || { s: { ...master }, e: { ...master } };
+}
+
+function normalizeTabCell(sheet, cell) {
+    const target = sheet.getCell(cell.r, cell.c);
+    return target.master ? { ...target.master } : { ...cell };
+}
+
+function isTabCellVisible(sheet, cell) {
+    const row = sheet.rows[cell.r];
+    const pendingRow = !row ? sheet._getPendingXlsxRowState?.(cell.r) : null;
+    if (row?.hidden || pendingRow?.hidden || pendingRow?.filterHidden) return false;
+    return !sheet.cols[cell.c]?.hidden;
+}
+
+function isTabCellSelectable(sheet, cell) {
+    return sheet.protection?.isCellSelectable?.(sheet.getCell(cell.r, cell.c)) !== false;
+}
+
+function stepInsideArea(sheet, area, cell, reverse) {
+    const span = getCellSpan(sheet, cell);
+    let r = span.s.r;
+    let c = reverse ? span.s.c - 1 : span.e.c + 1;
+
+    if (reverse && c < area.s.c) {
+        c = area.e.c;
+        r--;
+        if (r < area.s.r) r = area.e.r;
+    } else if (!reverse && c > area.e.c) {
+        c = area.s.c;
+        r++;
+        if (r > area.e.r) r = area.s.r;
+    }
+
+    return { r, c };
+}
+
+function findTabTargetInArea(sheet, area, activeCell, reverse) {
+    if (!areaContains(area, activeCell)) return null;
+    if (sheet.protection?.enabled &&
+        !sheet.protection.selectLockedCells &&
+        !sheet.protection.selectUnlockedCells) {
+        return null;
+    }
+
+    const cellCount = (area.e.r - area.s.r + 1) * (area.e.c - area.s.c + 1);
+    let cursor = { ...activeCell };
+    for (let i = 0; i < cellCount; i++) {
+        cursor = stepInsideArea(sheet, area, cursor, reverse);
+        const target = normalizeTabCell(sheet, cursor);
+        if (sameCell(target, activeCell)) continue;
+        if (!areaContains(area, target)) continue;
+        if (!isTabCellVisible(sheet, target)) continue;
+        if (!isTabCellSelectable(sheet, target)) continue;
+        return target;
+    }
+    return null;
+}
+
+function isRestrictedSelection(sheet) {
+    return !!sheet.protection?.enabled &&
+        (!sheet.protection.selectLockedCells || !sheet.protection.selectUnlockedCells);
+}
+
+function findNormalTabTarget(sheet, activeCell, reverse) {
+    const span = getCellSpan(sheet, activeCell);
+    const boundary = reverse ? span.s.c : span.e.c;
+    const c = reverse
+        ? sheet._findBeforeShowCol(boundary, 1)
+        : sheet._findNextShowCol(boundary, 1);
+    const target = normalizeTabCell(sheet, { r: span.s.r, c });
+
+    if (!sameCell(target, activeCell) && isTabCellSelectable(sheet, target)) return target;
+    if (!isRestrictedSelection(sheet)) return null;
+
+    const sheetArea = {
+        s: { r: 0, c: 0 },
+        e: { r: Math.max(0, sheet.rowCount - 1), c: Math.max(0, sheet.colCount - 1) }
+    };
+    return findTabTargetInArea(sheet, sheetArea, activeCell, reverse);
+}
+
+function getTableAppendTarget(sheet, activeCell, reverse, cyclesSelection) {
+    if (reverse || cyclesSelection) return null;
+    const table = sheet.Table?.getTableAt?.(activeCell.r, activeCell.c);
+    if (!table?.range || table.showTotalsRow || !table.isDataCell(activeCell.r, activeCell.c)) return null;
+    if (activeCell.r !== table.dataEndRow || activeCell.c !== table.range.e.c) return null;
+    if (!sheet.Table.appendRow(table)) return null;
+    return { r: table.dataEndRow, c: table.range.s.c };
+}
+
+function ensureCellVisible(canvas, sheet, target) {
+    const info = sheet.getCellInViewInfo(target.r, target.c);
+    if (info.inView) return;
+
+    const vi = sheet.vi || {};
+    const bodyLeft = vi.fw ?? sheet.indexWidth;
+    const bodyTop = vi.fh ?? sheet.headHeight;
+    const bodyWidth = Math.max(1, canvas.viewWidth - bodyLeft);
+    const bodyHeight = Math.max(1, canvas.viewHeight - bodyTop);
+    let scrollLeft = vi.scrollLeft ?? 0;
+    let scrollTop = vi.scrollTop ?? 0;
+
+    if (info.x < bodyLeft) {
+        scrollLeft = sheet.getScrollLeft(target.c);
+    } else if (info.x + info.w > canvas.viewWidth) {
+        scrollLeft = sheet.getScrollLeft(target.c + 1) - bodyWidth;
+    }
+    if (info.y < bodyTop) {
+        scrollTop = sheet.getScrollTop(target.r);
+    } else if (info.y + info.h > canvas.viewHeight) {
+        scrollTop = sheet.getScrollTop(target.r + 1) - bodyHeight;
+    }
+
+    canvas.scrollToPixels(scrollLeft, scrollTop);
+}
+
+/**
+ * Commit-compatible Excel Tab navigation shared by the cell editor and formula bar.
+ * @param {boolean} [reverse=false]
+ * @returns {boolean}
+ */
+export function moveByTab(reverse = false) {
+    const sheet = this.activeSheet;
+    if (!sheet) return false;
+
+    const activeCell = { ...sheet.activeCell };
+    const areas = sheet.activeAreas;
+    const area = normalizeArea(areas[areas.length - 1]);
+    const activeSpan = getCellSpan(sheet, activeCell);
+    const cyclesSelection = !!area &&
+        (area.s.r !== area.e.r || area.s.c !== area.e.c) &&
+        !sameArea(area, activeSpan);
+
+    const target = getTableAppendTarget(sheet, activeCell, reverse, cyclesSelection)
+        || (cyclesSelection
+            ? findTabTargetInArea(sheet, area, activeCell, reverse)
+            : findNormalTabTarget(sheet, activeCell, reverse));
+    if (!target || sameCell(target, activeCell)) return false;
+
+    sheet.activeCell = target;
+    if (!sameCell(sheet.activeCell, target)) return false;
+    if (!cyclesSelection) sheet.activeAreas = [];
+    ensureCellVisible(this, sheet, target);
+    this.input?.focus();
+    this.r('s');
+    return true;
+}
+
 export function docKeyDown(event) {
+    // 公式编辑态优先处理（联想下拉导航、F4、方向键 Point 引用等）
+    if (this.formulaEditor?.handleKeyDown(event)) return;
     if (event.altKey) {
         const isFormulaBarFocused = document.activeElement === this.formulaBar;
         if (event.key === 'Enter' && !isFormulaBarFocused) {
@@ -68,10 +265,34 @@ export function docKeyDown(event) {
     const sheet = this.activeSheet;
     const area = sheet.activeAreas[sheet.activeAreas.length - 1];
 
+    if (event.key === 'Tab' && document.activeElement === this.input) {
+        event.preventDefault();
+        if (this.inputEditing) this.updInputValue();
+        moveByTab.call(this, event.shiftKey);
+        return;
+    }
+
     // F9 - 全局重算（包括 Volatile 函数）
     if (event.key === 'F9') {
         event.preventDefault();
         this.SN.recalculate(event.shiftKey); // Shift+F9 仅重算当前表
+        return;
+    }
+
+    const selectionDirection = ARROW_DIRECTIONS[event.key];
+    if (selectionDirection && event.shiftKey && !this.inputEditing &&
+        document.activeElement !== this.formulaBar &&
+        document.activeElement === this.input) {
+        event.preventDefault();
+        const target = sheet.moveSelection(selectionDirection, {
+            extend: true,
+            jump: event.ctrlKey || event.metaKey
+        });
+        if (target) {
+            ensureCellVisible(this, sheet, target);
+            this.input?.focus();
+            this.r('s');
+        }
         return;
     }
 
@@ -142,6 +363,9 @@ export function docKeyDown(event) {
         document.activeElement !== this.formulaBar &&
         document.activeElement === this.input) {
 
+        // 编辑态下保留浏览器的文本扩选行为。
+        if (this.inputEditing && event.shiftKey) return;
+
         // 如果开启了输入框那么关闭输入框，活动的单元格调整
         if (this.inputEditing) {
             const blurEvent = new Event('blur');
@@ -166,7 +390,7 @@ export function docKeyDown(event) {
             sheet.activeCell.r = sheet._findBeforeShowRow(cellSide.t, 1);
         } else if (event.key == 'ArrowLeft' && cellSide.l > sheet.vi.side.l) {
             sheet.activeCell.c = sheet._findBeforeShowCol(cellSide.l, 1);
-        } else if ((event.key == 'ArrowRight' || event.key == 'Tab') && cellSide.r < sheet.vi.side.r) {
+        } else if (event.key == 'ArrowRight' && cellSide.r < sheet.vi.side.r) {
             sheet.activeCell.c = sheet._findNextShowCol(cellSide.r, 1);
         }
 
@@ -236,7 +460,9 @@ export function docKeyDown(event) {
         }
         this.showCellInput(true, true);
     }
-    else if (document.activeElement === this.input && !this.inputEditing) {
+    else if (document.activeElement === this.input &&
+        !this.inputEditing &&
+        !MODIFIER_KEYS.has(event.key)) {
         this.showCellInput(true, true);
     }
 }

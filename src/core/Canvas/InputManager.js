@@ -193,6 +193,7 @@ export function showCellInput(clearValue = false, focusEditor = false) {
     }
     this.currentCell = { ...this.activeSheet.activeCell }; // Prevent async drift
     this.activeSheet.cancelBrush(); // Exit format brush (with toolbar refresh)
+    this.formulaEditor?.beginSession(); // 公式内容着色与引用高亮
 
     if (!focusEditor || !this.inputEditing) return;
 
@@ -227,6 +228,7 @@ export function updateInputPosition() {
 
 // Input value update
 export function updInputValue() {
+    this.formulaEditor?.deactivate(false); // 结束公式编辑态（着色 span 不参与富文本判定）
     const { c, r } = this.currentCell;
     const sheet = this.activeSheet;
     const cell = sheet.getCell(r, c);
@@ -234,7 +236,7 @@ export function updInputValue() {
     // 富文本提交路径（数字内容不支持富文本，与 Excel 一致）
     const plainText = this.input.innerText.trim();
     const isNumeric = !isNaN(plainText) && plainText.length <= 15 && plainText !== '';
-    if (!isNumeric && hasRichContent(this.input) && !cell.isFormula) {
+    if (!isNumeric && hasRichContent(this.input) && !cell.isFormula && !plainText.startsWith('=')) {
         const runs = htmlToRichText(this.input, cell.font);
         if (runs && runs.length > 0) {
             cell.richText = runs;

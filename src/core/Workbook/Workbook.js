@@ -35,6 +35,8 @@ import "../../style/findReplace.css"
 import "../../style/pivotPanel.css"
 import "../../style/table.css"
 import "../../style/slicer.css"
+import "../../style/print.css"
+
 class SheetNext {
     static _instanceCounter = 0;
     static _pendingLocalesConsumed = false;

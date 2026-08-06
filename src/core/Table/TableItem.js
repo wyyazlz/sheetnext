@@ -472,6 +472,9 @@ export default class TableItem {
             this.columns = this.columns.slice(0, colCount);
         }
 
+        // 数据源为本表的图表跟随新区域
+        this.sheet.Table._syncChartRefsToResize(this, oldRef);
+
         // 更新自动筛选范围
         if (this.showTotalsRow) {
             this.applyTotalsRow({ initializeDefaults: true });

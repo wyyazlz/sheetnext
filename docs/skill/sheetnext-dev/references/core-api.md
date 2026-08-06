@@ -1,6 +1,6 @@
 # Core API
 
-> Generated: 2026-07-03
+> Generated: 2026-08-06
 
 Public callable classes detected for the generated API surface.
 
@@ -594,6 +594,19 @@ sheet.rangeSort([
 **Returns**
 - Type: `{s:{r:number,c:number},e:{r:number,c:number}} | string | null`
 
+#### `moveSelection(direction, options = {}): CellNum | null`
+- Move or extend the current selection using Excel-style navigation.
+- Category: `SelectionNavigation`
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| direction | 'up' \| 'down' \| 'left' \| 'right' | Yes | - | - |
+| options | {extend?:boolean,jump?:boolean} | No | {} | - |
+
+**Returns**
+- Type: `CellNum | null`
+
 #### `insertTemplate(arr, pos, options = {}, ops?): RangeNum`
 - Insert a template from the given position.
 - Category: `InsertTable`
@@ -1048,6 +1061,18 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 | validData | boolean | No | Data validation results |
 | isFormula | boolean | No | Is it a formula |
 
+### Methods
+#### `validateData(value = this.calcVal): boolean`
+- Check a candidate calculated value against this cell's data validation rule.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| value | any | No | this.calcVal | Candidate calculated value |
+
+**Returns**
+- Type: `boolean`
+
 ## Canvas
 - Canvas Rendering and Interaction Management
 
@@ -1089,6 +1114,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 | slicersCon | HTMLElement | No | SN.containerDom.querySelector('.sn-slicers-con') | Slicer Container |
 | maxTop | number | No | 0 | Maximum longitudinal scrolling distance |
 | maxLeft | number | No | 0 | Maximum lateral scrolling distance |
+| formulaEditor | FormulaEditor | No | new FormulaEditor(this) | Inline Formula Editor Controller |
 | rCount | number | No | 0 | Render Count |
 | hoveredComment | Object \| null | No | null | Current hover comment |
 | statSum | HTMLElement \| null | No | SN.containerDom.querySelector('[data-stat="sum"]') | Statistical Sum: Dom |
@@ -1184,6 +1210,20 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 
 **Returns**
 - Type: `{x: number, y: number, w: number, h: number}`
+
+#### `startRangePicker(options = {}): () => void`
+- Start a modeless grid range-picking session.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| options | Object | No | {} | Picker callbacks and target context |
+| options.onChange | (reference:string, detail:{area:Object, sheet:Object})=>void | Yes | - | Range change callback |
+| options.targetSheetName | string | No | - | Formula target sheet used to qualify cross-sheet references |
+
+**Returns**
+- Type: `() => void`
+- Session disposer
 
 #### `getEventPosition(event): {x: number, y: number}`
 - Gets the position of the event in the canvas (logical coordinates)<br>@ param {MouseEvent \| {clientX: number, clientY: number}} event - Mouse event or object with coordinates
@@ -1580,7 +1620,7 @@ sheet.insertTemplate(meetingTemplate, 'A1', {
 - Assigned outside the constructor. These are flagged for audit because they may be public state that the scanner should not silently miss.
 | Name | Static | Source Line | Example Assignment |
 | --- | --- | --- | --- |
-| SKctx | No | 352 | this.scrollSkeletonLayer.getContext('2d') |
+| SKctx | No | 361 | this.scrollSkeletonLayer.getContext('2d') |
 
 ## Layout
 - Layout & Toolbar Management
@@ -2155,6 +2195,17 @@ table.add({
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | name | string | Yes | - | - |
+
+**Returns**
+- Type: `boolean`
+
+#### `appendRow(tableOrId): boolean`
+- Append one blank data row to a table without shifting worksheet rows.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| tableOrId | TableItem \| string | Yes | - | - |
 
 **Returns**
 - Type: `boolean`
@@ -3306,6 +3357,76 @@ sparkline.add({
 
 **Returns**
 - Type: `Object | null`
+
+## FormulaEditor
+
+### Props
+| Name | Type | Static | Default | Description |
+| --- | --- | --- | --- | --- |
+| canvas | Canvas | No | canvas | Canvas instance |
+| SN | Object | No | canvas.SN | SheetNext Main Instance |
+
+### Get
+| Name | Type | Static | Description |
+| --- | --- | --- | --- |
+| active | boolean | No | Whether the formula editing mode is currently active |
+| rangePicking | boolean | No | - |
+
+### Methods
+#### `beginSession(): void`
+- Start a fresh editing session, called when the cell editor opens.
+
+#### `syncFromInput(): void`
+- Re-read the editor content and refresh coloring, overlays and highlights.
+
+#### `onInput(): void`
+- User typed into the cell editor.
+
+#### `onExternalTextChange(): void`
+- Editor content was mirrored from the formula bar, refresh without caret handling.
+
+#### `handleKeyDown(event): boolean`
+- Intercept keyboard events during formula editing.<br>Handles dropdown navigation, Tab-accept, Escape, F4 and arrow-key pointing.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| event | KeyboardEvent | Yes | - | Keydown event from the document handler |
+
+**Returns**
+- Type: `boolean`
+- true when the event was consumed
+
+#### `handleCanvasMousedown(event): boolean`
+- Intercept a canvas mousedown during formula editing.<br>When the cursor is at a reference-insertable position the click/drag<br>inserts a cell/range/row/column reference instead of committing the edit.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| event | MouseEvent | Yes | - | Mousedown event on the handle layer |
+
+**Returns**
+- Type: `boolean`
+- true when the event was consumed
+
+#### `drawRefHighlights(sheet): void`
+- Draw colored frames around referenced areas, called from the render pipeline.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| sheet | Sheet | Yes | - | Sheet being rendered |
+
+#### `onViewScrolled(): void`
+- Reposition editor overlays after view scrolling during formula editing.
+
+#### `deactivate(render = true): void`
+- Leave formula mode and clear overlays/highlights.
+
+**Parameters**
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| render | boolean | No | true | Whether to trigger a snapshot repaint |
 
 ## FormulaAstParser
 

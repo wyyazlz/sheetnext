@@ -1,4 +1,4 @@
-import { chartOptionApplyTemplate, chartXmlToEChartOption, refOptionParse } from "./chart.js";
+import { chartOptionApplyTemplate, chartXmlToEChartOption, refOptionParse, isRefWithSheet } from "./chart.js";
 import { _initImage } from "./image.js";
 import { parseShapeFromXml, buildShapeXml } from "./shape.js";
 import { CONNECTOR_TYPES } from "./constants.js";
@@ -434,6 +434,76 @@ export default class DrawingItem {
     _clearRenderCache() {
         this._renderOption = null;
         this.drawCache = null;
+    }
+
+    /**
+     * Rewrite chart range refs pointing at `sheetName` through `mapRange`.
+     * Walks every ref string in chartOption (series data/name, categories, __excelRef, ...).
+     * @param {string} sheetName - sheet whose refs should be remapped
+     * @param {Function} mapRange - ({s:{r,c}, e:{r,c}}) => new range, or null to keep unchanged
+     * @returns {boolean} whether any ref changed
+     */
+    _remapChartRefs(sheetName, mapRange) {
+        if (this.type !== 'chart' || !this._hasChartReferences()) return false;
+
+        const utils = this.sheet.Utils;
+        const endpointRegex = /^(\$?)([A-Za-z]{1,3})(\$?)(\d+)$/;
+
+        const remapStr = (str) => {
+            if (!isRefWithSheet(str)) return null;
+            const splitAt = str.lastIndexOf('!');
+            const sheetPart = str.slice(0, splitAt);
+            const refSheetName = sheetPart.startsWith("'")
+                ? sheetPart.slice(1, -1).replaceAll("''", "'")
+                : sheetPart;
+            if (refSheetName !== sheetName) return null;
+
+            const endpoints = str.slice(splitAt + 1).split(':').map(txt => {
+                const m = txt.match(endpointRegex);
+                return m && {
+                    absC: m[1] === '$',
+                    c: utils.charToNum(m[2].toUpperCase()),
+                    absR: m[3] === '$',
+                    r: parseInt(m[4], 10) - 1
+                };
+            });
+            if (endpoints.some(pt => !pt)) return null;
+
+            const [s, e = endpoints[0]] = endpoints;
+            const next = mapRange({ s: { r: s.r, c: s.c }, e: { r: e.r, c: e.c } });
+            if (!next) return null;
+            if (next.s.r === s.r && next.s.c === s.c && next.e.r === e.r && next.e.c === e.c) return null;
+
+            const fmt = (pt, src) => `${src.absC ? '$' : ''}${utils.numToChar(pt.c)}${src.absR ? '$' : ''}${pt.r + 1}`;
+            const single = endpoints.length === 1 && next.s.r === next.e.r && next.s.c === next.e.c;
+            const cellsPart = single ? fmt(next.s, s) : `${fmt(next.s, s)}:${fmt(next.e, e)}`;
+            return `${sheetPart}!${cellsPart}`;
+        };
+
+        let changed = false;
+        const walk = (node) => {
+            if (!node || typeof node !== 'object') return;
+            const visit = (val, assign) => {
+                if (typeof val === 'string') {
+                    const next = remapStr(val);
+                    if (next !== null) {
+                        assign(next);
+                        changed = true;
+                    }
+                } else {
+                    walk(val);
+                }
+            };
+            if (Array.isArray(node)) {
+                node.forEach((val, idx) => visit(val, next => { node[idx] = next; }));
+            } else {
+                Object.keys(node).forEach(key => visit(node[key], next => { node[key] = next; }));
+            }
+        };
+        walk(this.chartOption);
+
+        if (changed) this._clearRenderCache();
+        return changed;
     }
 
     // ==================== Anchor behavior ====================

@@ -23,6 +23,7 @@ import * as Clipboard from './Clipboard.js';
 import * as CellControl from './CellControl.js';
 import * as ClearRange from './ClearRange.js';
 import * as UsedRange from './UsedRange.js';
+import * as SelectionNavigation from './SelectionNavigation.js';
 
 /** @typedef {import('../Workbook/Workbook.js').default} SheetNext */
 
@@ -34,6 +35,8 @@ export default class Sheet {
     _activeCell;
     _defaultColWidth;
     _defaultRowHeight;
+    _activeAreas;
+    _selectionFocus;
 
     /** @param {Object} meta @param {SheetNext} SN */
     constructor(meta, SN) {
@@ -92,6 +95,7 @@ export default class Sheet {
         this._handleLayer = this.Canvas.handleLayer;
         this._brush = { keep: false, area: null };
         this._activeAreas = [];
+        this._selectionFocus = null;
         this._indexWidth = 50;
         this._headHeight = 23;
         this._styledRows = new Set();
@@ -137,6 +141,7 @@ export default class Sheet {
         if (beforeEvent.canceled) return;
 
         this._activeCell = cell;
+        this._selectionFocus = null;
 
         // 触发 afterSelectionChange 事件
         this.SN.Event.emit('afterSelectionChange', {
@@ -171,6 +176,7 @@ export default class Sheet {
         if (beforeEvent.canceled) return;
 
         this._activeAreas = arr;
+        this._selectionFocus = null;
 
         // 触发 afterSelectionChange 事件
         this.SN.Event.emit('afterSelectionChange', {
@@ -1059,6 +1065,8 @@ Object.assign(Sheet.prototype, {
     clearRange: ClearRange.clearRange,
 
     getUsedRange: UsedRange.getUsedRange,
+
+    moveSelection: SelectionNavigation.moveSelection,
 
     /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops] @returns {RangeNum} */
     insertTemplate: InsertTable.insertTemplate,

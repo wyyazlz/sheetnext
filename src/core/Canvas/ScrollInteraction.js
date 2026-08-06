@@ -76,6 +76,11 @@ function isTouchInSelectionHandle(canvas, touch) {
     const frame = canvas.activeBorderInfo;
     if (!frame?.inView) return false;
     const { x, y } = canvas.getEventPosition(touch);
+    const paneClip = frame.paneClip;
+    if (paneClip?.empty || (paneClip && (
+        x < paneClip.x || x > paneClip.x + paneClip.w ||
+        y < paneClip.y || y > paneClip.y + paneClip.h
+    ))) return false;
     const zoom = canvas.activeSheet?.zoom ?? 1;
     const hitSize = Math.max(10, TOUCH_SELECTION_HANDLE_HIT_SIZE / zoom);
     const centerX = frame.x + frame.w + 1;
@@ -346,8 +351,13 @@ export function canvasWheel(event) {
     this.scrollByPixels(deltaX / zoom, deltaY / zoom, { fast });
 
     if (this.inputEditing) {
-        const blurEvent = new Event('blur');
-        this.input.dispatchEvent(blurEvent);
+        // 公式录入中允许滚动查看/选取引用区域，不提交编辑（与 Excel 一致）
+        if (this.formulaEditor?.active) {
+            this.formulaEditor.onViewScrolled();
+        } else {
+            const blurEvent = new Event('blur');
+            this.input.dispatchEvent(blurEvent);
+        }
     }
 }
 

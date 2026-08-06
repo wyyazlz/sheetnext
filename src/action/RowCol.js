@@ -96,6 +96,40 @@ function getActiveAreas(SN) {
     return [{ s: SN.activeSheet.activeCell, e: SN.activeSheet.activeCell }];
 }
 
+function resolveAdjacentHiddenRange(startIndex, endIndex, count, isHidden) {
+    let start = Math.max(0, Math.min(startIndex, endIndex));
+    let end = Math.min(count - 1, Math.max(startIndex, endIndex));
+
+    while (start > 0 && isHidden(start - 1)) start--;
+    while (end < count - 1 && isHidden(end + 1)) end++;
+
+    return { start, end };
+}
+
+function isManuallyHiddenRow(sheet, rowIndex) {
+    const row = sheet.rows[rowIndex];
+    if (row) return !!row._hidden;
+    return sheet._getPendingXlsxRowState?.(rowIndex)?.hidden === true;
+}
+
+function resolveUnhideRowRange(sheet, startRow, endRow) {
+    return resolveAdjacentHiddenRange(
+        startRow,
+        endRow,
+        sheet.rowCount,
+        rowIndex => isManuallyHiddenRow(sheet, rowIndex)
+    );
+}
+
+function resolveUnhideColRange(sheet, startCol, endCol) {
+    return resolveAdjacentHiddenRange(
+        startCol,
+        endCol,
+        sheet.colCount,
+        colIndex => !!sheet.cols[colIndex]?.hidden
+    );
+}
+
 function resolveOutlineAxis(sheet, areas) {
     const isFullColumnSelection = areas.every(area =>
         area?.s?.r === 0 &&
@@ -320,7 +354,8 @@ export function hideColAction() {
 export function unhideRowAction() {
     const sheet = this.SN.activeSheet;
     const area = getActiveArea(this.SN);
-    Core.unhideRows(sheet, area.s.r, area.e.r);
+    const range = resolveUnhideRowRange(sheet, area.s.r, area.e.r);
+    Core.unhideRows(sheet, range.start, range.end);
     this.SN._r();
 }
 
@@ -328,7 +363,8 @@ export function unhideRowAction() {
 export function unhideColAction() {
     const sheet = this.SN.activeSheet;
     const area = getActiveArea(this.SN);
-    Core.unhideCols(sheet, area.s.c, area.e.c);
+    const range = resolveUnhideColRange(sheet, area.s.c, area.e.c);
+    Core.unhideCols(sheet, range.start, range.end);
     this.SN._r();
 }
 

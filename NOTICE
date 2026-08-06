@@ -3,11 +3,11 @@ SheetNext Open Edition
 Copyright (c) 2026 SheetNext
 
 This distribution is licensed under Apache License 2.0.
-This open edition disables proprietary or enterprise modules:
-- IO import/export pipeline (open API keeps getData as primary read path)
-- AI module
-- PivotTable module
-- Print module
-- License/activation module
+This open edition restricts only these proprietary capabilities:
+- IO file import/export (getData and setData remain available)
+- Built-in AI assistant and workflows
+- PivotTable authoring and processing
+
+All other included features are open and available without activation.
 
 See OPEN_EDITION_SCOPE.md for details.

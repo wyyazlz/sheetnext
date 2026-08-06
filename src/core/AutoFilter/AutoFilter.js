@@ -1444,7 +1444,27 @@ export default class AutoFilter {
         const parsed = this._parseAutoFilterXml(autoFilterXml, null);
         if (!parsed) return;
 
+        // Excel stores a header-only ref (e.g. A1:AK1) when autofilter was
+        // enabled on a single row, then extends it to the contiguous data
+        // rows at runtime — mirror that here so the filter has data to act on.
+        const range = parsed.range;
+        if (range.s.r === range.e.r) {
+            let maxR = range.e.r;
+            while (maxR < this.sheet.rowCount - 1 && this._rangeRowHasData(maxR + 1, range.s.c, range.e.c)) maxR++;
+            if (maxR > range.e.r) {
+                range.e.r = maxR;
+                parsed.ref = this._SN.Utils.rangeNumToStr(range);
+            }
+        }
+
         this._applyParsedScope(scope, parsed, { restoreHiddenRowsFromSheet: true });
+    }
+
+    _rangeRowHasData(r, startCol, endCol) {
+        for (let c = startCol; c <= endCol; c++) {
+            if (this._hasData(r, c)) return true;
+        }
+        return false;
     }
 
     /**
