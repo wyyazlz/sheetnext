@@ -1484,7 +1484,7 @@ a {
     flex: 0 0 auto;
     min-width: 64px;
     max-width: 180px;
-    padding: 0 14px;
+    padding: 0 10px;
     height: 30px;
     border: 1px solid transparent;
     border-bottom: 2px solid transparent;
@@ -1793,8 +1793,6 @@ a {
 }
 
 .sn-padding-type,
-.sn-hyperlink-jump-btn,
-.sn-hyperlink-tip,
 .sn-valid-select,
 .sn-valid-tip {
     position: absolute !important;
@@ -1803,21 +1801,83 @@ a {
     border-radius: 3px;
 }
 
-.sn-hyperlink-jump-btn {
-    padding: 4px 6px;
-    background-color: var(--sn-primary);
-    color: #fff;
+.sn-hyperlink-popover {
+    position: absolute;
+    width: max-content;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    padding: 5px;
+    max-width: 360px;
+    border: 1px solid #dce3df;
+    border-radius: 8px;
+    background: #fff;
+    color: #3c4741;
+    box-shadow: 0 4px 16px rgba(20, 40, 30, 0.14);
+    z-index: var(--sn-z-canvas-floating, 450);
 }
 
-.sn-hyperlink-tip {
-    padding: 4px 8px;
-    background-color: #ffffcc;
-    border: 1px solid #000;
-    font-size: 12px;
-    color: #333;
-    max-width: 300px;
-    word-wrap: break-word;
-    z-index: var(--sn-z-canvas-floating, 450);
+.sn-hyperlink-popover[hidden],
+.sn-hyperlink-popover button[hidden] {
+    display: none;
+}
+
+.sn-hyperlink-popover button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 6px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.sn-hyperlink-popover button:hover {
+    background: var(--sn-primary-soft, #edf5f0);
+}
+
+.sn-hyperlink-popover button:focus-visible {
+    outline: 2px solid var(--sn-primary);
+    outline-offset: -2px;
+}
+
+.sn-hyperlink-popover .sn-hyperlink-target {
+    min-width: 0;
+    gap: 8px;
+    justify-content: flex-start;
+    color: var(--sn-primary);
+}
+
+.sn-hyperlink-target span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sn-hyperlink-target:hover span {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.sn-hyperlink-popover .sn-svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.sn-hyperlink-action {
+    flex: 0 0 30px;
+}
+
+.sn-hyperlink-popover .sn-hyperlink-remove:hover {
+    background: #fff0ee;
+    color: #b83b31;
 }
 
 .sn-valid-tip {

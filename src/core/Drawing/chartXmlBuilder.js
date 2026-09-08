@@ -675,7 +675,7 @@ function buildSeriesDataLabels(series) {
     } else if (show) {
         const position = label?.position;
         let excelPos = null;
-        if (position === 'top') excelPos = 't';
+        if (position === 'top') excelPos = series?.type === 'bar' ? 'outEnd' : 't';
         else if (position === 'bottom') excelPos = 'b';
         else if (position === 'left') excelPos = 'l';
         else if (position === 'right') excelPos = 'r';
@@ -1259,13 +1259,13 @@ function createBarChart(id1, id2, isStack, barDir, isPercent = false) {
 /**
  * Create Line Chart
  */
-function createLineChart(id1, id2, grouping = 'standard') {
+function createLineChart(id1, id2, grouping = 'standard', isArea = false) {
     return {
         "c:grouping": { "_$val": grouping },
         "c:varyColors": { "_$val": "0" },
         "c:ser": [],
         "c:dLbls": getDefaultDLbls(),
-        "c:smooth": { "_$val": "0" },
+        ...(!isArea ? { "c:smooth": { "_$val": "0" } } : {}),
         "c:axId": [{ "_$val": id1 }, { "_$val": id2 }]
     };
 }
@@ -1430,7 +1430,7 @@ function getScatterValAx(id, crossId, axis, pos) {
 /**
  * Building Data References
  */
-function buildRef(str, type) {
+function buildRef(str, type, SN) {
     if (str == null) {
         if (type == 'str') return { "c:strLit": { "c:ptCount": { "_$val": 0 } } };
         return { "c:numLit": { "c:formatCode": "General", "c:ptCount": { "_$val": 0 } } };
@@ -1445,19 +1445,28 @@ function buildRef(str, type) {
             if (type == 'str') return { [key]: { "c:ptCount": { "_$val": 0 } } };
             return { [key]: { "c:formatCode": "General", "c:ptCount": { "_$val": 0 } } };
         }
+        const values = processCellReferences(SN, str.map(value => (
+            value && typeof value === 'object' && 'value' in value ? value.value : value
+        )));
         const lit = type == 'str'
             ? {
                 "c:ptCount": { "_$val": str.length },
-                "c:pt": str.map((val, idx) => ({ "_$idx": idx, "c:v": val == null ? '' : String(val) }))
+                "c:pt": values.map((val, idx) => ({ "_$idx": idx, "c:v": val == null ? '' : String(val) }))
             }
             : {
                 "c:formatCode": "General",
                 "c:ptCount": { "_$val": str.length },
-                "c:pt": str.map((val, idx) => ({ "_$idx": idx, "c:v": val == null ? '' : String(val) }))
+                // Missing/non-numeric values are gaps; c:numLit cannot contain cell addresses or text.
+                "c:pt": values.flatMap((val, idx) => {
+                    if (val == null || (typeof val === 'string' && !val.trim())) return [];
+                    if (!['number', 'string', 'boolean'].includes(typeof val)) return [];
+                    const number = Number(val);
+                    return Number.isFinite(number) ? [{ "_$idx": idx, "c:v": String(number) }] : [];
+                })
             };
         return { [key]: lit };
     } else {
-        return { "c:v": String(str) };
+        return buildRef([str], type, SN);
     }
 }
 
@@ -1782,30 +1791,31 @@ export function getChartXmlDetail(SN, d) {
                 "c:invertIfNegative": { "_$val": "1" },
                 ...buildBarStyle(s),
                 ...(buildSeriesDataLabels(s) || {}),
-                "c:cat": buildRef(binding.categories, 'str'),
-                "c:val": buildRef(s.data, 'num'),
+                "c:cat": buildRef(binding.categories, 'str', SN),
+                "c:val": buildRef(s.data, 'num', SN),
                 "c:extLst": buildSeriesExt(index, chartGuid)
             });
             hasChart = true;
         } else if (s.type == 'line') {
-            const chartType = s.areaStyle ? 'c:areaChart' : 'c:lineChart';
+            const isArea = !!s.areaStyle;
+            const chartType = isArea ? 'c:areaChart' : 'c:lineChart';
             const binding = getCategoryAxisBinding(s, (xAxis.type || 'category') === 'category' ? 'col' : 'bar');
             const isPercent = s.stack && isPercentStackedChart(chartOption, binding.valueAxis);
             const grouping = s.stack ? (isPercent ? 'percentStacked' : 'stacked') : 'standard';
             const group = getChartGroup(
                 chartType,
                 `${binding.categoryIndex}|${binding.valueIndex}|${grouping}`,
-                () => createLineChart(binding.categoryId, binding.valueId, grouping)
+                () => createLineChart(binding.categoryId, binding.valueId, grouping, isArea)
             );
             group["c:ser"].push({
                 "c:idx": { "_$val": index }, "c:order": { "_$val": index },
                 "c:tx": buildSeriesText(s.name),
-                ...buildLineMarker(s),
+                ...(!isArea ? buildLineMarker(s) : {}),
                 ...buildLineStyle(s),
                 ...(buildSeriesDataLabels(s) || {}),
-                "c:cat": buildRef(binding.categories, 'str'),
-                "c:val": buildRef(s?.data, 'num'),
-                "c:smooth": { "_$val": s?.smooth ? "1" : "0" },
+                "c:cat": buildRef(binding.categories, 'str', SN),
+                "c:val": buildRef(s?.data, 'num', SN),
+                ...(!isArea ? { "c:smooth": { "_$val": s?.smooth ? "1" : "0" } } : {}),
                 "c:extLst": buildSeriesExt(index, chartGuid)
             });
             hasChart = true;
@@ -1820,9 +1830,9 @@ export function getChartXmlDetail(SN, d) {
                 "c:tx": buildSeriesText(s.name),
                 ...buildBubbleStyle(s),
                 ...(buildSeriesDataLabels(s) || {}),
-                "c:xVal": buildRef(xVals, 'num'),
-                "c:yVal": buildRef(yVals, 'num'),
-                "c:bubbleSize": buildRef(sizeVals, 'num'),
+                "c:xVal": buildRef(xVals, 'num', SN),
+                "c:yVal": buildRef(yVals, 'num', SN),
+                "c:bubbleSize": buildRef(sizeVals, 'num', SN),
                 "c:bubble3D": { "_$val": "0" },
                 "c:extLst": buildSeriesExt(index, chartGuid)
             });
@@ -1840,8 +1850,8 @@ export function getChartXmlDetail(SN, d) {
                 ...buildScatterLineStyle(scatterStyle, s),
                 ...buildScatterSmooth(scatterStyle),
                 ...(buildSeriesDataLabels(s) || {}),
-                "c:xVal": buildRef(xVals, 'num'),
-                "c:yVal": buildRef(yVals, 'num'),
+                "c:xVal": buildRef(xVals, 'num', SN),
+                "c:yVal": buildRef(yVals, 'num', SN),
                 "c:extLst": buildSeriesExt(index, chartGuid)
             });
             hasChart = true;
@@ -1866,8 +1876,8 @@ export function getChartXmlDetail(SN, d) {
                 ...buildLineMarker(s),
                 ...buildLineStyle(s),
                 ...(buildSeriesDataLabels(s) || {}),
-                "c:cat": buildRef(radarCats, 'str'),
-                "c:val": buildRef(radarData, 'num'),
+                "c:cat": buildRef(radarCats, 'str', SN),
+                "c:val": buildRef(radarData, 'num', SN),
                 "c:extLst": buildSeriesExt(index, chartGuid)
             });
             hasChart = true;
@@ -1885,8 +1895,8 @@ export function getChartXmlDetail(SN, d) {
                     "c:bubble3D": { "_$val": "0" },
                     ...buildDataPointStyle(obj)
                 })),
-                "c:cat": buildRef(processCellReferences(SN, s.data.map(obj => obj.name)), 'str'),
-                "c:val": buildRef(processCellReferences(SN, s.data.map(obj => obj.value)), 'num'),
+                "c:cat": buildRef(s.data.map(obj => obj.name), 'str', SN),
+                "c:val": buildRef(s.data.map(obj => obj.value), 'num', SN),
                 "c:extLst": buildSeriesExt(index, chartGuid)
             };
             hasChart = true;
@@ -1906,8 +1916,8 @@ export function getChartXmlDetail(SN, d) {
             "c:tx": buildSeriesText(fallback.name),
             "c:invertIfNegative": { "_$val": "1" },
             ...(buildSeriesDataLabels(fallback) || {}),
-            "c:cat": buildRef(binding.categories, 'str'),
-            "c:val": buildRef(fallback.data ?? [], 'num'),
+            "c:cat": buildRef(binding.categories, 'str', SN),
+            "c:val": buildRef(fallback.data ?? [], 'num', SN),
             "c:extLst": buildSeriesExt(0, chartGuid)
         });
     }

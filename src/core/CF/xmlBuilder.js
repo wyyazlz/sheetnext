@@ -37,7 +37,9 @@ function buildSingleDxf(dxf) {
     // 字体
     if (dxf.font) {
         const fontNode = {};
-        if (dxf.font.bold) fontNode.b = '';
+        if (dxf.font.bold !== undefined) {
+            fontNode.b = dxf.font.bold ? '' : { '_$val': '0' };
+        }
         if (dxf.font.italic) fontNode.i = '';
         if (dxf.font.strike) fontNode.strike = '';
         if (dxf.font.underline) {

@@ -1,12 +1,20 @@
+import PrintDialog from '../../components/PrintDialog.js';
+
 const PRINT_DPI = 96;
 
 const PAPER_SIZES = {
-    A4: { name: 'A4', paperSize: 9, widthIn: 8.27, heightIn: 11.69 },
+    A4: { name: 'A4', paperSize: 9, widthIn: 210 / 25.4, heightIn: 297 / 25.4 },
+    A3: { name: 'A3', paperSize: 8, widthIn: 297 / 25.4, heightIn: 420 / 25.4 },
+    A5: { name: 'A5', paperSize: 11, widthIn: 148 / 25.4, heightIn: 210 / 25.4 },
+    Legal: { name: 'Legal', paperSize: 5, widthIn: 8.5, heightIn: 14 },
     Letter: { name: 'Letter', paperSize: 1, widthIn: 8.5, heightIn: 11 }
 };
 
 const PAPER_SIZE_BY_ID = {
     9: 'A4',
+    8: 'A3',
+    11: 'A5',
+    5: 'Legal',
     1: 'Letter'
 };
 
@@ -17,6 +25,12 @@ const DEFAULT_MARGINS = {
     bottom: 0.75,
     header: 0.3,
     footer: 0.3
+};
+
+const MARGIN_PRESETS = {
+    normal: DEFAULT_MARGINS,
+    narrow: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0.2, footer: 0.2 },
+    wide: { left: 1, right: 1, top: 1, bottom: 1, header: 0.3, footer: 0.3 }
 };
 
 function toNumber(val, fallback) {
@@ -77,6 +91,8 @@ export default class Print {
          * @type {Object}
          */
         this.SN = SN;
+        this._dialog = null;
+        this._settingsRefreshPending = false;
     }
 
     /**
@@ -123,6 +139,7 @@ export default class Print {
      */
     ensureSettings(sheet = this.SN.activeSheet) {
         if (!sheet) return null;
+        if (!sheet.initialized) sheet._init();
         if (!sheet.printSettings) {
             sheet.printSettings = this.createDefaultSettings();
         }
@@ -171,8 +188,9 @@ export default class Print {
 
         const scale = toInt(pageSetup._$scale, settings.pageSetup.scale);
         settings.pageSetup.scale = clampScale(scale);
-        settings.pageSetup.fitToWidth = toInt(pageSetup._$fitToWidth, settings.pageSetup.fitToWidth);
-        settings.pageSetup.fitToHeight = toInt(pageSetup._$fitToHeight, settings.pageSetup.fitToHeight);
+        const fitToPage = toBool(xmlObj.sheetPr?.pageSetUpPr?._$fitToPage);
+        settings.pageSetup.fitToWidth = fitToPage ? toInt(pageSetup._$fitToWidth, 1) : 0;
+        settings.pageSetup.fitToHeight = fitToPage ? toInt(pageSetup._$fitToHeight, 1) : 0;
 
         const printOptions = xmlObj.printOptions || {};
         settings.printOptions.gridlines = toBool(printOptions._$gridLines ?? printOptions._$gridlines, settings.printOptions.gridlines);
@@ -182,14 +200,14 @@ export default class Print {
         settings.headerFooter.header = headerFooter.oddHeader || '';
         settings.headerFooter.footer = headerFooter.oddFooter || '';
 
-        const rowBreaks = normalizeArray(xmlObj.rowBreaks?.brk)
-            .map(brk => toInt(brk?._$id, null))
-            .filter(id => Number.isFinite(id))
-            .map(id => id + 1);
-        const colBreaks = normalizeArray(xmlObj.colBreaks?.brk)
-            .map(brk => toInt(brk?._$id, null))
-            .filter(id => Number.isFinite(id))
-            .map(id => id + 1);
+        // OOXML uses the one-based row/column BEFORE the break, which equals
+        // our zero-based start index of the next page. Automatic breaks are recalculated.
+        const rowBreaks = this._normalizePageBreaks(normalizeArray(xmlObj.rowBreaks?.brk)
+            .filter(brk => toBool(brk?._$man))
+            .map(brk => brk?._$id), 1048576);
+        const colBreaks = this._normalizePageBreaks(normalizeArray(xmlObj.colBreaks?.brk)
+            .filter(brk => toBool(brk?._$man))
+            .map(brk => brk?._$id), 16384);
         settings.pageBreaks = { rowBreaks, colBreaks };
 
         if (sheet) {
@@ -234,10 +252,17 @@ export default class Print {
         } else if (ws.pageSetup._$scale) {
             delete ws.pageSetup._$scale;
         }
-        if (setup.fitToWidth) ws.pageSetup._$fitToWidth = String(setup.fitToWidth);
-        else if (ws.pageSetup._$fitToWidth) delete ws.pageSetup._$fitToWidth;
-        if (setup.fitToHeight) ws.pageSetup._$fitToHeight = String(setup.fitToHeight);
-        else if (ws.pageSetup._$fitToHeight) delete ws.pageSetup._$fitToHeight;
+        const fitToPage = setup.fitToWidth > 0 || setup.fitToHeight > 0;
+        if (fitToPage) {
+            ws.pageSetup._$fitToWidth = String(setup.fitToWidth || 0);
+            ws.pageSetup._$fitToHeight = String(setup.fitToHeight || 0);
+            ws.sheetPr = ws.sheetPr || {};
+            ws.sheetPr.pageSetUpPr = { ...ws.sheetPr.pageSetUpPr, '_$fitToPage': '1' };
+        } else {
+            delete ws.pageSetup._$fitToWidth;
+            delete ws.pageSetup._$fitToHeight;
+            if (ws.sheetPr?.pageSetUpPr) delete ws.sheetPr.pageSetUpPr._$fitToPage;
+        }
 
         const options = settings.printOptions || {};
         if (options.gridlines || options.headings) {
@@ -261,16 +286,13 @@ export default class Print {
             delete ws.headerFooter;
         }
 
-        const rowBreaks = settings.pageBreaks?.rowBreaks || [];
-        const colBreaks = settings.pageBreaks?.colBreaks || [];
+        const rowBreaks = this._normalizePageBreaks(settings.pageBreaks?.rowBreaks, 1048576);
+        const colBreaks = this._normalizePageBreaks(settings.pageBreaks?.colBreaks, 16384);
         if (rowBreaks.length > 0) {
             ws.rowBreaks = {
                 '_$count': String(rowBreaks.length),
                 '_$manualBreakCount': String(rowBreaks.length),
-                brk: rowBreaks
-                    .map(id => Math.max(0, toInt(id, 0) - 1))
-                    .filter(id => Number.isFinite(id))
-                    .map(id => ({ '_$id': String(id), '_$man': '1' }))
+                brk: rowBreaks.map(id => ({ '_$id': String(id), '_$min': '0', '_$max': '16383', '_$man': '1' }))
             };
         } else if (ws.rowBreaks) {
             delete ws.rowBreaks;
@@ -279,10 +301,7 @@ export default class Print {
             ws.colBreaks = {
                 '_$count': String(colBreaks.length),
                 '_$manualBreakCount': String(colBreaks.length),
-                brk: colBreaks
-                    .map(id => Math.max(0, toInt(id, 0) - 1))
-                    .filter(id => Number.isFinite(id))
-                    .map(id => ({ '_$id': String(id), '_$man': '1' }))
+                brk: colBreaks.map(id => ({ '_$id': String(id), '_$min': '0', '_$max': '1048575', '_$man': '1' }))
             };
         } else if (ws.colBreaks) {
             delete ws.colBreaks;
@@ -315,9 +334,13 @@ export default class Print {
             settings.printTitles = this._normalizePrintTitles(partial.printTitles, sheet, settings.printTitles);
         }
         if (partial.headerFooter) Object.assign(settings.headerFooter, partial.headerFooter);
-        if (partial.pageBreaks) Object.assign(settings.pageBreaks, partial.pageBreaks);
+        if (partial.pageBreaks) {
+            if (partial.pageBreaks.rowBreaks !== undefined) settings.pageBreaks.rowBreaks = this._normalizePageBreaks(partial.pageBreaks.rowBreaks, 1048576);
+            if (partial.pageBreaks.colBreaks !== undefined) settings.pageBreaks.colBreaks = this._normalizePageBreaks(partial.pageBreaks.colBreaks, 16384);
+        }
         if (partial.pageBackground !== undefined) settings.pageBackground = partial.pageBackground;
         if (partial.printArea !== undefined) settings.printArea = this.normalizeRange(partial.printArea, sheet);
+        this._notifySettingsChanged(sheet);
         return settings;
     }
 
@@ -328,7 +351,38 @@ export default class Print {
      * @returns {Object|null}
      */
     setPageMargins(margins, sheet = this.SN.activeSheet) {
+        const settings = this.ensureSettings(sheet);
+        if (!settings) return null;
+        const next = { ...settings.pageMargins, ...margins };
+        const paper = this.getPaperDefinition(settings);
+        if (Object.values(next).some(value => !Number.isFinite(Number(value)) || Number(value) < 0)
+            || Number(next.left) + Number(next.right) >= paper.widthIn
+            || Number(next.top) + Number(next.bottom) >= paper.heightIn) {
+            throw new Error(this.SN.t('core.print.print.invalidMargins'));
+        }
         return this.setSettings({ pageMargins: margins }, sheet);
+    }
+
+    /** @returns {Array<Object>} Supported paper sizes in inches. */
+    getPaperSizes() {
+        return Object.values(PAPER_SIZES).map(paper => ({ ...paper }));
+    }
+
+    /** @returns {Object} Named margin presets in inches. */
+    getMarginPresets() {
+        return clone(MARGIN_PRESETS);
+    }
+
+    /** @param {Sheet} [sheet=this.SN.activeSheet] @returns {'normal'|'narrow'|'wide'|'custom'} Matching margin preset. */
+    getPageMarginsPreset(sheet = this.SN.activeSheet) {
+        const margins = this.ensureSettings(sheet)?.pageMargins;
+        return Object.keys(MARGIN_PRESETS).find(name => Object.entries(MARGIN_PRESETS[name])
+            .every(([field, value]) => Math.abs(margins?.[field] - value) < 0.001)) || 'custom';
+    }
+
+    /** @param {string} preset @param {Sheet} [sheet=this.SN.activeSheet] */
+    setPageMarginsPreset(preset, sheet = this.SN.activeSheet) {
+        return this.setPageMargins(MARGIN_PRESETS[preset] || DEFAULT_MARGINS, sheet);
     }
 
     /**
@@ -351,8 +405,9 @@ export default class Print {
         }
         if (setup.orientation) settings.pageSetup.orientation = setup.orientation === 'landscape' ? 'landscape' : 'portrait';
         if (setup.scale !== undefined) settings.pageSetup.scale = clampScale(setup.scale);
-        if (setup.fitToWidth !== undefined) settings.pageSetup.fitToWidth = toInt(setup.fitToWidth, 0);
-        if (setup.fitToHeight !== undefined) settings.pageSetup.fitToHeight = toInt(setup.fitToHeight, 0);
+        if (setup.fitToWidth !== undefined) settings.pageSetup.fitToWidth = Math.max(0, toInt(setup.fitToWidth, 0));
+        if (setup.fitToHeight !== undefined) settings.pageSetup.fitToHeight = Math.max(0, toInt(setup.fitToHeight, 0));
+        this._notifySettingsChanged(sheet);
         return settings;
     }
 
@@ -376,6 +431,7 @@ export default class Print {
         const settings = this.ensureSettings(sheet);
         if (!settings) return null;
         settings.printArea = this.normalizeRange(range, sheet);
+        this._notifySettingsChanged(sheet);
         return settings.printArea;
     }
 
@@ -388,18 +444,26 @@ export default class Print {
         const settings = this.ensureSettings(sheet);
         if (!settings) return;
         settings.printArea = null;
+        this._notifySettingsChanged(sheet);
     }
 
     /**
      * Set the print title row/column
-     * @param {rows? : stringing number[s]
+     * @param {{rows?: string|Array<number>|null, cols?: string|Array<number>|null}} titles - Repeated rows and columns.
      * @param {Sheet} [sheet=this.SN.activeSheet] - Sheet
      * @returns {void}
      */
     setPrintTitles(titles, sheet = this.SN.activeSheet) {
         const settings = this.ensureSettings(sheet);
         if (!settings) return;
+        for (const [key, value] of Object.entries(titles || {})) {
+            if (value && ((key === 'rows' && !this._normalizeTitleRowsValue(value, sheet))
+                || (key === 'cols' && !this._normalizeTitleColsValue(value, sheet)))) {
+                throw new Error(this.SN.t('core.print.print.invalidTitles'));
+            }
+        }
         settings.printTitles = this._normalizePrintTitles(titles, sheet, settings.printTitles);
+        this._notifySettingsChanged(sheet);
     }
 
     /**
@@ -412,6 +476,7 @@ export default class Print {
         const settings = this.ensureSettings(sheet);
         if (!settings) return;
         settings.printOptions.gridlines = !!on;
+        this._notifySettingsChanged(sheet);
     }
 
     /**
@@ -424,6 +489,7 @@ export default class Print {
         const settings = this.ensureSettings(sheet);
         if (!settings) return;
         settings.printOptions.headings = !!on;
+        this._notifySettingsChanged(sheet);
     }
 
     /**
@@ -436,11 +502,12 @@ export default class Print {
         if (!sheet) return;
         sheet.showPageBreaks = !!on;
         if (sheet === this.SN.activeSheet) this.SN._r();
+        this.SN.Layout?.refreshToolbar();
     }
 
     /**
      * Insert Manual Page Break in the current active cell
-     * @param {r: number, c: number}
+     * @param {{r: number, c: number}|null} [cell=null] - Cell above/left of which to insert breaks.
      * @param {Sheet} [sheet=this.SN.activeSheet] - Sheet
      * @returns {{row:boolean, col:boolean}|null}
      */
@@ -448,7 +515,8 @@ export default class Print {
         const settings = this.ensureSettings(sheet);
         if (!settings || !sheet) return null;
         const target = cell || sheet.activeCell;
-        if (!target || !Number.isFinite(target.r) || !Number.isFinite(target.c)) return null;
+        if (!target || !Number.isInteger(target.r) || !Number.isInteger(target.c)
+            || target.r < 0 || target.c < 0 || target.r >= sheet.rowCount || target.c >= sheet.colCount) return null;
 
         const rowBreaks = settings.pageBreaks?.rowBreaks || (settings.pageBreaks.rowBreaks = []);
         const colBreaks = settings.pageBreaks?.colBreaks || (settings.pageBreaks.colBreaks = []);
@@ -468,7 +536,13 @@ export default class Print {
             colInserted = true;
         }
 
+        this._notifySettingsChanged(sheet);
         return { row: rowInserted, col: colInserted };
+    }
+
+    /** @param {Sheet} [sheet=this.SN.activeSheet] Remove all manual page breaks. */
+    resetPageBreaks(sheet = this.SN.activeSheet) {
+        this.setSettings({ pageBreaks: { rowBreaks: [], colBreaks: [] } }, sheet);
     }
 
     /**
@@ -479,25 +553,32 @@ export default class Print {
     getPageBreakGuides(sheet = this.SN.activeSheet) {
         const settings = this.ensureSettings(sheet);
         if (!settings || !sheet) return null;
-        const layout = this.buildLayout(sheet, settings);
+        let layout;
+        try {
+            layout = this.buildLayout(sheet, settings);
+        } catch {
+            return null;
+        }
         const range = layout.range;
         if (!range) return null;
 
+        const fitToPage = settings.pageSetup.fitToWidth > 0 || settings.pageSetup.fitToHeight > 0;
         const manualRowSet = new Set(
-            (settings.pageBreaks?.rowBreaks || [])
+            (fitToPage ? [] : settings.pageBreaks?.rowBreaks || [])
                 .map(val => toInt(val, null))
                 .filter(val => Number.isFinite(val))
                 .filter(val => val > range.s.r && val <= range.e.r)
         );
         const manualColSet = new Set(
-            (settings.pageBreaks?.colBreaks || [])
+            (fitToPage ? [] : settings.pageBreaks?.colBreaks || [])
                 .map(val => toInt(val, null))
                 .filter(val => Number.isFinite(val))
                 .filter(val => val > range.s.c && val <= range.e.c)
         );
 
-        const rowBreakSet = new Set(manualRowSet);
-        const colBreakSet = new Set(manualColSet);
+        // Show only effective page boundaries; breaks inside repeated titles do not split pages.
+        const rowBreakSet = new Set();
+        const colBreakSet = new Set();
         layout.rowSegments.forEach((seg, idx) => {
             if (idx > 0 && seg && Number.isFinite(seg.s) && seg.s > range.s.r && seg.s <= range.e.r) {
                 rowBreakSet.add(seg.s);
@@ -517,68 +598,87 @@ export default class Print {
     }
 
     /**
-     * Print Preview
+     * Open the print settings and preview panel.
      * @param {Object} [options={}] - Preview Options
      * @returns {Promise<void>}
      */
     async preview(options = {}) {
-        const sheet = options.sheet || this.SN.activeSheet;
-        if (!sheet) return;
-        sheet._init();
-        const settings = this.ensureSettings(sheet);
-        const layout = this.buildLayout(sheet, settings, options);
-        const pages = await this.renderPages(sheet, settings, layout);
-        const html = this.buildPreviewHtml(pages, layout);
-
-        await this.SN.Utils.modal({
-            titleKey: 'core.print.print.modal.m001.title', title: 'Print Preview',
-            content: html,
-            maxWidth: '96vw',
-            maxHeight: '90vh',
-            confirmKey: 'core.print.print.modal.m001.confirm', confirmText: 'Print',
-            cancelKey: 'core.print.print.modal.m001.cancel', cancelText: 'Close',
-            bodyClass: 'sn-print-preview',
-            onOpen: (bodyEl) => this.bindPreviewEvents(bodyEl, pages, layout),
-            onConfirm: () => this.print({ sheet, settings, layout, pages })
-        });
+        if (this._dialog || !(options.sheet || this.SN.activeSheet)) return;
+        const dialog = new PrintDialog(this.SN, options);
+        this._dialog = dialog;
+        try {
+            await dialog.open();
+        } finally {
+            if (this._dialog === dialog) this._dialog = null;
+        }
     }
 
     /**
-     * Print
-     * @param {Object} [options={}] - Print Options
+     * Print a job through the browser's system print dialog.
+     * @param {Object} [options={}] - Job options, or {job, fromPage, toPage, signal, onProgress}.
      * @returns {Promise<void>}
      */
     async print(options = {}) {
-        const sheet = options.sheet || this.SN.activeSheet;
-        if (!sheet) return;
-        sheet._init();
-        const settings = options.settings || this.ensureSettings(sheet);
-        const layout = options.layout || this.buildLayout(sheet, settings, options);
-        const pages = options.pages || await this.renderPages(sheet, settings, layout);
-        if (!pages.length) {
+        const job = options.job || this.createJob(options);
+        if (!job.pages.length) {
             this.SN.Utils.toast(this.SN.t('core.print.print.toast.nothingToPrint'));
             return;
         }
+        const fromPage = Number(options.fromPage ?? 1);
+        const toPage = Number(options.toPage ?? job.pages.length);
+        if (!Number.isInteger(fromPage) || !Number.isInteger(toPage)
+            || fromPage < 1 || toPage < fromPage || toPage > job.pages.length) {
+            throw new Error(this.SN.t('core.print.print.invalidPageRange', { total: job.pages.length }));
+        }
+        const selected = job.pages.slice(fromPage - 1, toPage);
+        const pages = [];
+        for (const page of selected) {
+            options.signal?.throwIfAborted();
+            pages.push(await this.renderPage(page, { signal: options.signal }));
+            options.onProgress?.(pages.length, selected.length);
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        options.signal?.throwIfAborted();
+        await this._printDocument(this.buildPrintHtml(pages), options.signal);
+    }
 
-        const html = this.buildPrintHtml(pages, layout);
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-
-        iframe.onload = () => {
-            const win = iframe.contentWindow;
-            if (!win) return;
-            win.focus();
-            win.print();
-            setTimeout(() => iframe.remove(), 1000);
-        };
-
-        iframe.srcdoc = html;
-        this.SN.containerDom.appendChild(iframe);
+    /**
+     * Create a pagination snapshot without rendering images or changing saved print areas.
+     * @param {Object} [options={}] - {sheet, scope: 'sheet'|'selection'|'workbook', ranges, ignorePrintArea}.
+     * @returns {{pages: Array<Object>}}
+     */
+    createJob(options = {}) {
+        const now = new Date();
+        const dateText = now.toLocaleDateString();
+        const timeText = now.toLocaleTimeString();
+        const currentSheet = options.sheet || this.SN.activeSheet;
+        const sheets = options.scope === 'workbook' ? this.SN.sheets.filter(sheet => !sheet.hidden) : [currentSheet];
+        const pages = [];
+        for (const sheet of sheets) {
+            if (!sheet) continue;
+            sheet._init();
+            const settings = this.getSettings(sheet);
+            const selection = options.ranges || (sheet.activeAreas.length ? sheet.activeAreas : [{ s: sheet.activeCell, e: sheet.activeCell }]);
+            const ranges = options.scope === 'selection'
+                ? selection.map(range => this._selectionRange(range, sheet)).filter(Boolean)
+                : [null];
+            for (const range of ranges) {
+                const pageSettings = clone(settings);
+                if (range) {
+                    pageSettings.printArea = range;
+                    pageSettings.printTitles = { rows: null, cols: null };
+                } else if (options.ignorePrintArea) pageSettings.printArea = null;
+                const layout = this.buildLayout(sheet, pageSettings);
+                pages.push(...this._describePages(sheet, layout));
+            }
+        }
+        pages.forEach((page, index) => {
+            page.pageNumber = index + 1;
+            page.totalPages = pages.length;
+            page.dateText = dateText;
+            page.timeText = timeText;
+        });
+        return { pages };
     }
 
     /**
@@ -587,50 +687,51 @@ export default class Print {
      * @param {Object} settings - Print Settings
      * @returns {Object}
      */
-    buildLayout(sheet, settings, options = {}) {
+    buildLayout(sheet, settings) {
         const paper = this.getPaperDefinition(settings);
         const margins = this.getMarginPixels(settings.pageMargins);
         const printable = {
             width: Math.max(0, paper.widthPx - margins.left - margins.right),
             height: Math.max(0, paper.heightPx - margins.top - margins.bottom)
         };
-        const scale = this._resolvePrintScale(sheet, settings, printable);
-        const contentLimit = {
-            width: printable.width / scale,
-            height: printable.height / scale
-        };
         const range = this.getPrintRange(sheet, settings);
+        if (!range) return { paper, margins, printable, range: null, rowSegments: [], colSegments: [], settings };
+        if (printable.width <= 0 || printable.height <= 0) {
+            throw new Error(this.SN.t('core.print.print.invalidMargins'));
+        }
+        const scale = this._resolvePrintScale(sheet, settings, printable);
+        const headings = settings.printOptions?.headings;
+        const contentLimit = {
+            width: printable.width / scale - (headings ? sheet._indexWidth : 0),
+            height: printable.height / scale - (headings ? sheet._headHeight : 0)
+        };
         const repeatTitles = this._resolveRepeatTitles(sheet, settings, range);
         const bodyRange = this._buildBodyRange(range, repeatTitles);
+        const repeatWidth = repeatTitles.cols && (repeatTitles.cols.s < range.s.c || repeatTitles.cols.e < range.e.c) ? repeatTitles.colsSize : 0;
+        const repeatHeight = repeatTitles.rows && (repeatTitles.rows.s < range.s.r || repeatTitles.rows.e < range.e.r) ? repeatTitles.rowsSize : 0;
+        if (repeatWidth >= contentLimit.width || repeatHeight >= contentLimit.height) {
+            throw new Error(this.SN.t('core.print.print.titlesTooLarge'));
+        }
         const bodyLimit = {
-            width: Math.max(1, contentLimit.width - repeatTitles.colsSize),
-            height: Math.max(1, contentLimit.height - repeatTitles.rowsSize)
+            width: Math.max(1, contentLimit.width - repeatWidth),
+            height: Math.max(1, contentLimit.height - repeatHeight)
         };
 
-        let rowSegments = [];
-        let colSegments = [];
-        if (bodyRange) {
-            rowSegments = this.buildSegments(
-                bodyRange.s.r,
-                bodyRange.e.r,
-                (r) => this.getRowSize(sheet, r),
-                bodyLimit.height,
-                settings.pageBreaks?.rowBreaks || []
-            );
-            colSegments = this.buildSegments(
-                bodyRange.s.c,
-                bodyRange.e.c,
-                (c) => this.getColSize(sheet, c),
-                bodyLimit.width,
-                settings.pageBreaks?.colBreaks || []
-            );
-        } else {
-            rowSegments = [null];
-            colSegments = [null];
-        }
-
-        if (!rowSegments.length) rowSegments = [null];
-        if (!colSegments.length) colSegments = [null];
+        const fitToPage = settings.pageSetup.fitToWidth > 0 || settings.pageSetup.fitToHeight > 0;
+        const rowSegments = this.buildSegments(
+            bodyRange.s.r,
+            bodyRange.e.r,
+            row => this.getRowSize(sheet, row),
+            bodyLimit.height,
+            fitToPage ? [] : settings.pageBreaks?.rowBreaks || []
+        );
+        const colSegments = this.buildSegments(
+            bodyRange.s.c,
+            bodyRange.e.c,
+            col => this.getColSize(sheet, col),
+            bodyLimit.width,
+            fitToPage ? [] : settings.pageBreaks?.colBreaks || []
+        );
 
         return {
             paper,
@@ -642,7 +743,7 @@ export default class Print {
             rowSegments,
             colSegments,
             repeatTitles,
-            pageBreakPreview: !!options.pageBreakPreview,
+            sheetName: sheet.name,
             settings
         };
     }
@@ -666,8 +767,8 @@ export default class Print {
             paperSize: base.paperSize,
             widthIn,
             heightIn,
-            widthPx: Math.round(widthIn * PRINT_DPI),
-            heightPx: Math.round(heightIn * PRINT_DPI)
+            widthPx: widthIn * PRINT_DPI,
+            heightPx: heightIn * PRINT_DPI
         };
     }
 
@@ -689,7 +790,7 @@ export default class Print {
      * Get Actual Print Range
      * @param {Sheet} sheet - Sheet
      * @param {Object} settings - Print Settings
-     * @returns {{s: {r: number, c: number}, e: {r: number, c: number}}}
+     * @returns {{s: {r: number, c: number}, e: {r: number, c: number}}|null}
      */
     getPrintRange(sheet, settings) {
         const area = settings?.printArea;
@@ -706,8 +807,11 @@ export default class Print {
      */
     normalizeRange(range, sheet) {
         if (!range || !sheet) return null;
-        if (typeof range === 'string') return sheet.rangeStrToNum(range);
-        if (range.s && range.e) return range;
+        const parsed = typeof range === 'string' ? sheet.rangeStrToNum(range) : range;
+        if (parsed?.s && parsed?.e) {
+            const normalized = this._selectionRange(parsed, sheet);
+            if (Object.values(normalized.s).concat(Object.values(normalized.e)).every(Number.isInteger)) return normalized;
+        }
         return null;
     }
 
@@ -722,6 +826,19 @@ export default class Print {
         let maxR = -1;
         let maxC = -1;
 
+        for (const [rowIndex, row] of sheet._pendingXlsxRowMap || []) {
+            const cells = Array.isArray(row.c) ? row.c : row.c ? [row.c] : [];
+            for (const cell of cells) {
+                if (cell.v === undefined && cell.f === undefined && cell.is === undefined && !Number(cell._$s)) continue;
+                const address = this.SN.Utils.cellStrToNum(cell._$r);
+                if (!Number.isFinite(address?.c)) continue;
+                minR = Math.min(minR, rowIndex);
+                minC = Math.min(minC, address.c);
+                maxR = Math.max(maxR, rowIndex);
+                maxC = Math.max(maxC, address.c);
+            }
+        }
+
         sheet.rows.forEach((row, rIndex) => {
             if (!row) return;
             row.cells.forEach((cell, cIndex) => {
@@ -733,8 +850,23 @@ export default class Print {
             });
         });
 
+        for (const drawing of sheet.Drawing?.getAll() || []) {
+            if (!drawing.area) continue;
+            minR = Math.min(minR, drawing.area.s.r);
+            minC = Math.min(minC, drawing.area.s.c);
+            maxR = Math.max(maxR, drawing.area.e.r);
+            maxC = Math.max(maxC, drawing.area.e.c);
+        }
+        for (const merge of sheet.merges || []) {
+            if (merge.s.r > maxR || merge.s.c > maxC || merge.e.r < minR || merge.e.c < minC) continue;
+            minR = Math.min(minR, merge.s.r);
+            minC = Math.min(minC, merge.s.c);
+            maxR = Math.max(maxR, merge.e.r);
+            maxC = Math.max(maxC, merge.e.c);
+        }
+
         if (maxR < 0 || maxC < 0) {
-            return { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
+            return null;
         }
         return { s: { r: minR, c: minC }, e: { r: maxR, c: maxC } };
     }
@@ -765,7 +897,7 @@ export default class Print {
                 size = 0;
             }
             const nextSize = Math.max(0, sizeGetter(i));
-            if (size + nextSize > maxSegmentSize && i > segStart) {
+            if (size + nextSize > maxSegmentSize + 0.001 && i > segStart && size > 0) {
                 segments.push({ s: segStart, e: i - 1 });
                 segStart = i;
                 size = 0;
@@ -787,7 +919,12 @@ export default class Print {
     getRowSize(sheet, r) {
         const row = sheet.rows[r];
         if (row && row.hidden) return 0;
-        return row ? row.height : sheet.defaultRowHeight;
+        if (row) return row.height;
+        const state = sheet._getPendingXlsxRowState(r);
+        if (state) return state.hidden || state.filterHidden ? 0 : state.height;
+        const pending = sheet._pendingXlsxRowMap?.get(r);
+        if (pending?._$hidden === '1') return 0;
+        return pending?._$ht ? Math.round(Number(pending._$ht) * 1.333) : sheet.defaultRowHeight;
     }
 
     /**
@@ -848,25 +985,60 @@ export default class Print {
      */
     async renderPages(sheet, settings, layout) {
         const pages = [];
-        const includeHeadings = settings.printOptions?.headings;
-        const rowSegments = layout.rowSegments?.length ? layout.rowSegments : [null];
-        const colSegments = layout.colSegments?.length ? layout.colSegments : [null];
-        for (const rowSeg of rowSegments) {
-            for (const colSeg of colSegments) {
-                const range = this._buildPageRange(layout, rowSeg, colSeg);
-                const size = this.getRangeSize(sheet, range, includeHeadings);
-                const dataUrl = await this.captureRange(sheet, range, size.width, size.height, settings);
-                pages.push({
-                    range,
-                    rowSeg,
-                    colSeg,
-                    width: size.width,
-                    height: size.height,
-                    dataUrl
-                });
-            }
+        const descriptors = this._describePages(sheet, layout);
+        for (const page of descriptors) {
+            pages.push(await this.renderPage({ ...page, pageNumber: pages.length + 1, totalPages: descriptors.length }));
         }
         return pages;
+    }
+
+    /**
+     * Render one job page, including repeated titles.
+     * @param {Object} page - A page descriptor from createJob.
+     * @param {{signal?: AbortSignal}} [options={}] - Optional cancellation signal.
+     * @returns {Promise<Object>}
+     */
+    async renderPage(page, options = {}) {
+        options.signal?.throwIfAborted();
+        const { sheet, layout, rowBands, colBands } = page;
+        const headings = layout.settings.printOptions?.headings;
+        const headingWidth = headings ? sheet._indexWidth : 0;
+        const headingHeight = headings ? sheet._headHeight : 0;
+        const outputScale = Math.min(2, 2 * layout.scale, 16384 / Math.max(page.width, page.height), Math.sqrt(16777216 / (page.width * page.height)));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.ceil(page.width * outputScale));
+        canvas.height = Math.max(1, Math.ceil(page.height * outputScale));
+        const context = canvas.getContext('2d');
+        let offsetY = 0;
+        for (let rowIndex = 0; rowIndex < rowBands.length; rowIndex++) {
+            let offsetX = 0;
+            let bandHeight = 0;
+            for (let colIndex = 0; colIndex < colBands.length; colIndex++) {
+                options.signal?.throwIfAborted();
+                const range = {
+                    s: { r: rowBands[rowIndex].s, c: colBands[colIndex].s },
+                    e: { r: rowBands[rowIndex].e, c: colBands[colIndex].e }
+                };
+                const size = this.getRangeSize(sheet, range, headings);
+                const cropX = colIndex ? headingWidth : 0;
+                const cropY = rowIndex ? headingHeight : 0;
+                const width = size.width - cropX;
+                bandHeight = size.height - cropY;
+                if (width <= 0 || bandHeight <= 0) continue;
+                const dataUrl = await this.captureRange(sheet, range, size.width, size.height, layout.settings, outputScale);
+                const image = new Image();
+                image.src = dataUrl;
+                await image.decode();
+                options.signal?.throwIfAborted();
+                const sourceX = cropX / size.width * image.width;
+                const sourceY = cropY / size.height * image.height;
+                context.drawImage(image, sourceX, sourceY, image.width - sourceX, image.height - sourceY,
+                    offsetX * outputScale, offsetY * outputScale, width * outputScale, bandHeight * outputScale);
+                offsetX += width;
+            }
+            offsetY += bandHeight;
+        }
+        return { ...page, dataUrl: canvas.toDataURL('image/png') };
     }
 
     /**
@@ -876,47 +1048,224 @@ export default class Print {
      * @param {number} width - Width
      * @param {number} height - Height
      * @param {Object} settings - Print Settings
+     * @param {number} [outputScale=2] - Raster resolution multiplier.
      * @returns {Promise<string>}
      */
-    async captureRange(sheet, range, width, height, settings) {
-        const prevGrid = sheet.showGridLines;
-        const prevHeadings = sheet.showRowColHeaders;
-        sheet.showGridLines = !!settings.printOptions?.gridlines;
-        sheet.showRowColHeaders = !!settings.printOptions?.headings;
+    async captureRange(sheet, range, width, height, settings, outputScale = 2) {
+        return this.SN.Canvas.captureScreenshot(this.SN.Utils.cellNumToStr(range.s), 'topleft', {
+            sheet,
+            width: Math.max(1, width),
+            height: Math.max(1, height),
+            exportScale: outputScale,
+            printOptions: settings.printOptions,
+            compress: false,
+            hideSelectionFrame: true
+        });
+    }
 
-        try {
-            const safeWidth = Math.max(1, Math.round(width || 1));
-            const safeHeight = Math.max(1, Math.round(height || 1));
-            const cellAddress = this.buildCellAddress(sheet, range.s);
-            return await this.SN.Canvas.captureScreenshot(cellAddress, 'topleft', {
-                width: safeWidth,
-                height: safeHeight,
-                compress: false,
-                hideSelectionFrame: true
-            });
-        } finally {
-            sheet.showGridLines = prevGrid;
-            sheet.showRowColHeaders = prevHeadings;
+    /** @param {Object} page - Rendered job page. @returns {string} Paper HTML shared by preview and print. */
+    buildPageHtml(page) {
+        const { paper, margins, scale, settings } = page.layout;
+        const headerFooter = this._buildPageHeaderFooterHtml(settings, margins, paper, {
+            pageNumber: page.pageNumber,
+            totalPages: page.totalPages,
+            sheetName: page.layout.sheetName,
+            dateText: page.dateText,
+            timeText: page.timeText
+        });
+        const pageStyle = `width:${paper.widthPx}px;height:${paper.heightPx}px;padding:${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px;${this._buildPageStyle(settings, false)}`;
+        return `<div class="sn-print-page" style="${escapeAttr(pageStyle)}">
+            ${headerFooter.header}
+            <img class="sn-print-page-image" src="${escapeAttr(page.dataUrl)}" style="width:${page.width * scale}px;height:${page.height * scale}px;" alt="">
+            ${headerFooter.footer}
+        </div>`;
+    }
+
+    /** @param {Array<Object>} pages - Rendered job pages. @returns {string} Standalone printable document. */
+    buildPrintHtml(pages) {
+        const sizes = new Map();
+        const body = pages.map(page => {
+            const paper = page.layout.paper;
+            const size = `${paper.widthIn}in ${paper.heightIn}in`;
+            if (!sizes.has(size)) sizes.set(size, `snPaper${sizes.size}`);
+            return `<section style="page:${sizes.get(size)}">${this.buildPageHtml(page)}</section>`;
+        }).join('');
+        const pageRules = [...sizes].map(([size, name]) => `@page ${name} { size:${size}; margin:0; }`).join('\n');
+        return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+            <title>${escapeHtml(this.SN.workbookName || '')}</title>
+            <style>
+                @page { size:${sizes.keys().next().value || 'A4'}; margin:0; }
+                ${pageRules}
+                body { margin:0; padding:0; }
+                section { break-after:page; }
+                section:last-child { break-after:auto; }
+                .sn-print-page { position:relative; box-sizing:border-box; overflow:hidden; background-color:white; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+                .sn-print-page-image { display:block; }
+                .sn-print-page-header,.sn-print-page-footer { position:absolute; color:#6b7280; font:12px/1.4 Arial,sans-serif; white-space:pre-wrap; }
+            </style></head><body>${body}</body></html>`;
+    }
+
+    _normalizePageBreaks(values, limit) {
+        return [...new Set(normalizeArray(values).map(Number)
+            .filter(index => Number.isInteger(index) && index > 0 && index < limit))].sort((a, b) => a - b);
+    }
+
+    _notifySettingsChanged(sheet) {
+        this._dialog?._settingsChanged(sheet);
+        if (this._settingsRefreshPending) return;
+        this._settingsRefreshPending = true;
+        queueMicrotask(() => {
+            this._settingsRefreshPending = false;
+            this.SN.Layout?.refreshToolbar();
+            if (this.SN.activeSheet?.showPageBreaks) this.SN._r();
+        });
+    }
+
+    _selectionRange(range, sheet) {
+        if (!range?.s || !range?.e) return null;
+        const used = [range.s.r, range.s.c, range.e.r, range.e.c].every(Number.isFinite) ? null : this.getUsedRange(sheet);
+        const startRow = Math.max(0, Math.min(range.s.r, range.e.r));
+        const startCol = Math.max(0, Math.min(range.s.c, range.e.c));
+        const endRow = Math.max(range.s.r, range.e.r);
+        const endCol = Math.max(range.s.c, range.e.c);
+        return {
+            s: { r: startRow, c: startCol },
+            e: {
+                r: Number.isFinite(endRow) ? endRow : Math.max(startRow, used?.e.r ?? 0),
+                c: Number.isFinite(endCol) ? endCol : Math.max(startCol, used?.e.c ?? 0)
+            }
+        };
+    }
+
+    _describePages(sheet, layout) {
+        if (!layout.range) return [];
+        const pages = [];
+        const makeBands = (segment, repeat) => {
+            if (!repeat) return [segment];
+            if (segment.s <= repeat.e) return [{ s: Math.min(segment.s, repeat.s), e: segment.e }];
+            return [repeat, segment];
+        };
+        for (const rowSegment of layout.rowSegments) {
+            for (const colSegment of layout.colSegments) {
+                const rowBands = makeBands(rowSegment, layout.repeatTitles.rows);
+                const colBands = makeBands(colSegment, layout.repeatTitles.cols);
+                let width = layout.settings.printOptions?.headings ? sheet._indexWidth : 0;
+                let height = layout.settings.printOptions?.headings ? sheet._headHeight : 0;
+                for (const band of rowBands) {
+                    for (let row = band.s; row <= band.e; row++) height += this.getRowSize(sheet, row);
+                }
+                for (const band of colBands) {
+                    for (let col = band.s; col <= band.e; col++) width += this.getColSize(sheet, col);
+                }
+                if (width <= 0 || height <= 0) continue;
+                pages.push({ sheet, layout, rowBands, colBands, width, height });
+            }
         }
+        return pages;
+    }
+
+    async _printDocument(html, signal) {
+        signal?.throwIfAborted();
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+        await new Promise((resolve, reject) => {
+            let timer;
+            let finished = false;
+            const finish = error => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                signal?.removeEventListener('abort', abort);
+                iframe.remove();
+                if (error) reject(error);
+                else resolve();
+            };
+            const abort = () => finish(signal.reason || new DOMException('Aborted', 'AbortError'));
+            signal?.addEventListener('abort', abort, { once: true });
+            iframe.onload = async () => {
+                try {
+                    const printWindow = iframe.contentWindow;
+                    if (!printWindow) throw new Error(this.SN.t('core.print.print.failed'));
+                    await Promise.all(Array.from(printWindow.document.images, image => image.decode()));
+                    await printWindow.document.fonts?.ready;
+                    signal?.throwIfAborted();
+                    if (finished) return;
+                    clearTimeout(timer);
+                    printWindow.addEventListener('afterprint', () => finish(), { once: true });
+                    printWindow.focus();
+                    printWindow.print();
+                } catch (error) {
+                    finish(error);
+                }
+            };
+            timer = setTimeout(() => finish(new Error(this.SN.t('core.print.print.failed'))), 60000);
+            iframe.srcdoc = html;
+            this.SN.containerDom.appendChild(iframe);
+        });
     }
 
     _resolvePrintScale(sheet, settings, printable) {
         const setup = settings.pageSetup || {};
-        let scale = (setup.scale ?? 100) / 100;
         const fitToWidth = Math.max(0, toInt(setup.fitToWidth, 0));
         const fitToHeight = Math.max(0, toInt(setup.fitToHeight, 0));
-        if (fitToWidth <= 0 && fitToHeight <= 0) {
-            return Math.max(0.1, Math.min(4, scale || 1));
-        }
+        if (!fitToWidth && !fitToHeight) return clampScale(setup.scale) / 100;
         const range = this.getPrintRange(sheet, settings);
-        const size = this.getRangeSize(sheet, range, !!settings.printOptions?.headings);
-        const byWidth = fitToWidth > 0 ? (printable.width * fitToWidth) / Math.max(1, size.width) : Infinity;
-        const byHeight = fitToHeight > 0 ? (printable.height * fitToHeight) / Math.max(1, size.height) : Infinity;
-        const fitScale = Math.min(byWidth, byHeight);
-        if (Number.isFinite(fitScale) && fitScale > 0) {
-            scale = fitScale;
+        const repeats = this._resolveRepeatTitles(sheet, settings, range);
+        const body = this._buildBodyRange(range, repeats);
+        const repeatWidth = repeats.cols && (repeats.cols.s < range.s.c || repeats.cols.e < range.e.c) ? repeats.colsSize : 0;
+        const repeatHeight = repeats.rows && (repeats.rows.s < range.s.r || repeats.rows.e < range.e.r) ? repeats.rowsSize : 0;
+        const headings = settings.printOptions?.headings;
+        const widthScale = fitToWidth ? this._fitAxisScale(body.s.c, body.e.c, index => this.getColSize(sheet, index),
+            printable.width, repeatWidth + (headings ? sheet._indexWidth : 0), fitToWidth) : 1;
+        const heightScale = fitToHeight ? this._fitAxisScale(body.s.r, body.e.r, index => this.getRowSize(sheet, index),
+            printable.height, repeatHeight + (headings ? sheet._headHeight : 0), fitToHeight) : 1;
+        return Math.min(widthScale, heightScale);
+    }
+
+    /**
+     * Find a fitting scale while keeping whole rows or columns on each page.
+     * @param {number} start - First row or column index.
+     * @param {number} end - Last row or column index.
+     * @param {Function} sizeGetter - Unscaled row height or column width.
+     * @param {number} available - Printable size in pixels.
+     * @param {number} overhead - Repeated titles and headings in pixels.
+     * @param {number} targetPages - Maximum page count on this axis.
+     * @returns {number}
+     */
+    _fitAxisScale(start, end, sizeGetter, available, overhead, targetPages) {
+        const sizes = [];
+        let total = 0;
+        for (let index = start; index <= end; index++) {
+            const size = Math.max(0, sizeGetter(index));
+            if (size) sizes.push(size);
+            total += size;
         }
-        return Math.max(0.1, Math.min(4, scale || 1));
+        if (targetPages === 1) return Math.min(1, available / Math.max(1, total + overhead));
+        const fits = scale => {
+            const limit = available / scale - overhead;
+            let pages = 1;
+            let used = 0;
+            for (const size of sizes) {
+                if (size > limit + 0.001) return false;
+                if (used + size > limit + 0.001) {
+                    pages++;
+                    used = 0;
+                    if (pages > targetPages) return false;
+                }
+                used += size;
+            }
+            return true;
+        };
+        if (fits(1)) return 1;
+        let lower = Math.min(1, available / Math.max(1, total + overhead));
+        let upper = 1;
+        for (let iteration = 0; iteration < 24; iteration++) {
+            const candidate = (lower + upper) / 2;
+            if (fits(candidate)) lower = candidate;
+            else upper = candidate;
+        }
+        return lower;
     }
 
     _resolveRepeatTitles(sheet, settings, range) {
@@ -927,17 +1276,17 @@ export default class Print {
 
         if (rows) {
             const next = {
-                s: Math.max(range.s.r, rows.s),
+                s: rows.s,
                 e: Math.min(range.e.r, rows.e)
             };
-            if (next.s <= next.e && next.s === range.s.r) repeatRows = next;
+            if (next.s <= next.e && next.s <= range.s.r) repeatRows = next;
         }
         if (cols) {
             const next = {
-                s: Math.max(range.s.c, cols.s),
+                s: cols.s,
                 e: Math.min(range.e.c, cols.e)
             };
-            if (next.s <= next.e && next.s === range.s.c) repeatCols = next;
+            if (next.s <= next.e && next.s <= range.s.c) repeatCols = next;
         }
 
         let rowsSize = 0;
@@ -958,29 +1307,11 @@ export default class Print {
     }
 
     _buildBodyRange(range, repeatTitles) {
-        const startRow = repeatTitles.rows ? repeatTitles.rows.e + 1 : range.s.r;
-        const startCol = repeatTitles.cols ? repeatTitles.cols.e + 1 : range.s.c;
-        if (startRow > range.e.r || startCol > range.e.c) return null;
+        const startRow = repeatTitles.rows && repeatTitles.rows.e < range.e.r ? Math.max(range.s.r, repeatTitles.rows.e + 1) : range.s.r;
+        const startCol = repeatTitles.cols && repeatTitles.cols.e < range.e.c ? Math.max(range.s.c, repeatTitles.cols.e + 1) : range.s.c;
         return {
             s: { r: startRow, c: startCol },
             e: { r: range.e.r, c: range.e.c }
-        };
-    }
-
-    _buildPageRange(layout, rowSeg, colSeg) {
-        const repeatRows = layout.repeatTitles?.rows || null;
-        const repeatCols = layout.repeatTitles?.cols || null;
-        const bodyRows = rowSeg || repeatRows || { s: layout.range.s.r, e: layout.range.e.r };
-        const bodyCols = colSeg || repeatCols || { s: layout.range.s.c, e: layout.range.e.c };
-        return {
-            s: {
-                r: repeatRows ? repeatRows.s : bodyRows.s,
-                c: repeatCols ? repeatCols.s : bodyCols.s
-            },
-            e: {
-                r: bodyRows.e,
-                c: bodyCols.e
-            }
         };
     }
 
@@ -1021,8 +1352,9 @@ export default class Print {
         const clean = part.replace(/\$/g, '').replace(/\s+/g, '');
         if (!/^\d+:\d+$/.test(clean)) return null;
         const [sText, eText] = clean.split(':');
-        const s = Math.max(1, toInt(sText, 1));
-        const e = Math.max(1, toInt(eText, s));
+        const s = toInt(sText, 0);
+        const e = toInt(eText, 0);
+        if (s < 1 || e < 1 || s > 1048576 || e > 1048576) return null;
         return `${Math.min(s, e)}:${Math.max(s, e)}`;
     }
 
@@ -1049,6 +1381,7 @@ export default class Print {
         const [sText, eText] = clean.split(':');
         const s = this.SN.Utils.charToNum(sText);
         const e = this.SN.Utils.charToNum(eText);
+        if (s > 16383 || e > 16383) return null;
         return `${this.SN.Utils.numToChar(Math.min(s, e))}:${this.SN.Utils.numToChar(Math.max(s, e))}`;
     }
 
@@ -1205,9 +1538,8 @@ export default class Print {
         const trimmed = bgUrl.trim();
         if (!trimmed) return '';
         if (/^\s*javascript:/i.test(trimmed)) return '';
-        const safeUrl = forAttr
-            ? escapeAttr(trimmed)
-            : trimmed.replace(/["\\]/g, '\\$&');
+        const cssUrl = trimmed.replace(/["\\]/g, '\\$&').replace(/[\r\n\f]/g, '');
+        const safeUrl = forAttr ? escapeAttr(cssUrl) : cssUrl;
         return `background-image:url("${safeUrl}");background-repeat:no-repeat;background-position:center center;background-size:cover;`;
     }
 
@@ -1229,143 +1561,4 @@ export default class Print {
         };
     }
 
-    /**
-     * Build Preview HTML
-     * @param {Array<Object>} pages - Page Data
-     * @param {Object} layout - Layout Information
-     * @returns {string}
-     */
-    buildPreviewHtml(pages, layout) {
-        if (!pages.length) {
-            return `<div class="sn-print-preview-empty">Nothing to print</div>`;
-        }
-        const thumbs = pages.map((page, idx) => (
-            `<div class="sn-print-thumb" data-index="${idx}">
-                <div class="sn-print-thumb-label">Page ${idx + 1}</div>
-                <img src="${page.dataUrl}" alt="page-${idx + 1}">
-            </div>`
-        )).join('');
-
-        const main = this.buildPreviewPageHtml(pages[0], layout, 0, pages.length);
-
-        return `
-            <div class="sn-print-preview-sidebar">${thumbs}</div>
-            <div class="sn-print-preview-main">${main}</div>
-        `;
-    }
-
-    /**
-     * Build Single Page Preview HTML
-     * @param {Object} page - Page Data
-     * @param {Object} layout - Layout Information
-     * @returns {string}
-     */
-    buildPreviewPageHtml(page, layout, pageIndex = 0, pageCount = 1) {
-        const { paper, margins, scale, settings } = layout;
-        const imgWidth = Math.round(page.width * scale);
-        const imgHeight = Math.round(page.height * scale);
-        const pageStyle = this._buildPageStyle(settings, true);
-        const headerFooterHtml = this._buildPageHeaderFooterHtml(settings, margins, paper, {
-            pageNumber: pageIndex + 1,
-            totalPages: pageCount,
-            sheetName: this.SN.activeSheet?.name || ''
-        });
-        const rangeBadge = layout.pageBreakPreview
-            ? `<div class="sn-print-page-range">Page ${pageIndex + 1} · ${this.SN.Utils.rangeNumToStr(page.range)}</div>`
-            : '';
-        return `
-            <div class="sn-print-page" style="width:${paper.widthPx}px;height:${paper.heightPx}px;padding:${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px;${pageStyle}">
-                ${headerFooterHtml.header}
-                ${rangeBadge}
-                <img class="sn-print-page-image" src="${page.dataUrl}" style="width:${imgWidth}px;height:${imgHeight}px;" alt="print-page">
-                ${headerFooterHtml.footer}
-            </div>
-        `;
-    }
-
-    /**
-     * Tie preview interactive events
-     * @param {HTMLElement} bodyEl - Pop the window, buddy.
-     * @param {Array<Object>} pages - Page Data
-     * @param {Object} layout - Layout Information
-     * @returns {void}
-     */
-    bindPreviewEvents(bodyEl, pages, layout) {
-        if (!pages.length) return;
-        const main = bodyEl.querySelector('.sn-print-preview-main');
-        const thumbs = Array.from(bodyEl.querySelectorAll('.sn-print-thumb'));
-        const renderMain = (index) => {
-            const page = pages[index];
-            main.innerHTML = this.buildPreviewPageHtml(page, layout, index, pages.length);
-            thumbs.forEach((item, i) => item.classList.toggle('active', i === index));
-        };
-        thumbs.forEach((item, index) => {
-            item.addEventListener('click', () => renderMain(index));
-        });
-        renderMain(0);
-    }
-
-    /**
-     * Build HTML
-     * @param {Array<Object>} pages - Page Data
-     * @param {Object} layout - Layout Information
-     * @returns {string}
-     */
-    buildPrintHtml(pages, layout) {
-        const { paper, margins, scale, settings } = layout;
-        const pageCssSize = `${paper.name} ${paper.widthIn > paper.heightIn ? 'landscape' : 'portrait'}`;
-        const headerPx = Math.round(((settings.pageMargins?.header ?? 0.3) * PRINT_DPI));
-        const footerPx = Math.round(((settings.pageMargins?.footer ?? 0.3) * PRINT_DPI));
-        const pageStyles = `
-            @page { size: ${pageCssSize}; margin: 0; }
-            body { margin: 0; padding: 0; }
-            .page {
-                position: relative;
-                width: ${paper.widthPx}px;
-                height: ${paper.heightPx}px;
-                padding: ${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px;
-                box-sizing: border-box;
-                page-break-after: always;
-                ${this._buildPageStyle(settings, false)}
-            }
-            .page img { display: block; }
-            .page .sn-print-page-header,
-            .page .sn-print-page-footer {
-                position: absolute;
-                left: ${margins.left}px;
-                right: ${margins.right}px;
-                color: #6b7280;
-                font-size: 12px;
-                white-space: pre-wrap;
-                pointer-events: none;
-            }
-            .page .sn-print-page-header { top: ${Math.max(4, headerPx - 12)}px; }
-            .page .sn-print-page-footer { bottom: ${Math.max(4, footerPx - 12)}px; }
-        `;
-        const pagesHtml = pages.map((page, pageIndex) => {
-            const imgWidth = Math.round(page.width * scale);
-            const imgHeight = Math.round(page.height * scale);
-            const headerFooterHtml = this._buildPageHeaderFooterHtml(settings, margins, paper, {
-                pageNumber: pageIndex + 1,
-                totalPages: pages.length,
-                sheetName: this.SN.activeSheet?.name || ''
-            });
-            return `
-                <div class="page">
-                    ${headerFooterHtml.header}
-                    <img src="${page.dataUrl}" style="width:${imgWidth}px;height:${imgHeight}px;">
-                    ${headerFooterHtml.footer}
-                </div>
-            `;
-        }).join('');
-
-        return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>${pageStyles}</style>
-</head>
-<body>${pagesHtml}</body>
-</html>`;
-    }
 }

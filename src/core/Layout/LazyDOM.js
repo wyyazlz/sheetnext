@@ -136,22 +136,6 @@ export default class LazyDOM {
             return el;
         },
 
-        'hyperlink-btn': function () {
-            const el = document.createElement('div');
-            el.className = 'sn-hyperlink-jump-btn sn-cur';
-            el.innerHTML = getSvg('chongzuo');
-            el.onclick = () => this.SN.activeSheet.hyperlinkJump(el);
-            this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
-            return el;
-        },
-
-        'hyperlink-tip': function () {
-            const el = document.createElement('div');
-            el.className = 'sn-hyperlink-tip';
-            this.SN.containerDom.querySelector('.sn-top-layer').appendChild(el);
-            return el;
-        },
-
         'valid-tip': function () {
             const el = document.createElement('div');
             el.className = 'sn-valid-tip';
@@ -306,10 +290,6 @@ export default class LazyDOM {
     get scrollTip() { return this.get('scroll-tip'); }
     /** @type {HTMLElement|null} */
     get paddingType() { return this.get('padding-type'); }
-    /** @type {HTMLElement|null} */
-    get hyperlinkBtn() { return this.get('hyperlink-btn'); }
-    /** @type {HTMLElement|null} */
-    get hyperlinkTip() { return this.get('hyperlink-tip'); }
     /** @type {HTMLElement|null} */
     get validTip() { return this.get('valid-tip'); }
     /** @type {HTMLElement|null} */

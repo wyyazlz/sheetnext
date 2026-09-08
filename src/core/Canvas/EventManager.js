@@ -19,6 +19,8 @@ function shouldIgnoreTouchMouse(canvas, event) {
 }
 
 export function addEventListeners() {
+    document.addEventListener('pointerdown', event => this._hyperlinkPopover._handlePointerDown(event), true);
+    document.addEventListener('focusin', event => this._hyperlinkPopover._handleFocus(event));
     // 文档
     window.addEventListener('keydown', (event) => docKeyDown.call(this, event));
     document.addEventListener('paste', (event) => docPaste.call(this, event));

@@ -94,6 +94,7 @@ export function initDropdown(containerDom) {
 
     // 打开下拉菜单
     const openDropdown = (dropdown, menu) => {
+        menu.dispatchEvent(new CustomEvent('sn-dropdown-before-open', { bubbles: true }));
         // 关闭其他下拉
         containerDom.querySelectorAll('.sn-dropdown.active').forEach(el => {
             if (el !== dropdown) closeDropdown(el);

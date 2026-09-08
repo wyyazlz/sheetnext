@@ -59,7 +59,8 @@ export function rDataBar(x, y, w, h, dataBar) {
 function _rDataBar(ctx, x, y, w, h, dataBar, pixelRatio) {
     const snap = (value) => Math.round(value * pixelRatio) / pixelRatio;
     const lineWidth = 1 / pixelRatio;
-    const { percent, color, gradient, borderColor, axisPosition, axisColor, isNegative, showValue } = dataBar;
+    const { percent, color, gradient, borderColor, axisPosition, axisColor, direction } = dataBar;
+    const rightToLeft = direction === 'rightToLeft';
 
     const padding = 2;
     const barH = h - padding * 2;
@@ -71,12 +72,13 @@ function _rDataBar(ctx, x, y, w, h, dataBar, pixelRatio) {
     if (axisPosition !== null && axisPosition !== undefined) {
         // 有正负值：轴线在中间
         const axisX = x + w * axisPosition;
+        const visibleAxisX = rightToLeft ? x + w * (1 - axisPosition) : axisX;
 
         // 绘制轴线
         ctx.strokeStyle = axisColor || '#000000';
         ctx.lineWidth = lineWidth;
         ctx.beginPath();
-        const axisXLine = snap(axisX);
+        const axisXLine = snap(visibleAxisX);
         ctx.moveTo(axisXLine, snap(y));
         ctx.lineTo(axisXLine, snap(y + h));
         ctx.stroke();
@@ -97,12 +99,16 @@ function _rDataBar(ctx, x, y, w, h, dataBar, pixelRatio) {
     }
 
     barW = Math.max(0, barW);
+    if (rightToLeft) barX = x + w - (barX - x) - barW;
 
     // 绘制数据条
     if (barW > 0) {
         if (gradient) {
             // 渐变填充：左边深色 → 右边浅色（淡出效果）
-            const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+            const grad = ctx.createLinearGradient(
+                rightToLeft ? barX + barW : barX, barY,
+                rightToLeft ? barX : barX + barW, barY
+            );
             grad.addColorStop(0, color);
             grad.addColorStop(1, lightenColor(color, 0.65));
             ctx.fillStyle = grad;
@@ -129,7 +135,7 @@ function _rDataBar(ctx, x, y, w, h, dataBar, pixelRatio) {
 /**
  * Render Icon
  */
-function _rIcon(ctx, x, y, w, h, iconConfig, cell, pixelRatio) {
+export function _rIcon(ctx, x, y, w, h, iconConfig, cell, pixelRatio) {
     const snap = (value) => Math.round(value * pixelRatio) / pixelRatio;
     const { set, index, showValue } = iconConfig;
 

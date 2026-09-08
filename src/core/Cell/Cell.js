@@ -1,6 +1,7 @@
 import { CELL_TYPES } from './constants.js';
 import { compareValue, dateTrans, numFmtFun, dateStrToDate, formatValue } from './helpers.js';
 import { isCheckboxControl, normalizeCellControl } from './cellControlXml.js';
+import { _normalizeFormulaFromXlsx } from './formulaXml.js';
 
 function _inferDateValueType(value, numFmt) {
     const format = (numFmt ?? "").replaceAll('[Red]', '').toLowerCase();
@@ -126,9 +127,11 @@ export default class Cell {
             } else {
                 this._editVal = `=${f?.['#text'] ?? ""}`;
             }
+            this._editVal = _normalizeFormulaFromXlsx(this._editVal);
             this._calcVal = type === 'boolean' && v !== undefined && v !== null
                 ? _normalizeBooleanValue(v)
                 : ['date', 'dateTime', 'time', 'number'].includes(type) && v ? Number(v) : v;
+            if (v == null || (v === '' && type !== 'string')) this._calcVal = undefined;
         } else {
             if (_$t === 'b') {
                 this._editVal = _normalizeBooleanValue(v);
@@ -218,8 +221,9 @@ export default class Cell {
             parent._fmtResult = undefined;
         }
 
-        // 自动计算模式清除缓存，手动计算模式保留现有缓存
-        if (this._SN.calcMode !== 'manual') {
+        // Manual calculation preserves formula results, but literal edits must display immediately.
+        const nextIsFormula = typeof val === 'string' && val.trim().startsWith('=');
+        if (this._SN.calcMode !== 'manual' || !nextIsFormula) {
             this._calcVal = undefined;
             this._showVal = undefined;
             this._fmtResult = undefined;

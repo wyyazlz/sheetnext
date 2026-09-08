@@ -8,3 +8,8 @@ export const CONNECTOR_TYPES = [
     'bentConnector3',    // 肘形连接符
     'curvedConnector3'   // 曲线连接符
 ];
+
+export const OPEN_SHAPE_TYPES = new Set([
+    'arc', 'leftBracket', 'rightBracket', 'bracketPair',
+    'leftBrace', 'rightBrace', 'bracePair'
+]);

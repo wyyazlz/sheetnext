@@ -538,9 +538,15 @@ export class ToolbarBuilder {
         const menu = this.menuConfig[menuKey];
         if (!menu) return '';
 
-        const html = menu.map(item => {
+        const selectable = menu.some(item => item.selected !== undefined);
+        const html = menu.map((item, index) => {
             if (item.type === 'divider') return '<li class="sn-dropdown-divider"></li>';
             const style = item.style ? `style="${item.style}"` : '';
+            const selected = this._isMenuItemSelected(item);
+            const classes = `${selectable ? 'sn-menu-selectable' : ''}${selected ? ' sn-selected' : ''}`;
+            const selectionAttr = item.selected !== undefined
+                ? `data-menu-index="${index}" role="menuitemradio" aria-checked="${selected}"`
+                : '';
             // extra 作为兄弟元素，不嵌套在 span 内，这样 dropdown.js 获取第一个 span 就是纯 label
             const extraText = item.extraKey
                 ? this._t(item.extraKey, item.extra || '')
@@ -550,7 +556,7 @@ export class ToolbarBuilder {
             const label = item.labelKey
                 ? this._t(item.labelKey, item.text || item.label || '')
                 : this._trEn(item.text || item.label);
-            return `<li onclick="${item.action}" ${style} data-value="${label}">${iconHtml}<span>${label}</span>${extra}</li>`;
+            return `<li class="${classes}" onclick="${item.action}" ${style} ${selectionAttr} data-value="${label}">${iconHtml}<span>${label}</span>${extra}</li>`;
         }).join('');
         return this._trHtml(html);
     }
@@ -1066,7 +1072,7 @@ export class ToolbarBuilder {
                 onclick = `${ns}.activeSheet.Drawing.addShape('${svgKey}');${ns}._r()`;
             }
 
-            return `<div class="sn-shape-item" onclick="${onclick}" title="${name}">
+            return `<div class="sn-shape-item" data-shape-type="${mapping?.shapeType || svgKey}" data-shape-arrows="${mapping?.arrows || 'none'}" onclick="${onclick}" title="${name}">
                 <svg viewBox="0 0 22 22" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1">${svg}</svg>
             </div>`;
         };
@@ -1230,6 +1236,23 @@ export class ToolbarBuilder {
                 </div>
             </div>`);
     }
+
+    _isMenuItemSelected(item) {
+        return typeof item.selected === 'function' ? !!(this.SN && item.selected(this.SN)) : item.selected === true;
+    }
+
+    /** Refresh cached menu entries from current workbook state without rebuilding the DOM. */
+    _refreshMenuSelection(menu) {
+        const config = this.menuConfig[menu.dataset.lazyMenu];
+        if (!Array.isArray(config)) return;
+        menu.querySelectorAll(':scope > li[data-menu-index]').forEach(element => {
+            const item = config[Number(element.dataset.menuIndex)];
+            if (!item) return;
+            const selected = this._isMenuItemSelected(item);
+            element.classList.toggle('sn-selected', selected);
+            element.setAttribute('aria-checked', String(selected));
+        });
+    }
 }
 
 /** Initialization toolbar event (label toggle + lazy load + combobox optimization + checkbox status sync) */
@@ -1303,24 +1326,22 @@ export function initToolsEvents(container, builder, colorInitFn) {
         }
     });
 
-    // 懒加载下拉菜单内容（事件委托，在 capture 阶段拦截）
+    // Render and sync before the shared dropdown measures its position.
     if (builder) {
-        tools.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.sn-item-disabled')) return;
-            const toggle = e.target.closest('.sn-dropdown-toggle');
-            if (!toggle) return;
-
-            const dropdown = toggle.closest('.sn-dropdown');
-            if (!dropdown) return;
-
-              const menu = dropdown.querySelector('.sn-dropdown-menu[data-lazy-menu]');
-              if (!menu || menu.dataset.lazyLoaded) return;
-
-              // 首次点击，渲染菜单内容
-              menu.innerHTML = builder.buildMenuHTML(menu.dataset.lazyMenu);
-              menu.dataset.lazyLoaded = 'true';
-          }, true);
-      }
+        tools.addEventListener('sn-dropdown-before-open', (e) => {
+            const menu = e.target;
+            if (!menu.matches('.sn-dropdown-menu[data-lazy-menu]')) return;
+            if (!menu.dataset.lazyLoaded) {
+                menu.innerHTML = builder.buildMenuHTML(menu.dataset.lazyMenu);
+                menu.dataset.lazyLoaded = 'true';
+            }
+            builder._refreshMenuSelection(menu);
+        });
+        tools.addEventListener('click', (e) => {
+            const menu = e.target.closest('.sn-dropdown-menu[data-lazy-menu]');
+            if (menu) queueMicrotask(() => builder._refreshMenuSelection(menu));
+        });
+    }
 
     // Combobox 增强：打开时标记选中项、选择时设置字体样式
     initComboboxEnhancements(tools, container);

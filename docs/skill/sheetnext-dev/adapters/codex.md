@@ -18,4 +18,4 @@ If the skill is not installed globally, ask Codex to read `docs/skill/sheetnext-
 
 ## Prompt
 
-Use the SheetNext Dev skill. Read `SKILL.md`, verify exact APIs in `references/core-api.md`, and use `references/events.md`, `references/enums.md`, `references/json-format.md`, or `references/ai-relay.md` only when the task needs them.
+Use the SheetNext Dev skill. Read `SKILL.md`, choose the relevant module from `references/core-api.md`, and check signatures in `references/api/`. Load integration, event, JSON, enum or AI relay references only when the task needs them.

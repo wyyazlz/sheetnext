@@ -1,5 +1,6 @@
 import { getRangePaneClip, interpolateColor, shouldHideFormula, withPaneClip } from './helpers.js';
 import { getFilterIconLayout } from './FilterRenderer.js';
+import { _rIcon } from './CFRenderer.js';
 import { getCanvasFont, getFontSizePx } from '../Cell/fontDefaults.js';
 import { isCheckboxControl } from '../Cell/cellControlXml.js';
 
@@ -259,6 +260,112 @@ function getTableCellStyle(sheet, row, col) {
     return null;
 }
 
+/**
+ * Cache seamless fill tiles at the current device and sheet scale.
+ * @param {Canvas} canvas
+ * @param {Object} fill
+ * @returns {CanvasPattern}
+ */
+function _getCellFillPattern(canvas, fill) {
+    const ratio = canvas.pixelRatio;
+    const type = fill.pattern;
+    const fgColor = fill.fgColor || '#000000';
+    const bgColor = fill.bgColor || (canvas.eyeProtectionMode ? canvas.eyeProtectionColor : '#ffffff');
+    const key = JSON.stringify([type, fgColor, bgColor, ratio]);
+    const cache = canvas._fillPatternCache;
+    const cached = cache.get(key);
+    if (cached) return cached;
+
+    const dark = type?.startsWith('dark');
+    const logicalSize = type?.endsWith('Gray') ? 8 : dark ? 3 : 6;
+    const size = Math.max(2, Math.round(logicalSize * ratio));
+    const tile = canvas._patternCanvas;
+    const ctx = canvas._patternCtx;
+    if (tile.width !== size || tile.height !== size) {
+        tile.width = tile.height = size;
+    } else {
+        ctx.clearRect(0, 0, size, size);
+    }
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = fgColor;
+    ctx.strokeStyle = fgColor;
+    const lineWidth = Math.max(1, Math.round((dark ? 1.25 : 0.75) * ratio));
+    const dotSize = Math.max(1, Math.round(0.75 * ratio));
+    const half = Math.round(size / 2);
+    const quarter = Math.max(1, Math.round(size / 4));
+
+    switch (type) {
+        case 'darkGray':
+            ctx.fillRect(0, 0, half, half);
+            ctx.fillRect(half, half, size - half, size - half);
+            break;
+        case 'mediumGray':
+            ctx.fillRect(0, 0, size, half);
+            ctx.fillRect(0, half, half, size - half);
+            break;
+        case 'lightGray':
+            ctx.fillRect(0, 0, quarter, quarter);
+            ctx.fillRect(size - quarter, 0, quarter, quarter);
+            ctx.fillRect(0, size - quarter, quarter, quarter);
+            ctx.fillRect(size - quarter, size - quarter, quarter, quarter);
+            break;
+        case 'gray125':
+            ctx.fillRect(0, 0, dotSize, dotSize);
+            ctx.fillRect(half, half, dotSize, dotSize);
+            break;
+        case 'gray0625':
+            ctx.fillRect(0, 0, dotSize, dotSize);
+            break;
+        case 'darkHorizontal':
+        case 'lightHorizontal':
+        case 'darkVertical':
+        case 'lightVertical':
+        case 'darkGrid':
+        case 'lightGrid':
+            ctx.beginPath();
+            if (type.endsWith('Horizontal') || type.endsWith('Grid')) {
+                ctx.rect(0, 0, size, lineWidth);
+            }
+            if (type.endsWith('Vertical') || type.endsWith('Grid')) {
+                ctx.rect(0, 0, lineWidth, size);
+            }
+            ctx.fill();
+            break;
+        case 'darkDown':
+        case 'lightDown':
+        case 'darkUp':
+        case 'lightUp':
+        case 'darkTrellis':
+        case 'lightTrellis':
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            // Extend neighboring strokes across tile edges to keep antialiasing seamless.
+            for (let offset = -size; offset <= size; offset += size) {
+                if (!type.endsWith('Up')) {
+                    ctx.moveTo(offset - lineWidth, -lineWidth);
+                    ctx.lineTo(offset + size + lineWidth, size + lineWidth);
+                }
+                if (!type.endsWith('Down')) {
+                    ctx.moveTo(offset - lineWidth, size + lineWidth);
+                    ctx.lineTo(offset + size + lineWidth, -lineWidth);
+                }
+            }
+            ctx.stroke();
+            break;
+        default:
+            ctx.fillRect(0, 0, size, size);
+            break;
+    }
+
+    const pattern = canvas.bc.createPattern(tile, 'repeat');
+    // Cancel the buffer's half-device-pixel offset and avoid resampling the tile.
+    pattern.setTransform({ a: 1 / ratio, d: 1 / ratio, e: 0.5 / ratio, f: 0.5 / ratio });
+    if (cache.size >= 128) cache.delete(cache.keys().next().value);
+    cache.set(key, pattern);
+    return pattern;
+}
+
 /** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell @param {boolean} [skipGridLine=false] @param {Object|null} [cfFormat=null] @param {Object|null} [tableStyle=null] */
 export function rCellBackground(x, y, w, h, cell, skipGridLine = false, cfFormat = null, tableStyle = null) {
     // 条件格式背景色优先
@@ -286,148 +393,7 @@ export function rCellBackground(x, y, w, h, cell, skipGridLine = false, cfFormat
         this.bc.fillStyle = cell.fill.fgColor ?? defaultBg;
         this.bc.fillRect(x, y, w, h);
     } else if (cell.fill.type === 'pattern') { // 填充底纹
-        // 清空临时画布,准备重新绘制
-        this.pCtx.clearRect(0, 0, 8, 8);
-        // 先填充背景色
-        const patternDefaultBg = this.eyeProtectionMode ? this.eyeProtectionColor : '#ffffff';
-        this.pCtx.fillStyle = cell.fill.bgColor || patternDefaultBg;
-        this.pCtx.fillRect(0, 0, 8, 8);
-        // 设置前景色
-        this.pCtx.fillStyle = cell.fill.fgColor || '#000000';
-        this.pCtx.strokeStyle = cell.fill.fgColor || '#000000';
-        // 根据 pattern 名称绘制对应的 18 种底纹
-        switch (cell.fill.pattern) {
-            case 'solid':
-                // 纯色：直接用前景色填满整个 8×8
-                this.pCtx.fillRect(0, 0, 8, 8);
-                break;
-            case 'darkGray':
-                // 50% 灰度：纵向两列、水平两行交替填充
-                this.pCtx.fillRect(0, 0, 4, 4);
-                this.pCtx.fillRect(4, 4, 4, 4);
-                break;
-            case 'mediumGray':
-                // 75% 灰度：三个 8×8 中的像素块为前景色（留一个像素空白）
-                this.pCtx.fillRect(0, 0, 8, 4);
-                this.pCtx.fillRect(0, 4, 4, 4);
-                break;
-            case 'lightGray':
-                // 25% 灰度：只画四个角的小点
-                this.pCtx.fillRect(0, 0, 2, 2);
-                this.pCtx.fillRect(6, 0, 2, 2);
-                this.pCtx.fillRect(0, 6, 2, 2);
-                this.pCtx.fillRect(6, 6, 2, 2);
-                break;
-            case 'gray125':
-                // 12.5% 灰度：在 8×8 区域里画两个单像素点,分布在 (0,0) 和 (4,4)
-                this.pCtx.fillRect(0, 0, 1, 1);
-                this.pCtx.fillRect(4, 4, 1, 1);
-                break;
-            case 'gray0625':
-                // 6.25% 灰度：在 8×8 区域里只画一个单像素点
-                this.pCtx.fillRect(0, 0, 1, 1);
-                break;
-            case 'darkHorizontal':
-                // 深色水平线：每隔 4 像素画一条横线
-                for (let y0 = 0; y0 < 8; y0 += 4) {
-                    this.pCtx.fillRect(0, y0, 8, 2);
-                }
-                break;
-            case 'darkVertical':
-                // 深色垂直线：每隔 4 像素画一条竖线
-                for (let x0 = 0; x0 < 8; x0 += 4) {
-                    this.pCtx.fillRect(x0, 0, 2, 8);
-                }
-                break;
-            case 'darkDown':
-                // 深色向下对角线：从左上到右下画像素点
-                for (let i = -8; i < 16; i += 4) {
-                    this.pCtx.beginPath();
-                    this.pCtx.moveTo(i, 0);
-                    this.pCtx.lineTo(i + 8, 8);
-                    this.pCtx.stroke();
-                }
-                break;
-            case 'darkUp':
-                // 深色向上对角线：从左下到右上画像素点
-                for (let i = 0; i < 16; i += 4) {
-                    this.pCtx.beginPath();
-                    this.pCtx.moveTo(i, 8);
-                    this.pCtx.lineTo(i - 8, 0);
-                    this.pCtx.stroke();
-                }
-                break;
-            case 'darkGrid':
-                // 深色网格：水平线 & 垂直线
-                for (let y0 = 0; y0 < 8; y0 += 4) {
-                    this.pCtx.fillRect(0, y0, 8, 1);
-                }
-                for (let x0 = 0; x0 < 8; x0 += 4) {
-                    this.pCtx.fillRect(x0, 0, 1, 8);
-                }
-                break;
-            case 'darkTrellis':
-                // 深色格子：在 darkGrid 基础上加对角线
-                // 先画水平 & 垂直
-                for (let y0 = 0; y0 < 8; y0 += 4) {
-                    this.pCtx.fillRect(0, y0, 8, 1);
-                }
-                for (let x0 = 0; x0 < 8; x0 += 4) {
-                    this.pCtx.fillRect(x0, 0, 1, 8);
-                }
-                // 再画两条对角线
-                this.pCtx.beginPath();
-                this.pCtx.moveTo(0, 0);
-                this.pCtx.lineTo(8, 8);
-                this.pCtx.stroke();
-                this.pCtx.beginPath();
-                this.pCtx.moveTo(8, 0);
-                this.pCtx.lineTo(0, 8);
-                this.pCtx.stroke();
-                break;
-            case 'lightHorizontal':
-                // 浅色水平线：每隔 8 像素画一条 1 像素高的横线
-                this.pCtx.fillRect(0, 0, 8, 1);
-                break;
-            case 'lightVertical':
-                // 浅色垂直线：每隔 8 像素画一条 1 像素宽的竖线
-                this.pCtx.fillRect(0, 0, 1, 8);
-                break;
-            case 'lightDown':
-                // 浅色向下对角线（稀疏版）：一条对角线
-                this.pCtx.beginPath();
-                this.pCtx.moveTo(0, 0);
-                this.pCtx.lineTo(8, 8);
-                this.pCtx.stroke();
-                break;
-            case 'lightUp':
-                // 浅色向上对角线（稀疏版）：一条对角线
-                this.pCtx.beginPath();
-                this.pCtx.moveTo(8, 0);
-                this.pCtx.lineTo(0, 8);
-                this.pCtx.stroke();
-                break;
-            case 'lightGrid':
-                // 浅色网格：只画横线或竖线中的一部分（稀疏）
-                this.pCtx.fillRect(0, 0, 8, 1);
-                this.pCtx.fillRect(0, 0, 1, 8);
-                break;
-            case 'lightTrellis':
-                // 浅色格子：一条对角线 + 一条水平或竖直线
-                this.pCtx.fillRect(0, 0, 8, 1);
-                this.pCtx.beginPath();
-                this.pCtx.moveTo(0, 0);
-                this.pCtx.lineTo(8, 8);
-                this.pCtx.stroke();
-                break;
-            default:
-                // 若遇到未知 pattern,则退回到纯色填充
-                this.pCtx.fillRect(0, 0, 8, 8);
-                break;
-        }
-        // 利用临时画布生成重复图案
-        const pattern = this.bc.createPattern(this.pCanvas, 'repeat');
-        this.bc.fillStyle = pattern;
+        this.bc.fillStyle = _getCellFillPattern(this, cell.fill);
         this.bc.fillRect(x, y, w, h);
     } else if (cell.fill.type === 'gradient') { // 渐变填充
         // 从 cell.fill 中读取相关参数,提供默认值以防缺失
@@ -560,16 +526,26 @@ export function rCellBackground(x, y, w, h, cell, skipGridLine = false, cfFormat
     if (!skipGridLine && this.activeSheet.showGridLines) {
         const rect = this.snapRect(x, y, w, h);
         this.bc.save();
-        this.bc.strokeStyle = cell.fill.fgColor ?? '#ddd';
+        this.bc.strokeStyle = cfFillColor || cell.fill.fgColor || '#ddd';
         this.bc.lineWidth = this.px(1);
         this.bc.strokeRect(rect.x, rect.y, rect.w, rect.h);
         this.bc.restore();
     }
 }
 
+function _getRenderFont(cell, cfFormat = null, tableStyle = null) {
+    const font = cell.font;
+    const tableBold = tableStyle?.isBold || false;
+    const baseBold = tableStyle?._fromImport === true ? tableBold : (font.bold || tableBold);
+    const bold = cfFormat?.font?.bold ?? baseBold;
+    return bold === font.bold ? font : { ...font, bold };
+}
+
 // 渲染单元格文本
-/** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell @param {{x:number,y:number,w:number,h:number}|null} [layoutRect=null] */
-export function rCellText(x, y, w, h, cell, layoutRect = null) {
+/** @param {number} x @param {number} y @param {number} w @param {number} h @param {Object} cell @param {{x:number,y:number,w:number,h:number}|null} [layoutRect=null] @param {Object|null} [cfFormat=null] */
+export function rCellText(x, y, w, h, cell, layoutRect = null, cfFormat = null) {
+    if (cfFormat?.dataBar?.showValue === false || cfFormat?.icon?.showValue === false) return;
+
     // 显示公式模式：显示 editVal 而不是 showVal
     const sheet = this.activeSheet;
     const hideFormula = shouldHideFormula(sheet, cell);
@@ -582,19 +558,30 @@ export function rCellText(x, y, w, h, cell, layoutRect = null) {
     const v = showFormula ? cell.editVal.toString() : cell.showVal.toString();
     if (!v) return;
 
-    const alignX = layoutRect?.x ?? x;
+    let alignX = layoutRect?.x ?? x;
     const alignY = layoutRect?.y ?? y;
-    const alignW = layoutRect?.w ?? w;
+    let alignW = layoutRect?.w ?? w;
     const alignH = layoutRect?.h ?? h;
+
+    if (cfFormat?.icon) {
+        const iconOffset = Math.min(18, alignW);
+        alignX += iconOffset;
+        alignW -= iconOffset;
+        const right = x + w;
+        x = Math.max(x, alignX);
+        w = Math.max(0, right - x);
+        if (w <= 0 || alignW <= 0) return;
+    }
 
     // 富文本路径（非公式模式且有富文本数据）
     const richText = !showFormula ? cell._richText : null;
+    this.bc.font = getCanvasFont(_getRenderFont(cell, cfFormat), cell);
 
     // 处理文本换行
     let lines = [];
     if (cell.alignment.wrapText) {
         if (richText) {
-            lines = wrapRichText.call(this, richText, alignW - 4, cell);
+            lines = wrapRichText.call(this, richText, alignW - 4, cell, cfFormat?.font?.bold);
         } else {
             lines = wrapText.call(this, v, alignW - 4, this.bc); // 4是左右边距
         }
@@ -606,7 +593,7 @@ export function rCellText(x, y, w, h, cell, layoutRect = null) {
         }
     }
 
-    rText.call(this, { lines, cell, x, y, w, h, alignX, alignY, alignW, alignH, richText: !!richText }, false);
+    rText.call(this, { lines, cell, x, y, w, h, alignX, alignY, alignW, alignH, cfFormat, richText: !!richText }, false);
 }
 
 // 渲染带溢出支持的单元格文本（支持条件格式字体色和超级表样式）
@@ -625,12 +612,13 @@ export function rCellTextWithOverflow(r, c, x, y, w, h, cell, sheet, nonEmptyCel
 
     // 富文本路径
     const richText = !showFormula ? cell._richText : null;
+    this.bc.font = getCanvasFont(_getRenderFont(cell, cfFormat, tableStyle), cell);
 
     // 处理文本换行
     let lines = [];
     if (cell.alignment.wrapText) {
         if (richText) {
-            lines = wrapRichText.call(this, richText, w - 4, cell);
+            lines = wrapRichText.call(this, richText, w - 4, cell, cfFormat?.font?.bold);
         } else {
             lines = wrapText.call(this, v, w - 4, this.bc);
         }
@@ -645,15 +633,10 @@ export function rCellTextWithOverflow(r, c, x, y, w, h, cell, sheet, nonEmptyCel
         }
     }
 
-    // 设置字体以测量文本宽度
-    const f = cell.font;
-    const fsize = getFontSizePx(f, cell);
-    this.bc.font = getCanvasFont(f, cell, fsize);
-
     // 计算第一行文本宽度（通常溢出只考虑第一行）
     let textWidth;
     if (richText && lines.length > 0 && Array.isArray(lines[0])) {
-        textWidth = measureRichLineWidth.call(this, lines[0], cell);
+        textWidth = measureRichLineWidth.call(this, lines[0], cell, cfFormat?.font?.bold);
     } else {
         textWidth = lines.length > 0 ? this.bc.measureText(lines[0]).width : 0;
     }
@@ -880,14 +863,14 @@ function splitRichTextByNewline(runs) {
 }
 
 // 富文本自动换行
-function wrapRichText(runs, maxWidth, cell) {
+function wrapRichText(runs, maxWidth, cell, boldOverride = undefined) {
     const f = cell.font;
     const lines = [[]];
     let lineWidth = 0;
 
     for (const run of runs) {
         const rf = run.font || {};
-        const bold = rf.bold ?? f.bold;
+        const bold = boldOverride ?? rf.bold ?? f.bold;
         const italic = rf.italic ?? f.italic;
         const mergedFont = { ...f, ...rf, bold, italic };
         const size = getFontSizePx(mergedFont, cell);
@@ -919,12 +902,12 @@ function wrapRichText(runs, maxWidth, cell) {
 }
 
 // 测量富文本行总宽度
-function measureRichLineWidth(richLine, cell) {
+function measureRichLineWidth(richLine, cell, boldOverride = undefined) {
     const f = cell.font;
     let total = 0;
     for (const run of richLine) {
         const rf = run.font || {};
-        const bold = rf.bold ?? f.bold;
+        const bold = boldOverride ?? rf.bold ?? f.bold;
         const italic = rf.italic ?? f.italic;
         const mergedFont = { ...f, ...rf, bold, italic };
         const size = getFontSizePx(mergedFont, cell);
@@ -935,7 +918,7 @@ function measureRichLineWidth(richLine, cell) {
 }
 
 // 富文本水平渲染
-function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsize, defaultColor) {
+function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsize, defaultColor, boldOverride = undefined) {
     const f = cell.font;
     const px = 2;
     const indent = cell.alignment?.indent || 0;
@@ -962,7 +945,7 @@ function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsi
     richLines.forEach((runs, lineIndex) => {
         if (!runs.length) return;
 
-        const lineWidth = measureRichLineWidth.call(this, runs, cell);
+        const lineWidth = measureRichLineWidth.call(this, runs, cell, boldOverride);
         const maxSize = lineMaxSizes[lineIndex];
 
         // 计算行起始 X
@@ -1000,7 +983,7 @@ function rRichTextNormal(richLines, cell, baseX, baseY, baseW, baseH, defaultFsi
         let curX = Math.round(startX);
         for (const run of runs) {
             const rf = run.font || {};
-            const bold = rf.bold ?? f.bold;
+            const bold = boldOverride ?? rf.bold ?? f.bold;
             const italic = rf.italic ?? f.italic;
             const mergedFont = { ...f, ...rf, bold, italic };
             const size = getFontSizePx(mergedFont, cell);
@@ -1120,13 +1103,10 @@ export function rText(info) {
     const baseW = alignW !== undefined ? alignW : w;
     const baseH = alignH !== undefined ? alignH : h;
 
-    const f = cell.font;
+    const f = _getRenderFont(cell, cfFormat, tableStyle);
     let fsize = getFontSizePx(f, cell);
 
-    // 超级表表头加粗处理
-    const tableBold = tableStyle?.isBold || false;
     const preferImportedTableStyle = tableStyle?._fromImport === true;
-    const isBold = preferImportedTableStyle ? tableBold : (f.bold || tableBold);
 
     // 字体颜色优先级：条件格式 > 表格样式(当单元格为默认黑) > 单元格颜色 > 默认
     // 这样可保证导入的 Excel/WPS 表格样式颜色能覆盖基础 xf 字体色。
@@ -1153,7 +1133,7 @@ export function rText(info) {
     const textRotation = cell.alignment?.textRotation;
 
     // 设置字体样式
-    this.bc.font = getCanvasFont({ ...f, bold: isBold }, cell, fsize);
+    this.bc.font = getCanvasFont(f, cell, fsize);
 
     // 富文本在竖排/旋转时 fallback 为纯文本
     if (richText && (textRotation === 255 || (textRotation && textRotation !== 0))) {
@@ -1166,7 +1146,7 @@ export function rText(info) {
         const px = 4; // 左右边距
         let maxTextWidth;
         if (richText) {
-            maxTextWidth = Math.max(...lines.map(line => measureRichLineWidth.call(this, line, cell)));
+            maxTextWidth = Math.max(...lines.map(line => measureRichLineWidth.call(this, line, cell, cfFormat?.font?.bold)));
         } else {
             maxTextWidth = Math.max(...lines.map(line => this.bc.measureText(line).width));
         }
@@ -1179,7 +1159,7 @@ export function rText(info) {
             const finalScale = Math.max(scale, minScale);
             fsize = fsize * finalScale;
             // 重新设置字体
-            this.bc.font = getCanvasFont({ ...f, bold: isBold }, cell, fsize);
+            this.bc.font = getCanvasFont(f, cell, fsize);
         }
     }
 
@@ -1198,7 +1178,7 @@ export function rText(info) {
         rTextRotated.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor, textRotation);
     } else if (richText) {
         // 富文本水平渲染
-        rRichTextNormal.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor);
+        rRichTextNormal.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor, cfFormat?.font?.bold);
     } else {
         // 普通水平文字
         rTextNormal.call(this, lines, cell, baseX, baseY, baseW, baseH, fsize, textColor);
@@ -1442,6 +1422,8 @@ function rTextRotated(lines, cell, x, y, w, h, fsize, textColor, rotation) {
 // 渲染合并的单元格
 /** @param {Object} sheet */
 export function rMerged(sheet) {
+    const cf = sheet.CF;
+    const hasCF = cf && cf.rules.length > 0;
     // 遍历所有合并单元格
     sheet.merges.forEach(m => {
         const { s: start, e: end } = m;
@@ -1451,9 +1433,18 @@ export function rMerged(sheet) {
             const paneClip = getRangePaneClip(this, sheet, m);
             if (paneClip.empty) return;
             const layoutRect = sheet._getAreaInviewInfo2(m);
+            const cfFormat = hasCF ? cf.getFormat(start.r, start.c) : null;
             withPaneClip(this.bc, paneClip, () => {
-                rCellBackground.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo);
-                rCellText.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo, layoutRect);
+                rCellBackground.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo, false, cfFormat);
+                // Use full merge geometry so scrolling only clips bars and icons, without resizing them.
+                const { x, y, w, h } = layoutRect;
+                if (cfFormat?.dataBar) {
+                    this.rDataBar(x, y, w, h, cfFormat.dataBar);
+                }
+                rCellText.call(this, sCell.x, sCell.y, sCell.w, sCell.h, cellInfo, layoutRect, cfFormat);
+                if (cfFormat?.icon) {
+                    _rIcon(this.bc, x, y, w, h, cfFormat.icon, cellInfo, this.pixelRatio);
+                }
             });
             // ****************设置合并单元格边框比较特殊,逻辑为：比如如果top有边框,那么top的所有单元格的topborder属性都必须一样****************
             // 获取合并区域的范围
@@ -1534,6 +1525,8 @@ export function rMerged(sheet) {
                 if (masterBorder.diagonalUp) result.diagonalUp = true;
             }
             // *******四周边框检测结束*******
+
+            if (cfFormat?.border) Object.assign(result, cfFormat.border);
 
             if (Object.keys(result).length > 0) {
                 this.borders.push({

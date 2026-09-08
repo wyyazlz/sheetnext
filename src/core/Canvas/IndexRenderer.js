@@ -323,7 +323,7 @@ function resolveBoundaryPosition(sheet, index, indices, starts, startCoord, endC
     const last = indices[indices.length - 1];
 
     if (index <= first) {
-        if (index === first) return startCoord;
+        if (index === first) return starts.get(index) ?? startCoord;
         return axis === 'row'
             ? (isRowsHiddenBetween(sheet, index, first - 1) ? startCoord : null)
             : (isColsHiddenBetween(sheet, index, first - 1) ? startCoord : null);
@@ -417,6 +417,11 @@ export function rPageBreaks(sheet) {
     const guides = this.SN.Print?.getPageBreakGuides?.(sheet);
     if (!guides?.range) return;
 
+    const visibleRange = sheet.getAreaInviewInfo(guides.range);
+    if (!visibleRange.inView) return;
+    const paneClip = getRangePaneClip(this, sheet, guides.range);
+    if (paneClip.empty) return;
+
     const rowLayouts = sheet.vi?.rowLayouts || [];
     const colLayouts = sheet.vi?.colLayouts || [];
     const rowIndices = rowLayouts.map(item => item.index);
@@ -437,10 +442,10 @@ export function rPageBreaks(sheet) {
     const yTop = resolveBoundaryPosition(sheet, guides.range.s.r, rowIndices, rowMap.starts, sheet.headHeight, rowMap.end, 'row');
     const yBottom = resolveBoundaryPosition(sheet, guides.range.e.r + 1, rowIndices, rowMap.starts, sheet.headHeight, rowMap.end, 'row');
 
-    const spanX1 = Math.max(sheet.indexWidth, xLeft ?? sheet.indexWidth);
-    const spanX2 = Math.min(this.viewWidth, xRight ?? this.viewWidth);
-    const spanY1 = Math.max(sheet.headHeight, yTop ?? sheet.headHeight);
-    const spanY2 = Math.min(this.viewHeight, yBottom ?? this.viewHeight);
+    const spanX1 = Math.max(paneClip.x, visibleRange.x);
+    const spanX2 = Math.min(paneClip.x + paneClip.w, visibleRange.x + visibleRange.w);
+    const spanY1 = Math.max(paneClip.y, visibleRange.y);
+    const spanY2 = Math.min(paneClip.y + paneClip.h, visibleRange.y + visibleRange.h);
     if (spanX2 <= spanX1 || spanY2 <= spanY1) return;
 
     const autoStyle = { color: this._themeColor('primaryLight', '#709f82'), width: 1, dash: [this.px(6), this.px(4)] };
@@ -449,20 +454,22 @@ export function rPageBreaks(sheet) {
     const hp = this.halfPixel;
 
     const drawLine = (x1, y1, x2, y2, style) => {
-        this.bc.beginPath();
-        this.bc.strokeStyle = style.color;
-        this.bc.lineWidth = this.px(style.width);
-        this.bc.setLineDash(style.dash || []);
-        if (Math.abs(x1 - x2) < 0.0001) {
-            const x = this.snap(x1) + hp;
-            this.bc.moveTo(x, this.snap(y1));
-            this.bc.lineTo(x, this.snap(y2));
-        } else {
-            const y = this.snap(y1) + hp;
-            this.bc.moveTo(this.snap(x1), y);
-            this.bc.lineTo(this.snap(x2), y);
-        }
-        this.bc.stroke();
+        withPaneClip(this.bc, paneClip, () => {
+            this.bc.beginPath();
+            this.bc.strokeStyle = style.color;
+            this.bc.lineWidth = this.px(style.width);
+            this.bc.setLineDash(style.dash || []);
+            if (Math.abs(x1 - x2) < 0.0001) {
+                const snappedX = this.snap(x1) + hp;
+                this.bc.moveTo(snappedX, this.snap(y1));
+                this.bc.lineTo(snappedX, this.snap(y2));
+            } else {
+                const snappedY = this.snap(y1) + hp;
+                this.bc.moveTo(this.snap(x1), snappedY);
+                this.bc.lineTo(this.snap(x2), snappedY);
+            }
+            this.bc.stroke();
+        });
     };
 
     guides.rowBreaks.forEach(item => {
@@ -585,6 +592,7 @@ export function rIndex(sheet, isScreenshot = false, renderOptions = {}) {
 // dom渲染
 export function rDom() {
     const sheet = this.activeSheet;
+    this._hyperlinkPopover._sync();
     if (!sheet.protection.isSelectionVisible()) {
         this.areaInput.value = '';
         this.formulaBar.value = '';

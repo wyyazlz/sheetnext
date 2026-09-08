@@ -17,6 +17,10 @@ export function parseShapeFromXml(xmlDetail, SN, isConnector = false) {
     // 解析形状类型
     const prstGeom = spPr?.['a:prstGeom'];
     const shapeType = prstGeom?._$prst || 'rect';
+    const shapeAdjustments = Object.fromEntries(toArray(prstGeom?.['a:avLst']?.['a:gd']).flatMap(guide => {
+        const match = /^val\s+([-+]?\d+(?:\.\d+)?)$/.exec(String(guide?._$fmla || '').trim());
+        return guide?._$name && match ? [[guide._$name, Number(match[1])]] : [];
+    }));
 
     // 根据 shapeType 判断是否为连接线
     const isActualConnector = CONNECTOR_TYPES.includes(shapeType);
@@ -49,13 +53,14 @@ export function parseShapeFromXml(xmlDetail, SN, isConnector = false) {
     if (style?.['a:fillRef']) {
         const fillRef = style['a:fillRef'];
         const fillColor = getColor(fillRef['a:schemeClr'] || fillRef['a:srgbClr'], SN);
-        if (fillColor && fillRef._$idx !== '0') shapeStyle.fill = fillColor;
+        if (!solidFill && fillColor && fillRef._$idx !== '0') shapeStyle.fill = fillColor;
     }
+    if (spPr && Object.hasOwn(spPr, 'a:noFill')) shapeStyle.fill = 'none';
 
     // 从 spPr 解析边框
     const ln = spPr?.['a:ln'];
     if (ln) {
-        shapeStyle.strokeWidth = (parseInt(ln._$w) || 9525) / 12700;
+        shapeStyle.strokeWidth = (Number.isFinite(Number(ln._$w)) ? Number(ln._$w) : 9525) / 12700;
         const lnFill = ln['a:solidFill'];
         if (lnFill) {
             const strokeColor = getColor(lnFill['a:srgbClr'] || lnFill['a:schemeClr'] || lnFill['a:sysClr'], SN);
@@ -75,8 +80,9 @@ export function parseShapeFromXml(xmlDetail, SN, isConnector = false) {
     if (style?.['a:lnRef']) {
         const lnRef = style['a:lnRef'];
         const lnColor = getColor(lnRef['a:schemeClr'] || lnRef['a:srgbClr'], SN);
-        if (lnColor && lnRef._$idx !== '0') shapeStyle.stroke = lnColor;
+        if (!ln?.['a:solidFill'] && lnColor && lnRef._$idx !== '0') shapeStyle.stroke = lnColor;
     }
+    if (ln && Object.hasOwn(ln, 'a:noFill')) shapeStyle.stroke = 'none';
 
     const bodyPr = txBody?.['a:bodyPr'];
     if (isVerticalText(bodyPr?._$vert)) shapeStyle.textDirection = 'vertical';
@@ -133,7 +139,7 @@ export function parseShapeFromXml(xmlDetail, SN, isConnector = false) {
         shapeStyle.textAlign = 'r';
     }
 
-    return { shapeType, shapeStyle, shapeText, isTextBox };
+    return { shapeType, shapeStyle, shapeText, isTextBox, shapeAdjustments };
 }
 
 // ==================== 导出 XML 相关 ====================
@@ -154,7 +160,11 @@ export function buildShapeXml(index) {
     const height = SN.Utils.pxToEmu(drawing.height);
 
     // 线条宽度（pt 转 EMU）
-    const lineWidth = Math.round((style.strokeWidth || 1) * 12700);
+    const lineWidth = Math.round((style.strokeWidth ?? 1) * 12700);
+    const adjustmentGuides = Object.entries(drawing.shapeAdjustments || {})
+        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+        .map(([name, value]) => ({ '_$name': name, '_$fmla': `val ${Math.round(value)}` }));
+    const adjustmentList = adjustmentGuides.length ? { 'a:gd': adjustmentGuides } : '';
 
     // 如果是连接线，构建 cxnSp 节点
     if (isConnector) {
@@ -191,7 +201,7 @@ export function buildShapeXml(index) {
                     "a:ext": { "_$cx": width.toString(), "_$cy": height.toString() }
                 },
                 "a:prstGeom": {
-                    "a:avLst": "",
+                    "a:avLst": adjustmentList,
                     "_$prst": shapeType
                 },
                 "a:ln": lnNode
@@ -243,7 +253,7 @@ export function buildShapeXml(index) {
             "a:ext": { "_$cx": width.toString(), "_$cy": height.toString() }
         },
         "a:prstGeom": {
-            "a:avLst": "",
+            "a:avLst": adjustmentList,
             "_$prst": shapeType
         }
     };
@@ -268,6 +278,16 @@ export function buildShapeXml(index) {
                 }
             }
         };
+    }
+    if (style.fill === 'none') {
+        delete spPrNode['a:solidFill'];
+        const line = spPrNode['a:ln'];
+        delete spPrNode['a:ln'];
+        spPrNode['a:noFill'] = '';
+        if (line) spPrNode['a:ln'] = line;
+    }
+    if (style.stroke === 'none' || style.strokeWidth === 0) {
+        spPrNode['a:ln'] = { '_$w': lineWidth.toString(), 'a:noFill': '' };
     }
 
     const result = {

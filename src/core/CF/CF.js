@@ -5,6 +5,21 @@ import { createRule } from './ruleFactory.js';
 import { getColorByIndex as _getColorByIndex, getThemeColor as _getThemeColor } from '../Xml/helpers.js';
 import { shiftFormulaRefs, shiftSqref } from '../Sheet/structureRef.js';
 
+const _x14Namespace = 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main';
+const _xmNamespace = 'http://schemas.microsoft.com/office/excel/2006/main';
+
+function _asArray(value) {
+    return value == null ? [] : (Array.isArray(value) ? value : [value]);
+}
+
+function _xmlText(value) {
+    return value && typeof value === 'object' ? value['#text'] : value;
+}
+
+function _xmlBoolean(value, fallback) {
+    return value === undefined ? fallback : value === true || value === 'true' || value === 1 || value === '1';
+}
+
 function _cloneStateValue(value) {
     if (value === null || value === undefined) return value;
     if (Array.isArray(value)) return value.map(_cloneStateValue);
@@ -123,12 +138,11 @@ export default class CF {
      * @returns {void}
      */
     parse(xmlObj) {
-        const cfList = xmlObj?.conditionalFormatting;
-        if (!cfList) return;
-
-        const items = Array.isArray(cfList) ? cfList : [cfList];
+        const items = _asArray(xmlObj?.conditionalFormatting);
         const dxfs = this.sheet.SN.Xml.obj['xl/styles.xml']?.styleSheet?.dxfs?.dxf || [];
         const dxfArr = Array.isArray(dxfs) ? dxfs : [dxfs];
+        const configs = [];
+        const linkedConfigs = new Map();
 
         for (const cf of items) {
             const sqref = cf['_$sqref'];
@@ -138,12 +152,45 @@ export default class CF {
             const ruleList = Array.isArray(cfRules) ? cfRules : [cfRules];
             for (const ruleXml of ruleList) {
                 const config = this._parseRuleXml(ruleXml, sqref, dxfArr);
-                const rule = createRule(config, this.sheet);
-                this.rules.push(rule);
+                configs.push(config);
+                if (config.type === 'dataBar') {
+                    for (const ext of _asArray(ruleXml.extLst?.ext)) {
+                        const id = _xmlText(ext['x14:id']);
+                        if (id) linkedConfigs.set(String(id).trim().toUpperCase(), config);
+                    }
+                }
             }
         }
 
+        // An x14 data bar augments the base rule with the same ID, rather than adding a second rule.
+        for (const ext of _asArray(xmlObj?.extLst?.ext)) {
+            const groups = _asArray(ext['x14:conditionalFormattings']?.['x14:conditionalFormatting']);
+            for (const group of groups) {
+                const sqref = _xmlText(group['xm:sqref']);
+                for (const ruleXml of _asArray(group['x14:cfRule'])) {
+                    const dataBar = ruleXml['x14:dataBar'];
+                    if (!dataBar) continue;
+                    const id = String(ruleXml['_$id'] || '').trim().toUpperCase();
+                    let config = linkedConfigs.get(id);
+                    if (!config) {
+                        if (!sqref) continue;
+                        config = {
+                            type: 'dataBar', sqref,
+                            priority: parseInt(ruleXml['_$priority'], 10) || configs.length + 1,
+                            stopIfTrue: _xmlBoolean(ruleXml['_$stopIfTrue'], false)
+                        };
+                        configs.push(config);
+                        if (id) linkedConfigs.set(id, config);
+                    }
+                    Object.assign(config, this._parseDataBar(dataBar, true, config));
+                    if (sqref) config.sqref = sqref;
+                }
+            }
+        }
+
+        for (const config of configs) this.rules.push(createRule(config, this.sheet));
         this._sortRules();
+        this.clearAllCache();
     }
 
     /**
@@ -219,16 +266,7 @@ export default class CF {
 
         // 解析dataBar
         if (ruleXml.dataBar) {
-            const dataBar = this._parseDataBar(ruleXml.dataBar);
-            if (dataBar) {
-                const cfvoArr = Array.isArray(dataBar.cfvo) ? dataBar.cfvo : [];
-                config.minCfvo = cfvoArr[0] || { type: 'min' };
-                config.maxCfvo = cfvoArr[1] || { type: 'max' };
-                config.color = dataBar.color;
-                config.showValue = dataBar.showValue;
-                config.minLength = dataBar.minLength;
-                config.maxLength = dataBar.maxLength;
-            }
+            Object.assign(config, this._parseDataBar(ruleXml.dataBar));
         }
 
         // 解析iconSet
@@ -257,7 +295,9 @@ export default class CF {
         // 字体
         if (dxfXml.font) {
             dxf.font = {};
-            if (dxfXml.font.b) dxf.font.bold = true;
+            if (dxfXml.font.b !== undefined) {
+                dxf.font.bold = _xmlBoolean(dxfXml.font.b?.['_$val'], true);
+            }
             if (dxfXml.font.i) dxf.font.italic = true;
             if (dxfXml.font.strike) dxf.font.strike = true;
             if (dxfXml.font.u) dxf.font.underline = true;
@@ -338,22 +378,45 @@ export default class CF {
      * Parse dataBar
      * @private
      */
-    _parseDataBar(dbXml) {
-        const cfvo = dbXml.cfvo;
-        if (!cfvo) return null;
-
-        const cfvoArr = Array.isArray(cfvo) ? cfvo : [cfvo];
-
-        return {
-            cfvo: cfvoArr.map(c => ({
-                type: c['_$type'],
-                val: c['_$val'] !== undefined ? parseFloat(c['_$val']) : undefined
-            })),
-            color: dbXml.color ? this._parseColor(dbXml.color) : '#638EC6',
-            showValue: dbXml['_$showValue'] !== '0',
-            minLength: parseInt(dbXml['_$minLength']) || 10,
-            maxLength: parseInt(dbXml['_$maxLength']) || 90
+    _parseDataBar(dbXml, extended = false, fallback = {}) {
+        const prefix = extended ? 'x14:' : '';
+        const cfvos = _asArray(dbXml[`${prefix}cfvo`]).map(node => {
+            const type = node['_$type'];
+            const raw = extended ? _xmlText(node['xm:f']) : node['_$val'];
+            const value = { type };
+            if (raw !== undefined && raw !== '') {
+                value.val = type === 'formula' ? String(raw) : Number(raw);
+            }
+            return value;
+        });
+        const length = (name, defaultValue) => {
+            const raw = dbXml[`_$${name}`];
+            const value = raw === undefined || raw === '' ? NaN : Number(raw);
+            return Number.isFinite(value) ? value : (fallback[name] ?? defaultValue);
         };
+        const result = {
+            minCfvo: cfvos[0] || fallback.minCfvo || { type: 'min' },
+            maxCfvo: cfvos[1] || fallback.maxCfvo || { type: 'max' },
+            color: this._parseColor(dbXml[extended ? 'x14:fillColor' : 'color']) || fallback.color || '#638EC6',
+            showValue: _xmlBoolean(dbXml['_$showValue'], fallback.showValue ?? true),
+            minLength: length('minLength', 10),
+            maxLength: length('maxLength', 90)
+        };
+        if (!extended) return result;
+
+        result.gradient = _xmlBoolean(dbXml['_$gradient'], true);
+        result.direction = dbXml['_$direction'] || 'context';
+        result.axisPosition = dbXml['_$axisPosition'] || 'automatic';
+        result.axisColor = this._parseColor(dbXml['x14:axisColor']) || '#000000';
+        result.negativeColor = _xmlBoolean(dbXml['_$negativeBarColorSameAsPositive'], false)
+            ? result.color : (this._parseColor(dbXml['x14:negativeFillColor']) || '#FF0000');
+        const hasBorder = _xmlBoolean(dbXml['_$border'], false);
+        result.borderColor = hasBorder ? (this._parseColor(dbXml['x14:borderColor']) || result.color) : null;
+        result.negativeBorderColor = hasBorder
+            ? (_xmlBoolean(dbXml['_$negativeBarBorderColorSameAsPositive'], true)
+                ? result.borderColor : (this._parseColor(dbXml['x14:negativeBorderColor']) || result.negativeColor))
+            : null;
+        return result;
     }
 
     /**
@@ -500,6 +563,27 @@ export default class CF {
         });
 
         return result.length > 0 ? result : null;
+    }
+
+    _toX14XmlObject() {
+        const groups = new Map();
+        for (const rule of this.rules) {
+            if (rule.type !== 'dataBar') continue;
+            if (!groups.has(rule.sqref)) groups.set(rule.sqref, []);
+            groups.get(rule.sqref).push(rule._toX14XmlObject());
+        }
+        if (groups.size === 0) return null;
+        return {
+            '_$uri': '{78C0D931-6437-407d-A8EE-F0AAD7539E65}',
+            '_$xmlns:x14': _x14Namespace,
+            'x14:conditionalFormattings': {
+                'x14:conditionalFormatting': Array.from(groups, ([sqref, rules]) => ({
+                    '_$xmlns:xm': _xmNamespace,
+                    'x14:cfRule': rules,
+                    'xm:sqref': sqref
+                }))
+            }
+        };
     }
 
     /**

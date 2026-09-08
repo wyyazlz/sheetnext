@@ -48,6 +48,11 @@ initDropdown(containerDom);
 **属性：**
 - `data-keep-open="true"` - 点击菜单项后保持打开
 - `.sn-no-icon` - 加在 `sn-dropdown-toggle` 上，隐藏下拉小三角
+- `.sn-menu-selectable` - 菜单项预留勾号位置；`.sn-selected` 显示勾号和主题色高亮
+
+工具栏普通菜单支持 `selected: ctx => boolean`（或静态布尔值），`ctx` 为当前编辑器实例。例如纸张菜单配置 `selected: ctx => ctx.Print.ensureSettings()?.pageSetup.paperName === 'A4'`。打开菜单、执行菜单操作和刷新工具栏时均按实际设置更新选中态；执行命令或取消弹窗不会直接改变勾选。
+
+通用下拉菜单在打开、计算位置之前，从菜单元素派发冒泡事件 `sn-dropdown-before-open`，用于懒加载内容和同步状态。
 
 **特性：**
 - 自动边界检测，超出视口时翻转位置

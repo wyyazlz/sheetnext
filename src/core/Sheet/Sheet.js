@@ -997,8 +997,9 @@ export default class Sheet {
     /** Jump to hyperlink target of active cell. */
     hyperlinkJump() {
 
+        this.SN.Canvas._hyperlinkPopover?._dismiss();
         const cell = this.getCell(this.activeCell.r, this.activeCell.c)
-        if (!cell.hyperlink) return this.SN.Canvas.hyperlinkJumpBtn.style.display = 'none';  // 隐藏元素
+        if (!cell.hyperlink) return;
         const location = cell.hyperlink.location
         if (location) { // 跳转本文档指定位置
             let sheetObj = this
@@ -1020,7 +1021,6 @@ export default class Sheet {
             const target = cell?.hyperlink?.target
             window.open(target ?? '')
         }
-        this.SN.Canvas.hyperlinkJumpBtn.style.display = 'none';  // 隐藏元素
 
     }
 
@@ -1066,9 +1066,11 @@ Object.assign(Sheet.prototype, {
 
     getUsedRange: UsedRange.getUsedRange,
 
+    getCurrentRegion: SelectionNavigation.getCurrentRegion,
+
     moveSelection: SelectionNavigation.moveSelection,
 
-    /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops] @returns {RangeNum} */
+    /** @param {(ICellConfig|string|number)[][]} arr @param {CellRef} pos @param {{align?:string,border?:boolean,width?:number,height?:number}} [options] @returns {Promise<RangeNum|undefined>} Await insertion; targets over 100,000 cells are processed in slices with progress. */
     insertTemplate: InsertTable.insertTemplate,
 
     /**
@@ -1076,7 +1078,7 @@ Object.assign(Sheet.prototype, {
      * @param {(ICellConfig|string|number)[][]} arr
      * @param {CellRef} pos
      * @param {{align?:string,border?:boolean,width?:number,height?:number}} [ops]
-     * @returns {RangeNum}
+     * @returns {Promise<RangeNum|undefined>}
      */
     insertTable: InsertTable.insertTable,
 

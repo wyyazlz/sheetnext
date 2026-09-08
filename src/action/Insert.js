@@ -27,6 +27,7 @@ import {
     initChartModalInteraction
 } from '../components/ChartModal.js';
 import { drawShapeToCanvas } from '../core/Canvas/ShapeRenderer.js';
+import { getShapeRenderBounds } from '../core/Canvas/shapePathsCanvas.js';
 import { createChartOptionFromRange, resolveChartMeta } from '../core/Drawing/chartOption.js';
 
 echarts.use([
@@ -99,18 +100,31 @@ async function _renderChartDrawingToDataURL(drawing, pixelRatio = 2) {
 function _renderShapeDrawingToDataURL(drawing, pixelRatio = 2) {
     const logicalW = Math.max(1, Number(drawing.width) || 1);
     const logicalH = Math.max(1, Number(drawing.height) || 1);
+    const padding = Math.max(2, (Number(drawing.shapeStyle?.strokeWidth) || 1) * 8);
+    const bounds = drawing.isConnector
+        ? { x: -padding, y: -padding, w: logicalW + padding * 2, h: logicalH + padding * 2 }
+        : getShapeRenderBounds(drawing, logicalW, logicalH);
+    const angle = (drawing.rotation || 0) * Math.PI / 180;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const corners = [
+        [bounds.x, bounds.y], [bounds.x + bounds.w, bounds.y],
+        [bounds.x, bounds.y + bounds.h], [bounds.x + bounds.w, bounds.y + bounds.h]
+    ].map(([pointX, pointY]) => {
+        const dx = pointX - logicalW / 2, dy = pointY - logicalH / 2;
+        return { x: dx * cos - dy * sin, y: dx * sin + dy * cos };
+    });
+    const minX = Math.min(...corners.map(point => point.x));
+    const minY = Math.min(...corners.map(point => point.y));
+    const width = Math.max(...corners.map(point => point.x)) - minX;
+    const height = Math.max(...corners.map(point => point.y)) - minY;
     const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(logicalW * pixelRatio));
-    canvas.height = Math.max(1, Math.round(logicalH * pixelRatio));
+    canvas.width = Math.max(1, Math.ceil(width * pixelRatio));
+    canvas.height = Math.max(1, Math.ceil(height * pixelRatio));
     const ctx = canvas.getContext('2d');
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    if (drawing.rotation) {
-        ctx.translate(logicalW / 2, logicalH / 2);
-        ctx.rotate(drawing.rotation * Math.PI / 180);
-        drawShapeToCanvas(ctx, drawing, -logicalW / 2, -logicalH / 2, logicalW, logicalH, pixelRatio);
-    } else {
-        drawShapeToCanvas(ctx, drawing, 0, 0, logicalW, logicalH, pixelRatio);
-    }
+    ctx.translate(-minX, -minY);
+    ctx.rotate(angle);
+    drawShapeToCanvas(ctx, drawing, -logicalW / 2, -logicalH / 2, logicalW, logicalH, pixelRatio);
     return canvas.toDataURL('image/png');
 }
 
@@ -599,9 +613,7 @@ export async function insertHyperlink() {
     const modalTitleKey = existingLink
         ? 'action.insert.modal.m004.titleEdit'
         : 'action.insert.modal.m004.titleInsert';
-    const modalCancelKey = existingLink
-        ? 'action.insert.modal.m004.cancelRemove'
-        : 'action.insert.modal.m004.cancel';
+    const modalCancelKey = 'action.insert.modal.m004.cancel';
 
     try {
         await SN.Utils.modal({

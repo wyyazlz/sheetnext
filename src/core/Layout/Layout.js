@@ -401,6 +401,10 @@ export default class Layout {
         // 4. sync disabled state in active panel
         refreshDisabledToolbarItemsFn(this.SN.containerDom, this._toolbarBuilder);
 
+        activePanel?.querySelectorAll('.sn-dropdown-menu[data-lazy-loaded]').forEach(menu => {
+            this._toolbarBuilder?._refreshMenuSelection(menu);
+        });
+
         this._scheduleToolbarAdaptiveLayout();
     }
 

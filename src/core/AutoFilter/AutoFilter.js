@@ -87,6 +87,28 @@ export default class AutoFilter {
         this._allHiddenRows = new Set();
     }
 
+    /** @returns {void} Toggle the active table's filter buttons or the worksheet filter. */
+    toggle() {
+        const sheet = this.sheet;
+        if (sheet.protection.enabled) {
+            this._SN.Utils.toast(this._SN.t('core.sheet.sheetProtection.message.autoFilterDenied'));
+            return;
+        }
+        if (sheet.activeAreas.length > 1) {
+            this._SN.Utils.toast(this._SN.t('common.singleRangeRequired'));
+            return;
+        }
+
+        const table = sheet.Table.getTableAt(sheet.activeCell.r, sheet.activeCell.c);
+        if (table) {
+            table.autoFilterEnabled = !table.autoFilterEnabled;
+        } else if (this.enabled) {
+            this.clear();
+        } else {
+            this.setRange();
+        }
+    }
+
     _createScope(id, options = {}) {
         return {
             id,
@@ -772,25 +794,7 @@ export default class AutoFilter {
             }
         }
 
-        // 否则从当前单元格扩展到连续数据区域
-        const startCell = sheet.activeCell;
-        let minR = startCell.r, maxR = startCell.r;
-        let minC = startCell.c, maxC = startCell.c;
-
-        while (minR > 0 && this._hasData(minR - 1, startCell.c)) minR--;
-        while (maxR < sheet.rowCount - 1 && this._hasData(maxR + 1, startCell.c)) maxR++;
-        while (minC > 0 && this._hasData(startCell.r, minC - 1)) minC--;
-        while (maxC < sheet.colCount - 1 && this._hasData(startCell.r, maxC + 1)) maxC++;
-
-        // 确保至少有两行（标题+数据）
-        if (maxR === minR) maxR = Math.min(minR + 100, sheet.rowCount - 1);
-
-        return { s: { r: minR, c: minC }, e: { r: maxR, c: maxC } };
-    }
-
-    _hasData(r, c) {
-        const cell = this.sheet.getCell(r, c);
-        return cell.editVal !== undefined && cell.editVal !== null && cell.editVal !== '';
+        return sheet.getCurrentRegion();
     }
 
     /**
@@ -902,7 +906,11 @@ export default class AutoFilter {
     /**
      * Set column filters
      * @param {number} colIndex
-     * @param {Object} filter
+     * @param {Object|null} filter - Null clears this column filter.
+     * @param {'values'|'custom'} filter.type - Filter mode.
+     * @param {Array<string|number|boolean|null>} [filter.values] - Accepted values for values mode; an empty array clears the filter.
+     * @param {Array<{operator: string, value: string|number}>} [filter.filters] - Conditions for custom mode, for example [{operator: 'contains', value: 'East'}].
+     * @param {boolean} [filter.and=true] - Combine custom conditions with AND; false uses OR.
      * @param {string} [scopeId]
      */
     setColumnFilter(colIndex, filter, scopeId = null) {

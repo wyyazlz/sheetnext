@@ -528,11 +528,16 @@ export function createToolbarConfig(ns) {
                 },
                 {
                     items: [
-                        { type: 'large', icon: 'dayinyulan1', labelKey: 'layout.page.pagePreview', action: `${ns}.Action.pageBreakPreview()` },
                         {
                             type: 'stack', items: [
-                                { type: 'checkbox', labelKey: 'layout.page.pageBreaks', id: 'showPageBreaks', checked: ctx => ctx.activeSheet?.showPageBreaks === true, action: `${ns}.Action.toggleShowPageBreaks(this.checked)` },
-                                { icon: '_24glPageBreak', labelKey: 'layout.page.addBreak', action: `${ns}.Action.insertPageBreak()` }
+                                { icon: 'dayinyulan1', labelKey: 'layout.page.pagePreview', action: `${ns}.Action.pageBreakPreview()` },
+                                { type: 'checkbox', labelKey: 'layout.page.pageBreaks', id: 'showPageBreaks', checked: ctx => ctx.activeSheet?.showPageBreaks === true, action: `${ns}.Action.toggleShowPageBreaks(this.checked)` }
+                            ]
+                        },
+                        {
+                            type: 'stack', items: [
+                                { icon: '_24glPageBreak', labelKey: 'layout.page.addBreak', action: `${ns}.Action.insertPageBreak()` },
+                                { icon: '_24glPageBreak', labelKey: 'core.print.print.resetBreaks', action: `${ns}.Print.resetPageBreaks()` }
                             ]
                         }
                     ]
@@ -807,6 +812,10 @@ function buildFormulaMenu(ns, categoryKey, options = {}) {
  * Create Dropdown Menu Configuration
  */
 export function createMenuConfig(ns) {
+    const matchesPageSetup = expected => ctx => {
+        const setup = ctx.Print.ensureSettings()?.pageSetup;
+        return !!setup && Object.entries(expected).every(([key, value]) => setup[key] === value);
+    };
     return {
         fontName: buildFontItems(ns),
         fontSize: [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72].map(size => ({
@@ -912,31 +921,41 @@ export function createMenuConfig(ns) {
             { labelKey: 'layout.auto.label8ad96a3c', action: `${ns}.Action.zoomCustom()` },
         ],
         pageMargins: [
-            { labelKey: 'layout.menu.pageMargins.normal', action: `${ns}.Action.setPageMarginsPreset('normal')` },
-            { labelKey: 'layout.menu.pageMargins.narrow', action: `${ns}.Action.setPageMarginsPreset('narrow')` },
-            { labelKey: 'layout.menu.pageMargins.wide', action: `${ns}.Action.setPageMarginsPreset('wide')` },
+            { labelKey: 'layout.menu.pageMargins.normal', selected: ctx => ctx.Print.getPageMarginsPreset() === 'normal', action: `${ns}.Action.setPageMarginsPreset('normal')` },
+            { labelKey: 'layout.menu.pageMargins.narrow', selected: ctx => ctx.Print.getPageMarginsPreset() === 'narrow', action: `${ns}.Action.setPageMarginsPreset('narrow')` },
+            { labelKey: 'layout.menu.pageMargins.wide', selected: ctx => ctx.Print.getPageMarginsPreset() === 'wide', action: `${ns}.Action.setPageMarginsPreset('wide')` },
             { type: 'divider' },
-            { labelKey: 'layout.menu.custom', action: `${ns}.Action.setPageMarginsDialog()` },
+            { labelKey: 'layout.menu.custom', selected: ctx => ctx.Print.getPageMarginsPreset() === 'custom', action: `${ns}.Action.setPageMarginsDialog()` },
         ],
         pageOrientation: [
-            { labelKey: 'layout.menu.pageOrientation.portrait', action: `${ns}.Action.setPageOrientation('portrait')` },
-            { labelKey: 'layout.menu.pageOrientation.landscape', action: `${ns}.Action.setPageOrientation('landscape')` },
+            { labelKey: 'layout.menu.pageOrientation.portrait', selected: matchesPageSetup({ orientation: 'portrait' }), action: `${ns}.Action.setPageOrientation('portrait')` },
+            { labelKey: 'layout.menu.pageOrientation.landscape', selected: matchesPageSetup({ orientation: 'landscape' }), action: `${ns}.Action.setPageOrientation('landscape')` },
         ],
         paperSize: [
-            { labelKey: 'layout.menu.paperSize.a4', action: `${ns}.Action.setPaperSize('A4')` },
-            { labelKey: 'layout.menu.paperSize.letter', action: `${ns}.Action.setPaperSize('Letter')` },
+            { labelKey: 'layout.menu.paperSize.a4', selected: matchesPageSetup({ paperName: 'A4' }), action: `${ns}.Action.setPaperSize('A4')` },
+            { labelKey: 'layout.menu.paperSize.a3', selected: matchesPageSetup({ paperName: 'A3' }), action: `${ns}.Action.setPaperSize('A3')` },
+            { labelKey: 'layout.menu.paperSize.a5', selected: matchesPageSetup({ paperName: 'A5' }), action: `${ns}.Action.setPaperSize('A5')` },
+            { labelKey: 'layout.menu.paperSize.letter', selected: matchesPageSetup({ paperName: 'Letter' }), action: `${ns}.Action.setPaperSize('Letter')` },
+            { labelKey: 'layout.menu.paperSize.legal', selected: matchesPageSetup({ paperName: 'Legal' }), action: `${ns}.Action.setPaperSize('Legal')` },
         ],
         printArea: [
             { labelKey: 'layout.menu.printArea.set', action: `${ns}.Action.setPrintAreaFromSelection()` },
             { labelKey: 'layout.menu.printArea.clear', action: `${ns}.Action.clearPrintArea()` },
         ],
         printScale: [
-            { labelKey: 'layout.auto.label2f97df3c', action: `${ns}.Action.setPrintScale(100)` },
-            { labelKey: 'layout.auto.labelCacab6cb', action: `${ns}.Action.setPrintScale(90)` },
-            { labelKey: 'layout.auto.label38a173b8', action: `${ns}.Action.setPrintScale(80)` },
-            { labelKey: 'layout.auto.labelA9ccb748', action: `${ns}.Action.setPrintScale(70)` },
+            { labelKey: 'core.print.print.scaling.sheet', selected: matchesPageSetup({ fitToWidth: 1, fitToHeight: 1 }), action: `${ns}.Print.setPageSetup({fitToWidth:1,fitToHeight:1})` },
+            { labelKey: 'core.print.print.scaling.columns', selected: matchesPageSetup({ fitToWidth: 1, fitToHeight: 0 }), action: `${ns}.Print.setPageSetup({fitToWidth:1,fitToHeight:0})` },
+            { labelKey: 'core.print.print.scaling.rows', selected: matchesPageSetup({ fitToWidth: 0, fitToHeight: 1 }), action: `${ns}.Print.setPageSetup({fitToWidth:0,fitToHeight:1})` },
             { type: 'divider' },
-            { labelKey: 'layout.menu.custom', action: `${ns}.Action.setPrintScaleDialog()` },
+            { labelKey: 'layout.auto.label2f97df3c', selected: matchesPageSetup({ scale: 100, fitToWidth: 0, fitToHeight: 0 }), action: `${ns}.Action.setPrintScale(100)` },
+            { labelKey: 'layout.auto.labelCacab6cb', selected: matchesPageSetup({ scale: 90, fitToWidth: 0, fitToHeight: 0 }), action: `${ns}.Action.setPrintScale(90)` },
+            { labelKey: 'layout.auto.label38a173b8', selected: matchesPageSetup({ scale: 80, fitToWidth: 0, fitToHeight: 0 }), action: `${ns}.Action.setPrintScale(80)` },
+            { labelKey: 'layout.auto.labelA9ccb748', selected: matchesPageSetup({ scale: 70, fitToWidth: 0, fitToHeight: 0 }), action: `${ns}.Action.setPrintScale(70)` },
+            { type: 'divider' },
+            { labelKey: 'layout.menu.custom', selected: ctx => {
+                const setup = ctx.Print.ensureSettings()?.pageSetup;
+                return !!setup && !setup.fitToWidth && !setup.fitToHeight && ![100, 90, 80, 70].includes(setup.scale);
+            }, action: `${ns}.Action.setPrintScaleDialog()` },
         ],
         paste: [
             { labelKey: 'layout.auto.label3d33e8d4', action: `${ns}.Action.paste('all')` },

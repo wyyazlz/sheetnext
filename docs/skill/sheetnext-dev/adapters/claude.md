@@ -10,7 +10,7 @@ Install or copy the whole `sheetnext-dev/` directory into the tool-specific skil
 
 Provide `SKILL.md` first. Add only the reference files needed for the current task:
 
-- `references/core-api.md` for public classes and methods.
+- `references/core-api.md` for the module index, then the relevant `references/api/*.md` file for signatures.
 - `references/events.md` for event names and payloads.
 - `references/enums.md` for constants and enum values.
 - `references/json-format.md` for workbook JSON data.

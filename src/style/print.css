@@ -1,99 +1,256 @@
-.sn-print-preview {
-    display: flex;
-    gap: 12px;
-    height: 100%;
-    min-height: 0;
+.sn-print-dialog {
+    height: 92vh;
 }
 
-.sn-modal-body.sn-print-preview {
+.sn-print-dialog > .sn-modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.sn-print-dialog .sn-modal-title {
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.sn-modal-body.sn-print-workspace {
+    display: flex;
     min-height: 0;
-    box-sizing: border-box;
+    padding: 0;
     overflow: hidden;
 }
 
-.sn-print-preview-sidebar {
-    width: 220px;
-    overflow: auto;
+.sn-print-sidebar {
+    flex: 0 0 290px;
+    padding: 22px 24px;
+    box-sizing: border-box;
+    overflow-y: auto;
     border-right: 1px solid #e5e7eb;
-    padding: 8px;
     background: #fafafa;
 }
 
-.sn-print-thumb {
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    padding: 6px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    background: #fff;
-}
-
-.sn-print-thumb.active {
-    border-color: var(--sn-primary);
-    box-shadow: 0 0 0 1px var(--sn-primary);
-}
-
-.sn-print-thumb-label {
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 6px;
-}
-
-.sn-print-thumb img {
-    width: 100%;
-    display: block;
-}
-
-.sn-print-preview-main {
-    flex: 1;
-    overflow: auto;
-    padding: 12px;
-    background: #f3f4f6;
+.sn-print-sidebar .sn-print-submit {
     display: flex;
+    align-items: center;
     justify-content: center;
-    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    height: 56px;
+    font-size: 17px;
+    background: var(--sn-primary);
+    color: #fff;
+}
+
+.sn-print-submit:hover:not(:disabled) {
+    background: var(--sn-primary-hover);
+}
+
+.sn-print-submit svg {
+    width: 26px;
+    height: 26px;
+}
+
+.sn-print-workspace button:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+
+.sn-print-options {
+    border: 0;
+    padding: 0;
+    margin: 18px 0 0;
+    min-width: 0;
+}
+
+.sn-print-options h3 {
+    margin: 0 0 12px;
+    color: var(--sn-primary);
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.sn-print-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: #555;
+}
+
+.sn-print-field > input,
+.sn-print-field > select {
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.sn-print-row,
+.sn-print-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 10px;
+}
+
+.sn-print-workspace [hidden] {
+    display: none;
+}
+
+.sn-print-check {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 10px 0;
+    font-size: 12px;
+}
+
+.sn-print-check input {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.sn-print-hint {
+    color: #777;
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 8px 0 12px;
+    overflow-wrap: anywhere;
+}
+
+.sn-print-grid > .sn-print-hint {
+    grid-column: 1 / -1;
+    margin-top: 0;
+}
+
+.sn-print-sheet-settings {
+    padding-top: 4px;
+}
+
+.sn-print-advanced {
+    border-top: 1px solid #ddd;
+    padding-top: 12px;
+}
+
+.sn-print-advanced > summary {
+    cursor: pointer;
+    color: var(--sn-primary);
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.sn-print-feedback {
+    font-size: 12px;
+    color: var(--sn-primary);
+    overflow-wrap: anywhere;
+}
+
+.sn-print-preview-pane {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: #eceef0;
+}
+
+.sn-print-preview-caption {
+    flex: 0 0 auto;
+    min-height: 20px;
+    padding: 12px 20px 0;
+    color: #68717c;
+    font-size: 12px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.sn-print-viewport {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.sn-print-paper-frame {
+    position: relative;
+    margin: 0 auto;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 3px 14px rgb(0 0 0 / 14%);
 }
 
 .sn-print-page {
     position: relative;
-    background: #fff;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    background-color: #fff;
     box-sizing: border-box;
+    overflow: hidden;
+    transform-origin: top left;
 }
 
-.sn-print-page img,
 .sn-print-page-image {
     display: block;
+    max-width: none;
 }
 
 .sn-print-page-header,
 .sn-print-page-footer {
     position: absolute;
     color: #6b7280;
-    font-size: 12px;
-    line-height: 1.4;
+    font: 12px/1.4 Arial, sans-serif;
     white-space: pre-wrap;
     pointer-events: none;
 }
 
-.sn-print-page-range {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    z-index: 2;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: rgba(17, 24, 39, 0.72);
-    color: #fff;
-    font-size: 11px;
-    line-height: 1.4;
-    pointer-events: none;
+.sn-print-message {
+    padding: 40px 16px;
+    text-align: center;
+    color: #68717c;
 }
 
-.sn-print-preview-empty {
-    padding: 24px;
-    text-align: center;
-    color: #666;
+.sn-print-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 20px;
+    padding: 12px 20px;
+    border-top: 1px solid #dfe2e5;
+    background: #f7f8f9;
+}
+
+.sn-print-pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.sn-print-pager button {
+    width: 28px;
+    height: 30px;
+    border: 1px solid #d4d7dc;
+    border-radius: 4px;
+    background: white;
+    font-size: 20px;
+    cursor: pointer;
+    color: #555;
+}
+
+.sn-print-pager input {
+    width: 64px;
+    box-sizing: border-box;
+}
+
+.sn-print-navigation .sn-print-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.sn-print-navigation .sn-print-field select {
+    width: 108px;
 }
 
 .sn-form-row {
@@ -103,7 +260,8 @@
     margin-bottom: 8px;
 }
 
-.sn-form-row label {
+.sn-form-row label,
+label.sn-form-row > span {
     width: 80px;
     flex-shrink: 0;
 }
@@ -111,4 +269,26 @@
 .sn-form-tip {
     font-size: 12px;
     color: #999;
+}
+
+@media (max-width: 680px) {
+    .sn-print-dialog {
+        height: 96vh;
+    }
+
+    .sn-modal-body.sn-print-workspace {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .sn-print-sidebar {
+        flex: 0 0 auto;
+        overflow: visible;
+        padding: 16px;
+        border-right: 0;
+    }
+
+    .sn-print-preview-pane {
+        flex: 0 0 65vh;
+    }
 }

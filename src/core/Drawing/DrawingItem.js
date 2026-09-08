@@ -1,7 +1,7 @@
 import { chartOptionApplyTemplate, chartXmlToEChartOption, refOptionParse, isRefWithSheet } from "./chart.js";
 import { _initImage } from "./image.js";
 import { parseShapeFromXml, buildShapeXml } from "./shape.js";
-import { CONNECTOR_TYPES } from "./constants.js";
+import { CONNECTOR_TYPES, OPEN_SHAPE_TYPES } from "./constants.js";
 
 /** @class */
 export default class DrawingItem {
@@ -19,6 +19,8 @@ export default class DrawingItem {
         this.anchorType = config.anchorType ?? 'twoCell';
         /** @type {Object|null} */
         this.xmlDetail = config.xmlDetail ?? null;
+        /** @type {Object<string, number>} DrawingML preset adjustment values. */
+        this.shapeAdjustments = { ...(config.shapeAdjustments ?? {}) };
 
         // default start cell: top-left of viewport
         const defaultStartCell = {
@@ -51,6 +53,7 @@ export default class DrawingItem {
         this._area = null;
         this._renderOption = null;
         this._drawCache = null;
+        this._shapeGeometry = null;
         this._updRender = false;
 
         this._imageBase64 = config.imageBase64 ?? null;
@@ -90,7 +93,7 @@ export default class DrawingItem {
             startArrow: 'none',
             endArrow: 'none'
         } : {
-            fill: '#4472C4',
+            fill: OPEN_SHAPE_TYPES.has(this.shapeType) ? 'none' : '#4472C4',
             stroke: '#000000',
             strokeWidth: 1,
             textColor: '#000000',
@@ -135,6 +138,7 @@ export default class DrawingItem {
                 if (!this.shapeStyle.textDirection) this.shapeStyle.textDirection = 'horizontal';
                 if (this.isTextBox && !this.shapeStyle.textAlign) this.shapeStyle.textAlign = 'l';
                 this.shapeText = parsed.shapeText;
+                this.shapeAdjustments = parsed.shapeAdjustments;
             }
         }
 

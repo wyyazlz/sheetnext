@@ -7,7 +7,7 @@ GitHub Copilot can use this package through repository instructions and referenc
 Add this summary to `.github/copilot-instructions.md` or your workspace instructions:
 
 ```text
-For SheetNext development, use docs/skill/sheetnext-dev/SKILL.md as the guide. The source-of-truth API docs are in docs/skill/sheetnext-dev/references/. Check core-api.md for exact public APIs before writing code. Use events.md, enums.md, json-format.md, and ai-relay.md only when the task needs those areas.
+For SheetNext development, read docs/skill/sheetnext-dev/SKILL.md and match the installed version and edition. Start with references/core-api.md, then inspect the relevant references/api/ module for exact APIs. Use integration.md, events.md, enums.md, json-format.md and ai-relay.md when needed.
 ```
 
 ## Usage

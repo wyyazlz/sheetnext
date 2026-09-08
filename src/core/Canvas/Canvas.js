@@ -13,6 +13,7 @@ import * as PivotTableRenderer from './PivotTableRenderer.js';
 import FilterPanel from '../AutoFilter/FilterPanel.js';
 import FormulaEditor from './FormulaEditor.js';
 import LazyDOM from '../Layout/LazyDOM.js';
+import HyperlinkPopover from './HyperlinkPopover.js';
 import { _layerZIndex } from '../Layout/LayerConfig.js';
 import { getThemeColor } from '../Theme/Theme.js';
 import { getRangePaneClip, withPaneClip } from './helpers.js';
@@ -87,17 +88,6 @@ export default class Canvas {
         this.scrollSkeletonLayer = document.createElement('canvas');
         this.scrollSkeletonLayer.className = 'sn-scroll-skeleton-layer';
         this.dom.insertBefore(this.scrollSkeletonLayer, this.handleLayer);
-        /**
-         * Brush preview canvas
-         * @type {HTMLCanvasElement}
-         */
-        this.pCanvas = document.createElement('canvas');
-        this.pCanvas.width = this.pCanvas.height = 8;
-        /**
-         * Brush Preview Context
-         * @type {CanvasRenderingContext2D}
-         */
-        this.pCtx = this.pCanvas.getContext('2d');
         // 其他画布信息
         /**
          * Current Active Border Information
@@ -220,6 +210,7 @@ export default class Canvas {
          * @type {LazyDOM}
          */
         this.lazyDOM = new LazyDOM(SN);
+        this._hyperlinkPopover = new HyperlinkPopover(this);
 
         /**
          * Filter Panel Manager
@@ -278,6 +269,9 @@ export default class Canvas {
          * @type {string}
          */
         this.eyeProtectionColor = 'rgb(204,232,207)';
+        this._patternCanvas = document.createElement('canvas');
+        this._patternCtx = this._patternCanvas.getContext('2d');
+        this._fillPatternCache = new Map();
         //事件监听
         this.addEventListeners();
         this._initAreaSelector();
@@ -293,22 +287,6 @@ export default class Canvas {
      * @type {string}     */
 
     get paddingType() { return this.lazyDOM.paddingType; }
-    /**
-     * Hyperlink Jump Button
-     * @type {HTMLElement|null}     */
-    /**
-     * Hyperlink Jump Button
-     * @type {HTMLElement|null}     */
-
-    get hyperlinkJumpBtn() { return this.lazyDOM.hyperlinkBtn; }
-    /**
-     * Hyperlink Tips
-     * @type {HTMLElement|null}     */
-    /**
-     * Hyperlink Tips
-     * @type {HTMLElement|null}     */
-
-    get hyperlinkTip() { return this.lazyDOM.hyperlinkTip; }
     /**
      * Data Validation Selector
      * @type {HTMLElement|null}     */
@@ -500,7 +478,7 @@ export default class Canvas {
      * @type {Sheet}     */
 
     get activeSheet() {
-        return this.SN.activeSheet
+        return this._screenshotSheet || this.SN.activeSheet;
     }
 
     /**
@@ -530,6 +508,7 @@ export default class Canvas {
         const nextValue = Boolean(value);
         if (this._inputEditing === nextValue) return;
         this._inputEditing = nextValue;
+        if (nextValue) this._hyperlinkPopover?._dismiss();
         this.#syncInputEditorState();
     }
 
@@ -989,6 +968,7 @@ export default class Canvas {
         this.updateScrollBar();
         this.updateOverlayContainers();
         this._applyScrollPreview(!!options.fullSkeleton);
+        this._hyperlinkPopover._sync();
         this._requestScrollRender(options);
         return true;
     }
@@ -1161,11 +1141,17 @@ export default class Canvas {
      * @returns {Promise<void>}
      */
     async r(type, options = {}) {
+        if (this._screenshotActive && !options.targetCanvas) {
+            this._screenshotNeedsRender = true;
+            return;
+        }
         const _startTime = performance.now();
         this._cancelScrollRenderRequest();
 
         const isScreenshot = !!options.targetCanvas;
         const originalDpr = this.dpr;
+        const originalTransform = isScreenshot ? this.bc.getTransform() : null;
+        const originalPixelRatio = this._pixelRatio;
 
         if (isScreenshot && Number.isFinite(options.dpr)) {
             this.dpr = options.dpr;
@@ -1239,11 +1225,11 @@ export default class Canvas {
 
             this.rSparklines(sheet)
 
-            this.rCommentIndicators(sheet)
-
-            this.rCommentBoxes(sheet)
-
-            this.rFilterIcons(sheet)
+            if (!options.print) {
+                this.rCommentIndicators(sheet);
+                this.rCommentBoxes(sheet);
+                this.rFilterIcons(sheet);
+            }
 
             this.rPivotTablePlaceholders(sheet)
 
@@ -1261,26 +1247,15 @@ export default class Canvas {
 
 
             if (isScreenshot) {
-                this.rIndex(sheet, true, { hideSelectionFrame: !!options.hideSelectionFrame });
+                if (!options.print) this.rIndex(sheet, true, { hideSelectionFrame: !!options.hideSelectionFrame });
                 const nowRCount = ++this.rCount;
                 await this.rDrawing(nowRCount, options);
 
-                const lightInfo = this.getLight();
-                const headerLightInfo = options.hideSelectionFrame ? { rows: [], columns: [] } : lightInfo;
+                const headerLightInfo = options.hideSelectionFrame ? { rows: [], columns: [] } : this.getLight();
                 this.rRowColHeaders(sheet, headerLightInfo);
                 const targetCtx = options.targetCanvas.getContext('2d');
                 targetCtx.clearRect(0, 0, options.width, options.height);
                 targetCtx.drawImage(this.buffer, 0, 0);
-                // 恢复 buffer 尺寸
-                if (this.dpr !== originalDpr) {
-                    this.dpr = originalDpr;
-                }
-                this.buffer.width = options._originalBufferWidth;
-                this.buffer.height = options._originalBufferHeight;
-                this.#initBufferContext();
-                // 恢复宽高
-                this._width = options._originalWidth;
-                this._height = options._originalHeight;
             } else {
                 this.rIndex(sheet);
                 // 更新滚动条尺寸和位置
@@ -1292,9 +1267,17 @@ export default class Canvas {
             // -------------------- 平均3毫秒每次渲染 --------------------
 
         } finally {
-            if (isScreenshot && this.dpr !== originalDpr) {
+            if (isScreenshot) {
                 this.dpr = originalDpr;
-                this._pixelRatio = null;
+                if (options._originalBufferWidth !== undefined) {
+                    this.buffer.width = options._originalBufferWidth;
+                    this.buffer.height = options._originalBufferHeight;
+                    this.#initBufferContext();
+                    this.bc.setTransform(originalTransform);
+                    this._width = options._originalWidth;
+                    this._height = options._originalHeight;
+                }
+                this._pixelRatio = originalPixelRatio;
             }
             // console.log(`Render time: ${(performance.now() - _startTime).toFixed(2)}ms`);
         }

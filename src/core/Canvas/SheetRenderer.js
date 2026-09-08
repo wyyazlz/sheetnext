@@ -19,6 +19,7 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { drawShapeToCanvas } from './ShapeRenderer.js';
+import { getShapeRenderBounds } from './shapePathsCanvas.js';
 import { drawConnector, drawArrowHead } from './connectorPathsCanvas.js';
 
 echarts.use([
@@ -84,7 +85,7 @@ export async function rDrawing(nowRCount, options = {}) {
 
     const sheet = this.activeSheet
     if (sheet.Drawing.getAll().length == 0) {
-        this._syncTextBoxEditorPosition?.();
+        if (!isScreenshot) this._syncTextBoxEditorPosition?.();
         return;
     }
 
@@ -101,9 +102,9 @@ export async function rDrawing(nowRCount, options = {}) {
         }
 
         const info = sheet._getAreaInviewInfo2(drawing.area, true); // 是否在当前视图内
-        drawing.inView = info.inView
+        if (!isScreenshot) drawing.inView = info.inView;
         if (!info.inView) {
-            if (drawing.type === 'slicer' && drawing.Slicer) {
+            if (!isScreenshot && drawing.type === 'slicer' && drawing.Slicer) {
                 drawing.Slicer.render(this, 0, 0, 0, 0, false);
             }
             continue;
@@ -134,7 +135,7 @@ export async function rDrawing(nowRCount, options = {}) {
         }
 
         if (drawing.type === 'slicer') {
-            if (drawing.Slicer) {
+            if (!isScreenshot && drawing.Slicer) {
                 drawing.Slicer.render(this, x, y, w, h, true);
             }
         } else if (drawing.type === 'image') {
@@ -271,14 +272,16 @@ export async function rDrawing(nowRCount, options = {}) {
                     }
                 } else {
                     const strokeWidth = Math.max(0, drawing.shapeStyle?.strokeWidth || 0);
-                    const padding = Math.max(1, Math.ceil(strokeWidth * 2));
-                    const canvasW = logicalW + padding * 2;
-                    const canvasH = logicalH + padding * 2;
+                    const bounds = getShapeRenderBounds(drawing, logicalW, logicalH);
+                    const shapeKey = JSON.stringify([drawing._shapeGeometry.key, drawing.shapeStyle, drawing.shapeText]);
+                    const canvasW = bounds.w;
+                    const canvasH = bounds.h;
 
                     const needsRender = !drawing.drawCache ||
                         drawing._cachedWidth !== logicalW ||
                         drawing._cachedHeight !== logicalH ||
                         drawing._cachedStrokeWidth !== strokeWidth ||
+                        drawing._cachedShapeKey !== shapeKey ||
                         !Number.isFinite(drawing._cachedPixelRatio) ||
                         Math.abs(drawing._cachedPixelRatio - pixelRatio) > 1e-3;
 
@@ -289,29 +292,30 @@ export async function rDrawing(nowRCount, options = {}) {
 
                         const ctx = canvas.getContext('2d');
                         ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-                        drawShapeToCanvas(ctx, drawing, padding, padding, logicalW, logicalH, pixelRatio);
+                        drawShapeToCanvas(ctx, drawing, -bounds.x, -bounds.y, logicalW, logicalH, pixelRatio);
 
                         drawing.drawCache = canvas;
                         drawing._cachedWidth = logicalW;
                         drawing._cachedHeight = logicalH;
                         drawing._cachedStrokeWidth = strokeWidth;
+                        drawing._cachedShapeKey = shapeKey;
                         drawing._cachedPixelRatio = pixelRatio;
                     }
 
                     // render cancellation check
                     if (nowRCount !== this.rCount) return;
 
-                    const drawX = x - padding;
-                    const drawY = y - padding;
-                    const drawW = logicalW + padding * 2;
-                    const drawH = logicalH + padding * 2;
+                    const drawX = x + bounds.x;
+                    const drawY = y + bounds.y;
+                    const drawW = bounds.w;
+                    const drawH = bounds.h;
                     const snappedRect = this.snapRect(drawX, drawY, drawW, drawH);
 
                     if (drawing._rotation) {
                         this.bc.save();
-                        this.bc.translate(snappedRect.x + snappedRect.w / 2, snappedRect.y + snappedRect.h / 2);
+                        this.bc.translate(x + logicalW / 2, y + logicalH / 2);
                         this.bc.rotate(drawing._rotation * Math.PI / 180);
-                        this.bc.drawImage(drawing.drawCache, -snappedRect.w / 2, -snappedRect.h / 2, snappedRect.w, snappedRect.h);
+                        this.bc.drawImage(drawing.drawCache, bounds.x - logicalW / 2, bounds.y - logicalH / 2, bounds.w, bounds.h);
                         this.bc.restore();
                     } else {
                         this.bc.drawImage(drawing.drawCache, snappedRect.x, snappedRect.y, snappedRect.w, snappedRect.h);
@@ -321,7 +325,7 @@ export async function rDrawing(nowRCount, options = {}) {
 
         }
 
-        if (drawing.active) {
+        if (drawing.active && !options.hideSelectionFrame) {
             // 正方形尺寸,可根据需要调整
             const handleSize = 8;
             const halfSize = handleSize / 2;
@@ -392,11 +396,11 @@ export async function rDrawing(nowRCount, options = {}) {
             }
         }
 
-        drawing.position = { x, y, w, h }
+        if (!isScreenshot) drawing.position = { x, y, w, h };
 
     }
 
-    this._syncTextBoxEditorPosition?.();
+    if (!isScreenshot) this._syncTextBoxEditorPosition?.();
     if (nowRCount !== this.rCount) return  // 重要,解决异步竞争渲染问题
 
     // 截图模式不操作handleLayer

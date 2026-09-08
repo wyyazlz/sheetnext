@@ -241,6 +241,19 @@ export function moveByTab(reverse = false) {
 }
 
 export function docKeyDown(event) {
+    if (!event.defaultPrevented && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p'
+        && this.SN.containerDom.contains(document.activeElement)) {
+        event.preventDefault();
+        if (!event.repeat) this.SN.Action.printPreview();
+        return;
+    }
+    if (!this.inputEditing && document.activeElement === this.input) {
+        if (event.key === 'F6' && this._hyperlinkPopover._focus()) {
+            event.preventDefault();
+            return;
+        }
+        if (event.key === 'Escape') this._hyperlinkPopover._dismiss();
+    }
     // 公式编辑态优先处理（联想下拉导航、F4、方向键 Point 引用等）
     if (this.formulaEditor?.handleKeyDown(event)) return;
     if (event.altKey) {
@@ -315,6 +328,15 @@ export function docKeyDown(event) {
         if (document.activeElement !== this.input ||
             this.inputEditing ||
             window.getSelection().toString()) {
+            return;
+        }
+
+        if (!event.metaKey && !event.isComposing &&
+            event.key.toLowerCase() === 'l' && event.shiftKey) {
+            event.preventDefault();
+            const modal = this.SN.containerDom.querySelector('.sn-modal-overlay');
+            if (event.repeat || modal?._snModalSession || modal?.classList.contains('active')) return;
+            this.SN.Action.toggleAutoFilter();
             return;
         }
 

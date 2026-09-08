@@ -40,20 +40,9 @@ function getActiveFilterScope(sheet) {
 
 /** Toggle autofilter. */
 export function toggleAutoFilter() {
-    const sheet = this.SN.activeSheet;
-    const autoFilter = sheet.AutoFilter;
-    const { scopeId, table } = getActiveFilterScope(sheet);
-
-    if (table) {
-        table.autoFilterEnabled = !autoFilter.isScopeEnabled(scopeId);
-        return;
-    }
-
-    if (autoFilter.enabled) {
-        autoFilter.clear();
-    } else {
-        autoFilter.setRange();
-    }
+    this.SN.Canvas.filterPanelManager.hide();
+    this.SN.activeSheet.AutoFilter.toggle();
+    this.SN.Layout?.refreshActiveButtons();
 }
 
 /** Clear filters. */

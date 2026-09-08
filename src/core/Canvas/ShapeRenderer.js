@@ -1,7 +1,8 @@
 // 形状绘制辅助函数
 // 在指定 context 上绘制形状（供 SheetRenderer 调用）
 
-import { shapePaths } from './shapePathsCanvas.js';
+import { getShapeGeometry } from './shapePathsCanvas.js';
+import { drawConnector, drawArrowHead } from './connectorPathsCanvas.js';
 import { CONNECTOR_TYPES } from '../Drawing/constants.js';
 
 export function drawShapeToCanvas(ctx, drawing, x, y, w, h, pixelRatio = 1) {
@@ -10,66 +11,42 @@ export function drawShapeToCanvas(ctx, drawing, x, y, w, h, pixelRatio = 1) {
     const isConnector = drawing.isConnector || CONNECTOR_TYPES.includes(shapeType);
     const ratio = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
     const snap = (value) => Math.round(value * ratio) / ratio;
+    const geometry = isConnector ? null : getShapeGeometry(drawing, w, h);
 
     ctx.save();
-
-    // 填充部分（连接线跳过填充）
-    if (!isConnector && style.fill && style.fill !== 'none') {
-        ctx.beginPath();
-        const drawPath = shapePaths[shapeType];
-        if (drawPath) {
-            drawPath(ctx, x, y, w, h);
-        } else {
-            shapePaths.rect(ctx, x, y, w, h);
-        }
-        ctx.fillStyle = style.fill;
-        ctx.fill();
-    }
-
-    // 边框部分（需要0.5偏移以锐化线条）
     const baseStrokeWidth = Math.max(0, Number(style.strokeWidth) || 0);
-    const strokeWidth = !isConnector && drawing.isTextBox
+    const strokeWidth = !isConnector && drawing.isTextBox && baseStrokeWidth > 0
         ? Math.max(0.5, baseStrokeWidth * 0.85)
         : baseStrokeWidth;
-    if (style.stroke && strokeWidth > 0) {
-        ctx.save();
-
-        // 奇数像素宽度的线条需要0.5偏移才能锐化
-        const deviceStrokeWidth = Math.max(1, Math.round(strokeWidth * ratio));
-        const needsHalfPixelOffset = deviceStrokeWidth % 2 === 1;
-
-        if (needsHalfPixelOffset) {
-            const halfOffset = 0.5 / ratio;
-            ctx.translate(halfOffset, halfOffset);
+    if (isConnector) {
+        if (style.stroke && style.stroke !== 'none' && strokeWidth > 0) {
+            const angles = drawConnector(ctx, shapeType, x, y, x + w, y + h, style);
+            const size = strokeWidth * 8;
+            drawArrowHead(ctx, x, y, angles.startAngle + Math.PI, size, style.startArrow, style.stroke);
+            drawArrowHead(ctx, x + w, y + h, angles.endAngle, size, style.endArrow, style.stroke);
         }
-
-        ctx.beginPath();
-        const drawPath = shapePaths[shapeType];
-        if (drawPath) {
-            drawPath(ctx, x, y, w, h);
-        } else {
-            shapePaths.rect(ctx, x, y, w, h);
-        }
-
-        ctx.strokeStyle = style.stroke;
+    } else {
+        ctx.translate(x, y);
         ctx.lineWidth = strokeWidth;
-
-        // 连接线用圆头，形状用方头
-        if (isConnector) {
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-        } else {
-            ctx.lineCap = 'square';
-            ctx.lineJoin = 'miter';
+        ctx.lineCap = 'butt';
+        ctx.lineJoin = 'miter';
+        ctx.miterLimit = 10;
+        ctx.setLineDash([]);
+        const hasStroke = style.stroke && style.stroke !== 'none' && strokeWidth > 0;
+        const deviceStrokeWidth = Math.max(1, Math.round(strokeWidth * ratio));
+        const offset = hasStroke && deviceStrokeWidth % 2 === 1 ? 0.5 / ratio : 0;
+        ctx.translate(offset, offset);
+        for (const layer of geometry.paths) {
+            if (layer.fill !== 'none' && style.fill && style.fill !== 'none') {
+                ctx.fillStyle = style.fill;
+                if (layer.fill !== 'norm') ctx.fillStyle = shadeShapeColor(ctx.fillStyle, layer.fill);
+                ctx.fill(layer.path);
+            }
+            if (layer.stroke && hasStroke) {
+                ctx.strokeStyle = style.stroke;
+                ctx.stroke(layer.path);
+            }
         }
-        ctx.stroke();
-
-        // 绘制箭头（仅连接线）
-        if (isConnector) {
-            drawConnectorArrows(ctx, shapeType, x, y, w, h, style);
-        }
-
-        ctx.restore();
     }
 
     ctx.restore();
@@ -77,6 +54,12 @@ export function drawShapeToCanvas(ctx, drawing, x, y, w, h, pixelRatio = 1) {
     // 绘制文本（如果有，连接线通常没有文本）
     if (drawing.shapeText && !isConnector) {
         ctx.save();
+        if (!drawing.isTextBox) {
+            x += geometry.textRect.x;
+            y += geometry.textRect.y;
+            w = geometry.textRect.w;
+            h = geometry.textRect.h;
+        }
         ctx.fillStyle = style.textColor || '#000000';
         ctx.font = `${style.fontSize || 11}px ${style.fontFamily || '宋体'}`;
         ctx.textBaseline = 'middle';
@@ -161,79 +144,16 @@ function drawVerticalShapeText(ctx, lines, x, y, w, h, align, lineHeight, isText
     if (isTextBox) ctx.restore();
 }
 
-// 绘制连接线箭头
-function drawConnectorArrows(ctx, shapeType, x, y, w, h, style) {
-    const arrowSize = Math.max(8, style.strokeWidth * 3);
-
-    // 获取线条的起点和终点方向
-    const { startPoint, endPoint, startAngle, endAngle } = getConnectorEndpoints(shapeType, x, y, w, h);
-
-    // 绘制起始箭头
-    if (style.startArrow && style.startArrow !== 'none') {
-        drawArrowHead(ctx, startPoint.x, startPoint.y, startAngle + Math.PI, arrowSize, style);
-    }
-
-    // 绘制终点箭头
-    if (style.endArrow && style.endArrow !== 'none') {
-        drawArrowHead(ctx, endPoint.x, endPoint.y, endAngle, arrowSize, style);
-    }
-}
-
-// 获取连接线端点和方向（仅4种标准连接线类型）
-function getConnectorEndpoints(shapeType, x, y, w, h) {
-    let startPoint, endPoint, startAngle, endAngle;
-
-    switch (shapeType) {
-        case 'line':
-        case 'straightConnector1':
-            // 对角线：从左上到右下
-            startPoint = { x: x, y: y };
-            endPoint = { x: x + w, y: y + h };
-            startAngle = Math.atan2(-h, -w);
-            endAngle = Math.atan2(h, w);
-            break;
-
-        case 'bentConnector3':
-            // 肘形连接符：起点向右，终点向右
-            startPoint = { x: x, y: y };
-            endPoint = { x: x + w, y: y + h };
-            startAngle = 0; // 起点向右
-            endAngle = 0; // 终点向右
-            break;
-
-        case 'curvedConnector3':
-            // 曲线连接符：起点向右，终点向右
-            startPoint = { x: x, y: y };
-            endPoint = { x: x + w, y: y + h };
-            startAngle = 0; // 起点向右
-            endAngle = 0; // 终点向右
-            break;
-
-        default:
-            // 默认对角线
-            startPoint = { x: x, y: y };
-            endPoint = { x: x + w, y: y + h };
-            startAngle = Math.atan2(-h, -w);
-            endAngle = Math.atan2(h, w);
-    }
-
-    return { startPoint, endPoint, startAngle, endAngle };
-}
-
-// 绘制箭头头部
-function drawArrowHead(ctx, x, y, angle, size, style) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-size, -size / 2);
-    ctx.lineTo(-size, size / 2);
-    ctx.closePath();
-
-    ctx.fillStyle = style.stroke || '#000000';
-    ctx.fill();
-
-    ctx.restore();
+function shadeShapeColor(color, mode) {
+    const hex = /^#([\da-f]{6})([\da-f]{2})?$/i.exec(color);
+    const rgba = /^rgba?\(([^)]+)\)$/.exec(color);
+    if (!hex && !rgba) return color;
+    const channels = hex
+        ? [0, 2, 4].map(offset => parseInt(hex[1].slice(offset, offset + 2), 16))
+        : rgba[1].split(',').map(Number);
+    const alpha = hex ? (hex[2] ? parseInt(hex[2], 16) / 255 : 1) : (channels[3] ?? 1);
+    const amount = mode.endsWith('Less') ? 0.2 : 0.4;
+    const light = mode.startsWith('lighten');
+    const rgb = channels.slice(0, 3).map(value => Math.round(light ? value + (255 - value) * amount : value * (1 - amount)));
+    return `rgba(${rgb.join(',')},${alpha})`;
 }

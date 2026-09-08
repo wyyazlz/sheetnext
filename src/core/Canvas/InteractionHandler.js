@@ -300,18 +300,6 @@ export function canvasMousemove(event) {
     const cellRef = sheet.SN.Utils.cellNumToStr(cellIndex);
     const comment = sheet.Comment.get(cellRef);
 
-    // 检查超链接tooltip
-    const hoverCell = sheet.getCell(cellIndex.r, cellIndex.c);
-    if (hoverCell.hyperlink?.tooltip) {
-        const { x: cx, y: cy, w, h } = sheet.getCellInViewInfo(cellIndex.r, cellIndex.c);
-        this.hyperlinkTip.textContent = hoverCell.hyperlink.tooltip;
-        this.hyperlinkTip.style.left = `${this.toPhysical(cx)}px`;
-        this.hyperlinkTip.style.top = `${this.toPhysical(cy + h) + 2}px`;
-        this.hyperlinkTip.style.display = 'block';
-    } else {
-        this.hyperlinkTip.style.display = 'none';
-    }
-
     if (comment) {
         // hover在有批注的单元格上
         if (this.hoveredComment !== comment) {
@@ -397,7 +385,6 @@ export function baseMousedown(event) {
         }
     }
 
-    // #region 按下的是超链接需要显示跳转按钮
     const checkboxRect = downCell?._checkboxRect;
     if (isCheckboxControl(downCell?.control) && checkboxRect &&
         mouseX >= checkboxRect.x && mouseX <= checkboxRect.x + checkboxRect.w &&
@@ -408,15 +395,6 @@ export function baseMousedown(event) {
         if (sheet.toggleCheckbox(toggleRow, toggleCol)) this.r();
         return;
     }
-
-    if (downCell.hyperlink) {
-        const { x, y, w, h } = sheet.getCellInViewInfo(start.r, start.c);
-        this.hyperlinkJumpBtn.style.top = `${this.toPhysical(y) - 2}px`
-        this.hyperlinkJumpBtn.style.left = `${this.toPhysical(w + x) + 5}px`
-        this.hyperlinkJumpBtn.style.display = `block`
-        downBeforeFuns.push(() => this.hyperlinkJumpBtn.style.display = `none`)
-    }
-    // #endregion
 
     // #region 按下的的单元格需要数据验证提示
     if (downCell?._dataValidation) {

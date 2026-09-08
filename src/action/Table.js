@@ -9,13 +9,34 @@ import { createTableSlicers } from '../core/Slicer/index.js';
  * 打开创建表格对话框
  */
 export function createTable() {
-    const SN = this.SN;
+    return openCreateTableDialog(this, 'TableStyleMedium2', 'm001');
+}
+
+function openCreateTableDialog(action, styleId, dialogKey) {
+    const SN = action.SN;
     const sheet = SN.activeSheet;
     const Utils = SN.Utils;
     const t = (key, params = {}) => SN.t(key, params);
 
-    // 获取当前选区
-    const area = sheet.activeAreas[0];
+    if (sheet.protection.enabled) {
+        Utils.toast(t('action.protection.toast.msg001'));
+        return;
+    }
+    if (sheet.activeAreas.length > 1) {
+        Utils.toast(t('common.singleRangeRequired'));
+        return;
+    }
+
+    const existingTable = sheet.Table.getTableAt(sheet.activeCell.r, sheet.activeCell.c);
+    if (existingTable) {
+        SN.Layout?.updateContextualToolbar({ type: 'table', data: existingTable, autoSwitch: true });
+        return;
+    }
+
+    let area = sheet.activeAreas[0];
+    if (area && area.s.r === area.e.r && area.s.c === area.e.c) {
+        area = sheet.getCurrentRegion();
+    }
     if (!area) {
         Utils.toast(SN.t('action.table.toast.pleaseSelectARangeFirst'));
         return;
@@ -39,24 +60,61 @@ export function createTable() {
         </div>
     `;
 
-    Utils.modal({
-        titleKey: 'action.table.modal.m001.title', title: t('action.table.modal.m001.title'),
+    let modalEl;
+    const onKeyDown = event => {
+        event.stopPropagation();
+        if (event.isComposing) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            modalEl.querySelector('.sn-modal-btn-cancel').click();
+        } else if (event.key === 'Enter' && event.target.tagName !== 'BUTTON') {
+            event.preventDefault();
+            modalEl.querySelector('.sn-modal-btn-confirm').click();
+        } else if (event.key === 'Tab') {
+            const controls = Array.from(modalEl.querySelectorAll('input, button'))
+                .filter(control => !control.disabled && control.getClientRects().length > 0);
+            const index = controls.indexOf(document.activeElement);
+            const next = (index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length;
+            if (controls[next]) {
+                event.preventDefault();
+                controls[next].focus();
+            }
+        }
+    };
+
+    return Utils.modal({
+        titleKey: `action.table.modal.${dialogKey}.title`,
         body: bodyHTML,
         maxWidth: '360px',
-        confirmKey: 'action.table.modal.m001.confirm', confirmText: t('action.table.modal.m001.confirm'),
-        cancelKey: 'action.table.modal.m001.cancel', cancelText: t('action.table.modal.m001.cancel'),
+        confirmKey: `action.table.modal.${dialogKey}.confirm`,
+        cancelKey: `action.table.modal.${dialogKey}.cancel`,
+        onOpen: bodyEl => {
+            modalEl = bodyEl.closest('.sn-modal');
+            modalEl.addEventListener('keydown', onKeyDown);
+            const input = bodyEl.querySelector('.sn-table-ref');
+            input.focus();
+            input.select();
+        },
+        onClosed: () => {
+            modalEl?.removeEventListener('keydown', onKeyDown);
+            if (SN.activeSheet === sheet) SN.Canvas.input.focus();
+        },
         onConfirm: (bodyEl) => {
             const refInput = bodyEl.querySelector('.sn-table-ref');
             const hasHeaderCheckbox = bodyEl.querySelector('.sn-table-has-header');
 
-            const ref = refInput.value.trim();
-            if (!ref) {
+            const ref = refInput.value.trim().toUpperCase();
+            if (!/^\$?[A-Z]+\$?[1-9]\d*(?::\$?[A-Z]+\$?[1-9]\d*)?$/.test(ref)) {
                 Utils.toast(SN.t('action.table.toast.pleaseEnterAValidRange'));
                 return false;
             }
 
             try {
                 const range = sheet.rangeStrToNum(ref);
+                if (range.e.r >= sheet._maxVirtualRowCount || range.e.c >= sheet._maxVirtualColCount) {
+                    Utils.toast(t('action.table.toast.pleaseEnterAValidRange'));
+                    return false;
+                }
 
                 // 检查是否与现有表格重叠
                 for (const table of sheet.Table.getAll()) {
@@ -70,17 +128,20 @@ export function createTable() {
 
                 // 创建表格（使用默认样式）
                 const newTable = sheet.Table.createFromSelection(range, {
-                    styleId: 'TableStyleMedium2',
+                    styleId,
                     showHeaderRow: hasHeaderCheckbox.checked,
                     showRowStripes: true,
                     autoFilterEnabled: true
                 });
+                if (!newTable) return false;
 
                 // 刷新画布
-                this.SN.Canvas.r();
+                sheet.activeCell = { ...newTable.range.s };
+                sheet.activeAreas = [{ s: { ...newTable.range.s }, e: { ...newTable.range.e } }];
+                SN.Canvas.r();
 
                 // 创建成功后自动切换到"表设计"选项卡
-                this.SN.Layout?.updateContextualToolbar({
+                SN.Layout?.updateContextualToolbar({
                     type: 'table',
                     data: newTable,
                     autoSwitch: true
@@ -101,8 +162,6 @@ export function createTable() {
 export function formatAsTable(styleId) {
     const SN = this.SN;
     const sheet = SN.activeSheet;
-    const Utils = SN.Utils;
-    const t = (key, params = {}) => SN.t(key, params);
 
     // 如果当前已在表格中，直接改样式
     const { r, c } = sheet.activeCell;
@@ -113,76 +172,7 @@ export function formatAsTable(styleId) {
         return;
     }
 
-    const area = sheet.activeAreas[0];
-    if (!area) {
-        Utils.toast(SN.t('action.table.toast.pleaseSelectARangeFirst'));
-        return;
-    }
-
-    const refStr = Utils.rangeNumToStr(area, true);
-
-    const bodyHTML = `
-        <div class="sn-table-dialog">
-            <div class="sn-form-group">
-                <label>${t('action.table.content.sourceRangeLabel')}</label>
-                <input type="text" class="sn-table-ref" value="${refStr}" placeholder="${t('action.table.content.sourceRangePlaceholder')}">
-            </div>
-            <div class="sn-form-group">
-                <label>
-                    <input type="checkbox" class="sn-table-has-header" checked>
-                    ${t('action.table.content.hasHeader')}
-                </label>
-            </div>
-        </div>
-    `;
-
-    Utils.modal({
-        titleKey: 'action.table.modal.m002.title', title: t('action.table.modal.m002.title'),
-        body: bodyHTML,
-        maxWidth: '360px',
-        confirmKey: 'action.table.modal.m002.confirm', confirmText: t('action.table.modal.m002.confirm'),
-        cancelKey: 'action.table.modal.m002.cancel', cancelText: t('action.table.modal.m002.cancel'),
-        onConfirm: (bodyEl) => {
-            const refInput = bodyEl.querySelector('.sn-table-ref');
-            const hasHeaderCheckbox = bodyEl.querySelector('.sn-table-has-header');
-            const ref = refInput.value.trim();
-            if (!ref) {
-                Utils.toast(SN.t('action.table.toast.pleaseEnterAValidRange'));
-                return false;
-            }
-
-            try {
-                const range = sheet.rangeStrToNum(ref);
-
-                for (const table of sheet.Table.getAll()) {
-                    const tr = table.range;
-                    if (tr && !(range.e.r < tr.s.r || range.s.r > tr.e.r ||
-                               range.e.c < tr.s.c || range.s.c > tr.e.c)) {
-                        Utils.toast(SN.t('action.table.toast.theSelectedRangeOverlapsAn'));
-                        return false;
-                    }
-                }
-
-                const newTable = sheet.Table.createFromSelection(range, {
-                    styleId: styleId,
-                    showHeaderRow: hasHeaderCheckbox.checked,
-                    showRowStripes: true,
-                    autoFilterEnabled: true
-                });
-
-                this.SN.Canvas.r();
-                this.SN.Layout?.updateContextualToolbar({
-                    type: 'table',
-                    data: newTable,
-                    autoSwitch: true
-                });
-                return true;
-            } catch (e) {
-                Utils.toast(e.message || SN.t('action.table.toast.createFailed'));
-                return false;
-            }
-        }
-    });
+    return openCreateTableDialog(this, styleId, 'm002');
 }
 
 /**

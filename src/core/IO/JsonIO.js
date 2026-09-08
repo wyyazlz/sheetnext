@@ -524,6 +524,7 @@ function _serializeDrawing(drawing) {
         drawingData.imageBase64 = drawing.imageBase64;
     } else if (drawing.type === 'shape' || drawing.type === 'connector') {
         drawingData.shapeType = drawing.shapeType;
+        drawingData.shapeAdjustments = _clone(drawing.shapeAdjustments);
         drawingData.shapeStyle = _clone(drawing.shapeStyle);
         drawingData.shapeText = drawing.shapeText;
         drawingData.isTextBox = !!drawing.isTextBox;
@@ -554,6 +555,7 @@ function _applyDrawingData(sheet, drawingData) {
         config.imageBase64 = drawingData.imageBase64;
     } else if (drawingType === 'shape') {
         config.shapeType = drawingData.shapeType;
+        config.shapeAdjustments = _clone(drawingData.shapeAdjustments);
         config.shapeStyle = _clone(drawingData.shapeStyle);
         config.shapeText = drawingData.shapeText;
         config.isTextBox = !!drawingData.isTextBox;
@@ -975,8 +977,11 @@ export async function getData() {
 }
 
 /**
- * @param {Object} data
- * @returns {boolean}
+ * Replace the workbook with JSON version 2.0 data and clear undo/redo history on success.
+ * Loading is not atomic: false may leave partially replaced state. Back up with getData before loading,
+ * pause persistence during replacement, and reapply application permissions after loading.
+ * @param {Object} data - Workbook JSON previously exported with getData; requires a non-empty sheets array.
+ * @returns {boolean} - True on completion; false on invalid input or a restore failure. No automatic rollback.
  */
 export function setData(data) {
     const SN = this._SN;

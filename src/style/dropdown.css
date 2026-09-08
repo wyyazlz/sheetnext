@@ -639,8 +639,9 @@
     background: var(--sn-primary-soft-hover);
 }
 
-/* ==================== Combobox 选中项 ==================== */
-.sn-combobox .sn-dropdown-menu li {
+/* Shared selection state for comboboxes and configurable toolbar menus. */
+.sn-combobox .sn-dropdown-menu li,
+.sn-dropdown-menu li.sn-menu-selectable {
     padding-left: 20px;  /* 为勾号留出空间 */
 }
 

@@ -4,6 +4,7 @@ import { getDefaultCellFont, getFontName, getFontSize } from './fontDefaults.js'
 import { expandHex } from './helpers.js';
 import { _getCellEffectiveStyle, _getCellExplicitStyle } from './styleUtils.js';
 import { applyCellControlXfExtension, isCheckboxControl } from './cellControlXml.js';
+import { _buildFormulaXml, _writeFormulaCachedValue } from './formulaXml.js';
 
 const INLINE_STRING_UNIQUE_THRESHOLD = 50000;
 const INLINE_STRING_LONG_TEXT_THRESHOLD = 5000;
@@ -383,7 +384,11 @@ export function buildCellXml(cell, rowIndex, colIndex) {
     // 类型构建
     const tableHeaderText = _getTableHeaderText(cell, rowIndex, colIndex);
     if (cell.isFormula) {
-        obj = { f: cell.editVal.substring(1), ...obj };
+        _buildFormulaXml(obj, cell, rowIndex, colIndex);
+        const { f, ...attributesAndValue } = obj;
+        obj = { f, ...attributesAndValue };
+    } else if (cell._spillParent) {
+        _writeFormulaCachedValue(obj, cell);
     } else if (tableHeaderText !== null) {
         _emitPlainString(obj, SN, tableHeaderText);
     } else if (cell.type === 'boolean') {

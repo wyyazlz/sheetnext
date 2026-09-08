@@ -1,8 +1,3 @@
-function parsePositiveNumber(value, fallback) {
-    const num = Number(value);
-    return Number.isFinite(num) && num >= 0 ? num : fallback;
-}
-
 function escapeAttr(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -13,16 +8,17 @@ function escapeAttr(value) {
 }
 
 export function printPreview() {
-    this.SN.Print.preview();
+    if (this.SN.Canvas.inputEditing) this.SN.Canvas.updInputValue();
+    return this.SN.Print.preview();
 }
 
 export async function exportPdf() {
     await this.SN.Print.print();
 }
 
-export async function pageBreakPreview() {
+export function pageBreakPreview() {
     this.SN.Print.toggleShowPageBreaks(true);
-    await this.SN.Print.preview({ pageBreakPreview: true });
+    this.SN.Utils.toast(this.SN.t('core.print.print.pageBreakHint'));
 }
 
 export function toggleShowPageBreaks(checked) {
@@ -36,10 +32,15 @@ export function insertPageBreak() {
         return;
     }
     if (!result.row && !result.col) {
-        this.SN.Utils.toast(this.SN.t('action.print.toast.aPageBreakAlreadyExists'));
+        const cell = this.SN.activeSheet.activeCell;
+        const key = cell.r === 0 && cell.c === 0 ? 'cannotInsertPageBreakAtOrigin' : 'aPageBreakAlreadyExists';
+        this.SN.Utils.toast(this.SN.t(`action.print.toast.${key}`));
         return;
     }
-    this.SN.Utils.toast(this.SN.t('action.print.toast.pageBreakInserted'));
+    this.SN.Print.toggleShowPageBreaks(true);
+    const setup = this.SN.Print.ensureSettings().pageSetup;
+    const key = setup.fitToWidth > 0 || setup.fitToHeight > 0 ? 'pageBreakInsertedWhileFitting' : 'pageBreakInserted';
+    this.SN.Utils.toast(this.SN.t(`action.print.toast.${key}`));
 }
 
 export function togglePrintGridlines(checked) {
@@ -51,13 +52,7 @@ export function togglePrintHeadings(checked) {
 }
 
 export function setPageMarginsPreset(preset) {
-    const presets = {
-        normal: { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 },
-        narrow: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0.2, footer: 0.2 },
-        wide: { left: 1, right: 1, top: 1, bottom: 1, header: 0.3, footer: 0.3 }
-    };
-    const margin = presets[preset] || presets.normal;
-    this.SN.Print.setPageMargins(margin);
+    this.SN.Print.setPageMarginsPreset(preset);
     this.SN.Utils.toast(this.SN.t('action.print.toast.marginsUpdated'));
 }
 
@@ -65,33 +60,11 @@ export async function setPageMarginsDialog() {
     const SN = this.SN;
     const settings = SN.Print.ensureSettings(SN.activeSheet);
     const margins = settings.pageMargins || {};
-    const html = `
-        <div class="sn-form-row">
-            <label>Top</label>
-            <input type="number" step="0.01" data-field="pm-top" value="${margins.top ?? 0.75}">
-        </div>
-        <div class="sn-form-row">
-            <label>Bottom</label>
-            <input type="number" step="0.01" data-field="pm-bottom" value="${margins.bottom ?? 0.75}">
-        </div>
-        <div class="sn-form-row">
-            <label>Left</label>
-            <input type="number" step="0.01" data-field="pm-left" value="${margins.left ?? 0.7}">
-        </div>
-        <div class="sn-form-row">
-            <label>Right</label>
-            <input type="number" step="0.01" data-field="pm-right" value="${margins.right ?? 0.7}">
-        </div>
-        <div class="sn-form-row">
-            <label>Header</label>
-            <input type="number" step="0.01" data-field="pm-header" value="${margins.header ?? 0.3}">
-        </div>
-        <div class="sn-form-row">
-            <label>Footer</label>
-            <input type="number" step="0.01" data-field="pm-footer" value="${margins.footer ?? 0.3}">
-        </div>
-        <div class="sn-form-tip">Unit: inch</div>
-    `;
+    const fields = ['top', 'bottom', 'left', 'right', 'header', 'footer'];
+    const html = fields.map(field => `<label class="sn-form-row">
+        <span>${escapeAttr(SN.t(`core.print.print.margins.${field}`))}</span>
+        <input type="number" min="0" step="0.01" required data-field="${field}" value="${(margins[field] * 2.54).toFixed(2)}">
+    </label>`).join('') + `<div class="sn-form-tip">${escapeAttr(SN.t('core.print.print.marginUnit'))}</div>`;
 
     await SN.Utils.modal({
         titleKey: 'action.print.modal.m001.title', title: 'Margins',
@@ -99,15 +72,9 @@ export async function setPageMarginsDialog() {
         confirmKey: 'action.print.modal.m001.confirm', confirmText: 'OK',
         cancelKey: 'action.print.modal.m001.cancel', cancelText: 'Cancel',
         onConfirm: (bodyEl) => {
-            const read = (field, fallback) => parsePositiveNumber(bodyEl.querySelector(`[data-field="${field}"]`)?.value, fallback);
-            const next = {
-                top: read('pm-top', margins.top ?? 0.75),
-                bottom: read('pm-bottom', margins.bottom ?? 0.75),
-                left: read('pm-left', margins.left ?? 0.7),
-                right: read('pm-right', margins.right ?? 0.7),
-                header: read('pm-header', margins.header ?? 0.3),
-                footer: read('pm-footer', margins.footer ?? 0.3)
-            };
+            const inputs = Array.from(bodyEl.querySelectorAll('input'));
+            if (inputs.some(input => !input.reportValidity())) return false;
+            const next = Object.fromEntries(inputs.map(input => [input.dataset.field, Number(input.value) / 2.54]));
             SN.Print.setPageMargins(next);
             return true;
         }
@@ -132,10 +99,10 @@ export async function setPrintScaleDialog() {
     const scale = settings.pageSetup?.scale ?? 100;
     const html = `
         <div class="sn-form-row">
-            <label>Scale</label>
+            <label>${escapeAttr(SN.t('core.print.print.scalePercent'))}</label>
             <input type="number" step="1" data-field="print-scale" value="${scale}">
         </div>
-        <div class="sn-form-tip">Range: 10-400</div>
+        <div class="sn-form-tip">${escapeAttr(SN.t('core.print.print.scaleHint'))}</div>
     `;
 
     await SN.Utils.modal({
@@ -174,12 +141,12 @@ export async function setPrintTitles() {
     const titles = settings.printTitles || {};
     const html = `
         <div class="sn-form-row">
-            <label>Rows to Repeat</label>
-            <input type="text" data-field="print-rows" placeholder="e.g. 1:1" value="${escapeAttr(titles.rows ?? '')}">
+            <label>${escapeAttr(SN.t('core.print.print.titleRows'))}</label>
+            <input type="text" data-field="print-rows" placeholder="1:1" value="${escapeAttr(titles.rows ?? '')}">
         </div>
         <div class="sn-form-row">
-            <label>Columns to Repeat</label>
-            <input type="text" data-field="print-cols" placeholder="e.g. A:A" value="${escapeAttr(titles.cols ?? '')}">
+            <label>${escapeAttr(SN.t('core.print.print.titleCols'))}</label>
+            <input type="text" data-field="print-cols" placeholder="A:A" value="${escapeAttr(titles.cols ?? '')}">
         </div>
     `;
 
@@ -206,10 +173,10 @@ export async function setPageBackground() {
     const bg = settings.pageBackground?.url ?? '';
     const html = `
         <div class="sn-form-row">
-            <label>Background Image URL</label>
+            <label>${escapeAttr(SN.t('core.print.print.backgroundUrl'))}</label>
             <input type="text" data-field="print-bg" placeholder="https://..." value="${escapeAttr(bg)}">
         </div>
-        <div class="sn-form-tip">Background applies to preview and print</div>
+        <div class="sn-form-tip">${escapeAttr(SN.t('core.print.print.backgroundHint'))}</div>
     `;
 
     await SN.Utils.modal({
@@ -231,14 +198,14 @@ export async function setHeaderFooter() {
     const headerFooter = settings.headerFooter || {};
     const html = `
         <div class="sn-form-row">
-            <label>Header</label>
+            <label>${escapeAttr(SN.t('core.print.print.header'))}</label>
             <input type="text" data-field="print-header" value="${escapeAttr(headerFooter.header ?? '')}">
         </div>
         <div class="sn-form-row">
-            <label>Footer</label>
+            <label>${escapeAttr(SN.t('core.print.print.footer'))}</label>
             <input type="text" data-field="print-footer" value="${escapeAttr(headerFooter.footer ?? '')}">
         </div>
-        <div class="sn-form-tip">Header/Footer applies to preview and print</div>
+        <div class="sn-form-tip">${escapeAttr(SN.t('core.print.print.headerFooterHint'))}</div>
     `;
 
     await SN.Utils.modal({

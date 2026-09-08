@@ -986,14 +986,7 @@ export default class Formula {
         };
 
         const getNumericSorted = (argOrValues) => {
-            let values;
-            if (Array.isArray(argOrValues)) {
-                const hasNested = argOrValues.some(item => Array.isArray(item));
-                values = hasNested ? argOrValues.flat(Infinity) : argOrValues;
-            } else {
-                values = getFlatValues(argOrValues);
-            }
-            return values.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+            return this.#gNums([argOrValues]).filter(Number.isFinite).sort((a, b) => a - b);
         };
 
         const halfWidthText = (text) => String(text)

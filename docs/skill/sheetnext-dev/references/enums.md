@@ -1,6 +1,7 @@
 # Enum API
 
-> Generated: 2026-08-06
+> Generated: 2026-09-08
+> SheetNext source package: 0.2.23; source fingerprint: 896bd17c14ed91f3295183303ef16d4d78bb335764d4362f17ab30915bafee95
 
 ## Enum Types
 

@@ -253,6 +253,47 @@ function _canSelectTarget(sheet, target) {
 }
 
 /**
+ * Get the region bounded by blank rows and columns, including hidden cells.
+ * @param {CellNum} [cell=this.activeCell]
+ * @returns {RangeNum|null}
+ */
+export function getCurrentRegion(cell = this.activeCell) {
+    const lastRow = this.rowCount - 1;
+    const lastCol = this.colCount - 1;
+    if (!cell || !Number.isInteger(cell.r) || !Number.isInteger(cell.c) ||
+        cell.r < 0 || cell.c < 0 || cell.r > lastRow || cell.c > lastCol) return null;
+
+    const area = _normalizeArea(_getCellSpan(this, cell));
+    const rowHasData = (r, startCol, endCol) => {
+        for (let c = startCol; c <= endCol; c++) {
+            if (_cellAtHasNavigationContent(this, r, c)) return true;
+        }
+        return false;
+    };
+    const colHasData = c => {
+        for (let r = area.s.r; r <= area.e.r; r++) {
+            if (_cellAtHasNavigationContent(this, r, c)) return true;
+        }
+        return false;
+    };
+
+    let changed;
+    do {
+        const before = { ...area.s, er: area.e.r, ec: area.e.c };
+        const startCol = Math.max(0, area.s.c - 1);
+        const endCol = Math.min(lastCol, area.e.c + 1);
+        while (area.s.r > 0 && rowHasData(area.s.r - 1, startCol, endCol)) area.s.r--;
+        while (area.e.r < lastRow && rowHasData(area.e.r + 1, startCol, endCol)) area.e.r++;
+        while (area.s.c > 0 && colHasData(area.s.c - 1)) area.s.c--;
+        while (area.e.c < lastCol && colHasData(area.e.c + 1)) area.e.c++;
+        changed = before.r !== area.s.r || before.c !== area.s.c ||
+            before.er !== area.e.r || before.ec !== area.e.c;
+    } while (changed);
+
+    return area;
+}
+
+/**
  * Move or extend the current selection using Excel-style navigation.
  * @param {'up'|'down'|'left'|'right'} direction
  * @param {{extend?:boolean,jump?:boolean}} [options]

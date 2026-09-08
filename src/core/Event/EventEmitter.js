@@ -69,10 +69,10 @@ export default class EventEmitter {
      * Register Event Listener
      * @param {string} event - Event Name
      * @param {Function} handler - Handling function
-     * @param {Object} options - Options
-     * @param {string} options.id - Unique identity (anti duplicate binding)
-     * @param {number} options.priority - Priority (execute as soon as possible)
-     * @param {boolean} options.once - Whether to execute only once
+     * @param {Object} [options={}] - Options
+     * @param {string} [options.id] - Unique identity (anti duplicate binding)
+     * @param {number} [options.priority=0] - Priority (execute as soon as possible)
+     * @param {boolean} [options.once=false] - Whether to execute only once
      * @returns {EventEmitter} - Chain Calls Supported
      */
     on(event, handler, options = {}) {
@@ -116,7 +116,7 @@ export default class EventEmitter {
     /**
      * Remove Event Listener
      * @param {string} event - Event Name
-     * @param {string|Function} idOrHandler - id or handler reference
+     * @param {string|Function} [idOrHandler] - Listener id or handler reference; omit to remove all listeners for this event.
      * @returns {EventEmitter}
      */
     off(event, idOrHandler) {
@@ -257,7 +257,7 @@ export default class EventEmitter {
 
     /**
      * Get the number of listeners
-     * @param {string} event - Event name (optional, return total if not passed)
+     * @param {string} [event] - Event name; omit to return the total listener count.
      * @returns {number}
      */
     listenerCount(event) {

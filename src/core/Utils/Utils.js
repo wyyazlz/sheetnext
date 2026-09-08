@@ -190,6 +190,7 @@ export default class Utils {
             bodyClass = '',
             modalClass = '',
             modeless = false,
+            closable = true,
             onOpen = null,
             onConfirm = null,
             onClosed = null
@@ -249,6 +250,8 @@ export default class Utils {
             cancelBtn.replaceWith(newCancelBtn);
             confirmBtn.replaceWith(newConfirmBtn);
             newCloseBtn.setAttribute('aria-label', closeText);
+            newCloseBtn.style.display = closable ? '' : 'none';
+            newCloseBtn.disabled = !closable;
             newConfirmBtn.disabled = false;
 
             titleEl.textContent = translatedTitle;
@@ -312,7 +315,7 @@ export default class Utils {
             };
             modalOverlay._snModalSession = session;
 
-            newCloseBtn.onclick = () => closeModal(false);
+            newCloseBtn.onclick = () => { if (closable) closeModal(false); };
             newCancelBtn.onclick = () => closeModal(false);
             newConfirmBtn.onclick = async () => {
                 if (newConfirmBtn.disabled || closeState !== null) return;
@@ -339,6 +342,50 @@ export default class Utils {
                 if (onOpen) onOpen(bodyEl);
             });
         });
+    }
+
+    /** @param {string} titleKey @returns {{update:Function,close:Function}} Create a blocking progress panel using the common modal. */
+    _createProgressModal(titleKey) {
+        const container = this._SN.containerDom;
+        const previousFocus = document.activeElement;
+        const blockInput = event => {
+            if (!container.contains(event.target)) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        };
+        const events = ['keydown', 'paste', 'cut'];
+        this.modal({
+            titleKey,
+            maxWidth: '400px',
+            closable: false,
+            content: `<div class="sn-progress-info"><span class="sn-progress-status"></span><span class="sn-progress-percent">0%</span></div><progress class="sn-progress-bar" max="100" value="0"></progress>`,
+            onClosed: () => {
+                events.forEach(type => document.removeEventListener(type, blockInput, true));
+                if (previousFocus?.isConnected && container.contains(document.activeElement)) {
+                    previousFocus.focus({ preventScroll: true });
+                }
+            }
+        });
+        const overlay = container.querySelector('.sn-modal-overlay');
+        const session = overlay._snModalSession;
+        const panel = overlay.querySelector('.sn-modal');
+        const bar = overlay.querySelector('.sn-progress-bar');
+        const status = overlay.querySelector('.sn-progress-status');
+        const percent = overlay.querySelector('.sn-progress-percent');
+        bar.setAttribute('aria-label', this._SN.t(titleKey));
+        events.forEach(type => document.addEventListener(type, blockInput, true));
+        overlay.classList.add('active');
+        panel.tabIndex = -1;
+        panel.focus({ preventScroll: true });
+        return {
+            update: (value, message) => {
+                if (overlay._snModalSession !== session) return;
+                bar.value = Math.max(0, Math.min(100, value));
+                percent.textContent = `${Math.floor(bar.value)}%`;
+                status.textContent = message;
+            },
+            close: () => session.forceClose()
+        };
     }
 
     _enableModalDrag() {

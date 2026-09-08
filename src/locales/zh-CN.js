@@ -459,7 +459,6 @@ const zhCN = {
                 },
                 "m004": {
                     "cancel": "取消",
-                    "cancelRemove": "移除链接",
                     "confirm": "确定",
                     "label": {
                         "address": "地址",
@@ -581,9 +580,7 @@ const zhCN = {
                 }
             },
             "toast": {
-                "aPageBreakAlreadyExists": "该位置已存在分页符",
                 "marginsUpdated": "页边距已更新",
-                "pageBreakInserted": "分页符已插入",
                 "pleaseEnterANumberBetween": "请输入 10 到 400 之间的数字",
                 "pleaseSelectAPrintArea": "请先选择打印区域",
                 "pleaseSelectAValidCell": "请先选择有效单元格",
@@ -831,16 +828,6 @@ const zhCN = {
                 "sourceRangePlaceholder": "例如 A1:D20"
             },
             "modal": {
-                "m001": {
-                    "cancel": "取消",
-                    "confirm": "确定",
-                    "title": "创建表格"
-                },
-                "m002": {
-                    "cancel": "取消",
-                    "confirm": "确定",
-                    "title": "套用表格格式"
-                },
                 "m003": {
                     "cancel": "取消",
                     "confirm": "确定",
@@ -1084,7 +1071,8 @@ const zhCN = {
         "cancel": "取消",
         "close": "关闭",
         "notice": "提示",
-        "ok": "确定"
+        "ok": "确定",
+        "singleRangeRequired": "请选择单个连续区域"
     },
     "components": {
         "sortDialog": {
@@ -1270,13 +1258,33 @@ const zhCN = {
         },
         "print": {
             "print": {
+                "backgroundHint": "背景图片应用于预览和打印。",
+                "backgroundUrl": "背景图片地址",
+                "failed": "页面生成失败，请调整设置后重试。",
+                "footer": "页脚",
+                "header": "页眉",
+                "headerFooterHint": "可用 &P 表示页码、&N 表示总页数、&A 表示工作表名称。",
+                "invalidMargins": "页边距必须为非负数，且纸张内需保留可打印区域。",
+                "invalidPageRange": "请输入 1 到 {total} 之间的页码，结束页不能小于起始页。",
+                "invalidTitles": "重复标题请输入有效的行范围（如 1:2）或列范围（如 A:B）。",
+                "marginUnit": "单位：厘米",
                 "modal": {
                     "m001": {
-                        "cancel": "关闭",
-                        "confirm": "打印",
-                        "title": "打印预览"
+                        "title": "打印"
                     }
                 },
+                "pageBreakHint": "已在表格中显示分页线，可选中单元格后插入分页符。",
+                "resetBreaks": "重置分页符",
+                "scaleHint": "范围：10%–400%",
+                "scalePercent": "缩放比例",
+                "scaling": {
+                    "columns": "将所有列调整为一页",
+                    "rows": "将所有行调整为一页",
+                    "sheet": "将工作表调整为一页"
+                },
+                "titleCols": "每页重复的左端列",
+                "titleRows": "每页重复的顶端行",
+                "titlesTooLarge": "重复标题占满了可打印区域，请缩小标题范围或调整纸张、缩放。",
                 "toast": {
                     "nothingToPrint": "没有可打印内容"
                 }
@@ -1287,6 +1295,10 @@ const zhCN = {
                 "toast": {
                     "msg001": "无法在剪切区域内粘贴"
                 }
+            },
+            "insertTemplate": {
+                "done": "已完成",
+                "title": "正在插入数据"
             },
             "sheet": {
                 "toast": {
@@ -1854,7 +1866,10 @@ const zhCN = {
                 "portrait": "纵向"
             },
             "paperSize": {
+                "a3": "A3",
                 "a4": "A4",
+                "a5": "A5",
+                "legal": "法律用纸",
                 "letter": "信纸"
             },
             "printArea": {
@@ -1878,7 +1893,7 @@ const zhCN = {
             "printArea": "打印区域",
             "printGridlines": "打印网格线",
             "printHeadings": "打印行号列标",
-            "printPreview": "打印预览",
+            "printPreview": "打印",
             "printScale": "打印缩放",
             "printTitles": "打印标题",
             "theme": "主题"

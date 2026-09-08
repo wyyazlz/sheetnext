@@ -459,7 +459,6 @@ const enUS = {
                 },
                 "m004": {
                     "cancel": "Cancel",
-                    "cancelRemove": "Remove Link",
                     "confirm": "OK",
                     "label": {
                         "address": "Address",
@@ -581,9 +580,7 @@ const enUS = {
                 }
             },
             "toast": {
-                "aPageBreakAlreadyExists": "A page break already exists at this position",
                 "marginsUpdated": "Margins updated",
-                "pageBreakInserted": "Page break inserted",
                 "pleaseEnterANumberBetween": "Please enter a number between 10 and 400",
                 "pleaseSelectAPrintArea": "Please select a print area first",
                 "pleaseSelectAValidCell": "Please select a valid cell first",
@@ -831,16 +828,6 @@ const enUS = {
                 "sourceRangePlaceholder": "e.g. A1:D20"
             },
             "modal": {
-                "m001": {
-                    "cancel": "Cancel",
-                    "confirm": "OK",
-                    "title": "Create Table"
-                },
-                "m002": {
-                    "cancel": "Cancel",
-                    "confirm": "OK",
-                    "title": "Format as Table"
-                },
                 "m003": {
                     "cancel": "Cancel",
                     "confirm": "OK",
@@ -1084,7 +1071,8 @@ const enUS = {
         "cancel": "Cancel",
         "close": "Close",
         "notice": "Notice",
-        "ok": "OK"
+        "ok": "OK",
+        "singleRangeRequired": "Please select a single contiguous range"
     },
     "components": {
         "sortDialog": {
@@ -1270,13 +1258,33 @@ const enUS = {
         },
         "print": {
             "print": {
+                "backgroundHint": "The background image applies to preview and print.",
+                "backgroundUrl": "Background image URL",
+                "failed": "Could not generate the page. Adjust the settings and try again.",
+                "footer": "Footer",
+                "header": "Header",
+                "headerFooterHint": "Use &P for page number, &N for total pages, and &A for sheet name.",
+                "invalidMargins": "Margins must be nonnegative and leave a printable area inside the paper.",
+                "invalidPageRange": "Enter pages from 1 to {total}; the last page must not precede the first.",
+                "invalidTitles": "Enter valid repeated rows (such as 1:2) or columns (such as A:B).",
+                "marginUnit": "Unit: centimeters",
                 "modal": {
                     "m001": {
-                        "cancel": "Close",
-                        "confirm": "Print",
-                        "title": "Print Preview"
+                        "title": "Print"
                     }
                 },
+                "pageBreakHint": "Page breaks are visible in the sheet. Select a cell to insert a manual break.",
+                "resetBreaks": "Reset page breaks",
+                "scaleHint": "Range: 10%–400%",
+                "scalePercent": "Scale",
+                "scaling": {
+                    "columns": "Fit all columns on one page",
+                    "rows": "Fit all rows on one page",
+                    "sheet": "Fit sheet on one page"
+                },
+                "titleCols": "Columns to repeat at left",
+                "titleRows": "Rows to repeat at top",
+                "titlesTooLarge": "Repeated titles fill the printable area. Reduce the title range or adjust paper size or scaling.",
                 "toast": {
                     "nothingToPrint": "Nothing to print"
                 }
@@ -1287,6 +1295,10 @@ const enUS = {
                 "toast": {
                     "msg001": "Cannot paste inside the cut range"
                 }
+            },
+            "insertTemplate": {
+                "done": "Done",
+                "title": "Inserting data"
             },
             "sheet": {
                 "toast": {
@@ -1854,7 +1866,10 @@ const enUS = {
                 "portrait": "Portrait"
             },
             "paperSize": {
+                "a3": "A3",
                 "a4": "A4",
+                "a5": "A5",
+                "legal": "Legal",
                 "letter": "Letter"
             },
             "printArea": {
@@ -1878,7 +1893,7 @@ const enUS = {
             "printArea": "Print Area",
             "printGridlines": "Gridlines",
             "printHeadings": "Print Headings",
-            "printPreview": "Print Preview",
+            "printPreview": "Print",
             "printScale": "Print Scale",
             "printTitles": "Print Titles",
             "theme": "Theme"

@@ -43,6 +43,17 @@ function getNextRid(relationships) {
     return max + 1;
 }
 
+function _ensureCacheUid(cache) {
+    if (!cache._excelUid) {
+        const guid = globalThis.crypto?.randomUUID?.() || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
+            const value = Math.floor(Math.random() * 16);
+            return (ch === 'x' ? value : (value & 3) | 8).toString(16);
+        });
+        cache._excelUid = `{${guid.toUpperCase()}}`;
+    }
+    return cache._excelUid;
+}
+
 function collectSlicers(SN) {
     const slicers = [];
     SN.sheets.forEach((sheet, sheetIndex) => {
@@ -205,6 +216,7 @@ function buildTableSlicerCacheXml(cacheInfo) {
             '_$xmlns:xr10': XR10_NS,
             '_$name': cacheInfo.cacheName,
             '_$sourceName': cacheInfo.sourceName,
+            '_$xr10:uid': cacheInfo.uid,
             extLst: {
                 'x:ext': {
                     '_$uri': '{2F2917AC-EB37-4324-AD4E-5DD8C200BD13}',
@@ -412,7 +424,7 @@ function exportStandardSlicers(SN, _Xml, slicerEntries, caches) {
                 cacheName,
                 sourceName,
                 pivotCacheId: pivotTable?.cache?._getExcelPivotCacheId?.() ?? pivotTable?.cacheId ?? 0,
-                uid: cache._excelUid || null
+                uid: _ensureCacheUid(cache)
             });
         } else {
             const sourceSheetName = cache.sourceSheet || linked?.sheet?.name;
@@ -424,7 +436,8 @@ function exportStandardSlicers(SN, _Xml, slicerEntries, caches) {
                 cacheName,
                 sourceName,
                 tableId,
-                column
+                column,
+                uid: _ensureCacheUid(cache)
             });
         }
 

@@ -3,6 +3,8 @@
  * Contains tools for color interpolation, conditional comparisons, percentile calculations, and more
  */
 
+import { dateTrans, dateToSerial } from '../Cell/NumFmt.js';
+
 /**
  * Conditional formatting helper function
  * Contains tools for color interpolation, conditional comparisons, percentile calculations, and more
@@ -272,10 +274,9 @@ export function getMonthStart() {
  * @ returns {number} timestamps
  */
 export function excelDateToTimestamp(serial) {
-    // Excel日期基准：1900-01-01
-    // 但Excel错误地认为1900年是闰年，所以要减1
-    const excelEpoch = new Date(1899, 11, 30).getTime();
-    return excelEpoch + serial * 86400000;
+    if (!Number.isFinite(serial)) return NaN;
+    // Match displayed calendar dates without carrying the epoch's historical timezone offset.
+    return dateTrans(serial).getTime();
 }
 
 /**
@@ -284,8 +285,8 @@ export function excelDateToTimestamp(serial) {
  * @ returns {number} Excel date serial number
  */
 export function timestampToExcelDate(timestamp) {
-    const excelEpoch = new Date(1899, 11, 30).getTime();
-    return (timestamp - excelEpoch) / 86400000;
+    const date = new Date(timestamp);
+    return Number.isFinite(date.getTime()) ? dateToSerial(date) : NaN;
 }
 
 /**
