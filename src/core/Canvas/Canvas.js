@@ -492,17 +492,6 @@ export default class Canvas {
         return this.formulaEditor?._startRangePicker(options) ?? (() => {});
     }
 
-    /**
-     * Start a modeless grid range-picking session.
-     * @param {Object} options - Picker callbacks and target context
-     * @param {(reference:string, detail:{area:Object, sheet:Object})=>void} options.onChange - Range change callback
-     * @param {string} [options.targetSheetName] - Formula target sheet used to qualify cross-sheet references
-     * @returns {() => void} Session disposer
-     */
-    startRangePicker(options = {}) {
-        return this.formulaEditor?._startRangePicker(options) ?? (() => {});
-    }
-
     _themeColor(token, fallback) {
         return getThemeColor(this.SN, token, fallback);
     }

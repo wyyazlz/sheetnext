@@ -6,7 +6,7 @@ description: "Build and debug SheetNext spreadsheet integrations using its docum
 # SheetNext Development
 
 > Generated: 2026-09-08
-> SheetNext source package: 0.2.23; source fingerprint: 896bd17c14ed91f3295183303ef16d4d78bb335764d4362f17ab30915bafee95
+> SheetNext source package: 0.2.24; source fingerprint: dc22deb262eb5bb1514a446034bb678f6f32c276259b681cc707c7f3c2e52752
 
 Use these references for the matching SheetNext source version. First identify the installed version and Open Edition or commercial distribution; see [integration notes](references/integration.md). Do not assume the npm package has every documented capability.
 
