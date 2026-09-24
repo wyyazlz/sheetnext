@@ -1,3 +1,5 @@
+
+
 <p align="center">
   <img src="docs/logo.png" alt="SheetNext Logo" width="80" />
 </p>
@@ -54,7 +56,7 @@ npm install sheetnext
 
 ```javascript
 import SheetNext from 'sheetnext';
-import 'sheetnext.css';
+import 'sheetnext/dist/sheetnext.css';
 
 const SN = new SheetNext(document.querySelector('#SNContainer'));
 ```
